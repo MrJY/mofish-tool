@@ -1,0 +1,114 @@
+{
+  ".run": {
+    "zh": "IntelliJ IDEA 预置运行、测试和插件验证配置目录",
+    "en": "Predefined IntelliJ IDEA run, test, and plugin verification configurations"
+  },
+  ".run/Run Plugin.run.xml": {
+    "zh": "以沙箱 IDE 启动摸鱼工具插件的运行配置，对应 Gradle runIde 任务",
+    "en": "Run configuration for launching the MoFish plugin in a sandbox IDE, mapped to the Gradle runIde task"
+  },
+  ".run/Run Tests.run.xml": {
+    "zh": "运行项目测试的配置，对应 Gradle test 任务",
+    "en": "Run configuration for project tests, mapped to the Gradle test task"
+  },
+  ".run/Run Verifications.run.xml": {
+    "zh": "验证插件与目标 IDE 兼容性的配置，对应 Gradle verifyPlugin 任务",
+    "en": "Run configuration for plugin compatibility verification, mapped to the Gradle verifyPlugin task"
+  },
+  "src/main/kotlin/online/mofish/tool/actions": {
+    "zh": "IDE Action 入口，目前用于打开摸鱼工具窗口",
+    "en": "IDE action entry points, currently used to open the MoFish tool window"
+  },
+  "src/main/kotlin/online/mofish/tool/data": {
+    "zh": "行情数据层，包含远程数据源、静态回退数据源、HTTP 客户端和各市场 provider",
+    "en": "Quote data layer with remote data sources, static fallbacks, HTTP client, and market providers"
+  },
+  "src/main/kotlin/online/mofish/tool/data/http/MoFishHttpClient.kt": {
+    "zh": "统一 HTTP 客户端，封装 OkHttp、JSON 解析和 HTML 解析",
+    "en": "Shared HTTP client wrapping OkHttp, JSON parsing, and HTML parsing"
+  },
+  "src/main/kotlin/online/mofish/tool/data/fund": {
+    "zh": "摸鱼基金底层行情与搜索建议实现，当前接入东方财富数据",
+    "en": "Underlying quote and search implementation for MoFish Fund, currently backed by EastMoney"
+  },
+  "src/main/kotlin/online/mofish/tool/data/stock": {
+    "zh": "摸鱼股票与摸鱼指数底层行情、搜索和代码规范化实现，当前接入腾讯与新浪数据",
+    "en": "Underlying quote, search, and symbol normalization implementation for MoFish Stock and MoFish Index, currently backed by Tencent and Sina"
+  },
+  "src/main/kotlin/online/mofish/tool/data/crypto": {
+    "zh": "摸鱼虚拟币底层行情与搜索建议实现，当前接入 CoinGecko 数据",
+    "en": "Underlying quote and search implementation for MoFish Crypto, currently backed by CoinGecko"
+  },
+  "src/main/kotlin/online/mofish/tool/data/forex": {
+    "zh": "摸鱼外汇底层牌价抓取实现，当前接入中国银行页面",
+    "en": "Underlying forex rate fetching implementation for MoFish Forex, currently backed by Bank of China pages"
+  },
+  "src/main/kotlin/online/mofish/tool/domain": {
+    "zh": "领域模型目录，定义行情、持仓、提醒规则、收益快照、工作区等数据结构",
+    "en": "Domain model directory for quotes, holdings, reminder rules, profit snapshots, workspaces, and related structures"
+  },
+  "src/main/kotlin/online/mofish/tool/services": {
+    "zh": "核心服务目录，负责项目状态、缓存、刷新调度、提醒通知、收益计算和状态聚合",
+    "en": "Core services for project state, caching, refresh scheduling, notifications, profit calculation, and state aggregation"
+  },
+  "src/main/kotlin/online/mofish/tool/settings": {
+    "zh": "设置相关代码，包含设置持久化、配置页、持仓编辑弹窗和提醒编辑弹窗",
+    "en": "Settings code including persistent state, configurable UI, holdings editor, and reminders editor"
+  },
+  "src/main/kotlin/online/mofish/tool/state": {
+    "zh": "状态模型目录，定义 UI 聚合状态、项目事件、缓存状态和刷新调度状态",
+    "en": "State models for UI aggregation, project events, cache state, and refresh scheduler state"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/MoFishToolWindowFactory.kt": {
+    "zh": "摸鱼工具窗口工厂，向 IntelliJ Platform 注册并创建工具窗口内容",
+    "en": "MoFish tool window factory that registers and creates tool window content for the IntelliJ Platform"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/MoFishToolWindowPanel.kt": {
+    "zh": "摸鱼工具主界面，基于 Swing/JB UI 展示摸鱼股票、摸鱼指数、摸鱼基金、摸鱼虚拟币、摸鱼外汇、快讯和设置入口",
+    "en": "Main MoFish UI built with Swing/JB UI, showing MoFish Stock, Index, Fund, Crypto, Forex, flash news, and settings entry points"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/statusbar": {
+    "zh": "状态栏收益组件，展示摸鱼工具今日收益摘要",
+    "en": "Status bar profit widget showing the MoFish daily profit summary"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/dialogs": {
+    "zh": "通用搜索选择弹窗，用于添加摸鱼股票、摸鱼基金和摸鱼虚拟币",
+    "en": "Shared searchable choice dialog used to add MoFish Stock, Fund, and Crypto items"
+  },
+  "src/main/resources/META-INF/plugin.xml": {
+    "zh": "插件声明文件，定义插件 ID、名称、服务、设置页、工具窗口、通知组、状态栏组件和菜单 Action",
+    "en": "Plugin descriptor declaring plugin ID, name, services, configurable, tool window, notification group, status bar widget, and menu action"
+  },
+  "src/main/resources/META-INF/pluginIcon.svg": {
+    "zh": "插件图标，用于 JetBrains Marketplace 和 IDE 插件管理器",
+    "en": "Plugin icon used in JetBrains Marketplace and the IDE plugin manager"
+  },
+  "src/main/resources/icons/mofishToolWindow.svg": {
+    "zh": "摸鱼工具窗口图标",
+    "en": "MoFish tool window icon"
+  },
+  "build.gradle.kts": {
+    "zh": "Gradle 构建脚本，配置 Kotlin、IntelliJ Platform、OkHttp、Jsoup、kotlinx-serialization-json 和测试依赖",
+    "en": "Gradle build script configuring Kotlin, IntelliJ Platform, OkHttp, Jsoup, kotlinx-serialization-json, and test dependencies"
+  },
+  "settings.gradle.kts": {
+    "zh": "Gradle 项目设置，配置项目名称、插件版本、IntelliJ Platform 仓库和 Maven Central 仓库",
+    "en": "Gradle settings configuring project name, plugin versions, IntelliJ Platform repositories, and Maven Central"
+  },
+  "gradle.properties": {
+    "zh": "项目属性文件，定义 group、version，并启用 Gradle Configuration Cache 和 Build Cache",
+    "en": "Project properties defining group, version, and enabling Gradle configuration cache and build cache"
+  },
+  "gradle/libs.versions.toml": {
+    "zh": "Gradle 版本目录，目前集中管理 JUnit 版本",
+    "en": "Gradle version catalog, currently centralizing the JUnit version"
+  },
+  "README.md": {
+    "zh": "项目说明文档，介绍摸鱼工具插件、模块划分、构建命令和目录结构",
+    "en": "Project README describing the MoFish plugin, module structure, build commands, and directory layout"
+  },
+  "CHANGELOG.md": {
+    "zh": "版本变更记录文件",
+    "en": "Version changelog file"
+  }
+}

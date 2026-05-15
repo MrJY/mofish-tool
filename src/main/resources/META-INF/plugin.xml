@@ -1,0 +1,65 @@
+<idea-plugin>
+    <id>online.mofish.tool</id>
+    <name>摸鱼工具</name>
+    <vendor url="https://github.com/lvjiayu">mofish</vendor>
+    <description><![CDATA[
+        <p>摸鱼工具是一款 IntelliJ IDEA 摸鱼助手插件。</p>
+        <p>内置多个摸鱼行情模块，支持摸鱼股票、摸鱼基金、摸鱼指数、摸鱼虚拟币、摸鱼外汇行情查看，持仓盈亏计算，价格提醒等功能。</p>
+    ]]></description>
+    <idea-version since-build="253"/>
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService
+                serviceInterface="online.mofish.tool.services.MoFishAppService"
+                serviceImplementation="online.mofish.tool.services.MoFishAppService"/>
+        <applicationService
+                serviceInterface="online.mofish.tool.services.MoFishMemoryCacheService"
+                serviceImplementation="online.mofish.tool.services.MoFishMemoryCacheService"/>
+        <applicationService
+                serviceInterface="online.mofish.tool.services.MoFishRefreshSchedulerService"
+                serviceImplementation="online.mofish.tool.services.MoFishRefreshSchedulerService"/>
+        <applicationService
+                serviceInterface="online.mofish.tool.settings.MoFishSettingsService"
+                serviceImplementation="online.mofish.tool.settings.MoFishSettingsService"/>
+        <projectService
+                serviceInterface="online.mofish.tool.services.MoFishProjectService"
+                serviceImplementation="online.mofish.tool.services.MoFishProjectService"/>
+        <projectService
+                serviceInterface="online.mofish.tool.services.MoFishReminderService"
+                serviceImplementation="online.mofish.tool.services.MoFishReminderService"/>
+        <projectService
+                serviceInterface="online.mofish.tool.services.MoFishWatchlistService"
+                serviceImplementation="online.mofish.tool.services.MoFishWatchlistService"/>
+
+        <applicationConfigurable
+                id="online.mofish.tool.settings"
+                displayName="摸鱼工具"
+                instance="online.mofish.tool.settings.MoFishSettingsConfigurable"/>
+        <toolWindow
+                id="摸鱼工具"
+                anchor="left"
+                canCloseContents="false"
+                factoryClass="online.mofish.tool.ui.toolwindow.MoFishToolWindowFactory"
+                icon="/icons/mofishToolWindow.svg"/>
+        <notificationGroup
+                id="MoFish Notifications"
+                displayType="BALLOON"/>
+        <statusBarWidgetFactory
+                id="MoFishStatusBar"
+                implementation="online.mofish.tool.ui.statusbar.MoFishStatusBarWidgetFactory"/>
+        <fileEditorProvider
+                implementation="online.mofish.tool.ui.web.MoFishWebEditorProvider"/>
+    </extensions>
+
+    <actions>
+        <action
+                id="online.mofish.tool.actions.OpenMoFishToolWindowAction"
+                class="online.mofish.tool.actions.OpenMoFishToolWindowAction"
+                text="打开摸鱼工具"
+                description="打开摸鱼工具窗口"
+                icon="/icons/mofishToolWindow.svg">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>
