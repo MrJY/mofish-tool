@@ -247,10 +247,18 @@ class MoFishSettingsConfigurable : Configurable {
 
     private fun readEditorState(): MoFishSettingsState {
         val baseState = settingsService.snapshot()
+        val stockCodes = parseLowercaseCodes(stockCodesField?.text.orEmpty())
+        val stockCodeSet = stockCodes.toSet()
+        val stockGroups = baseState.watchlist.normalizedStockGroups()
+        val stockGroupAssignments = baseState.watchlist.stockGroupAssignments
+            .filterKeys { it.lowercase() in stockCodeSet }
+            .filterValues { group -> stockGroups.any { it.equals(group, ignoreCase = true) } }
         return baseState.copy(
             watchlist = MoFishWatchlistSettings(
                 fundCodes = parseFundCodes(fundCodesField?.text.orEmpty()),
-                stockCodes = parseLowercaseCodes(stockCodesField?.text.orEmpty()),
+                stockCodes = stockCodes,
+                stockGroups = stockGroups,
+                stockGroupAssignments = stockGroupAssignments,
                 cryptoIds = parseLowercaseCodes(cryptoCodesField?.text.orEmpty()),
             ),
             holdings = draftHoldings,

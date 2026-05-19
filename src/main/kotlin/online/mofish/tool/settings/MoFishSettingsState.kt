@@ -43,8 +43,30 @@ enum class MoFishReminderSortField(
 data class MoFishWatchlistSettings(
     val fundCodes: List<String> = listOf("161725"),
     val stockCodes: List<String> = listOf("sz300750"),
+    val stockGroups: List<String> = emptyList(),
+    val stockGroupAssignments: Map<String, String> = emptyMap(),
     val cryptoIds: List<String> = listOf("bitcoin"),
-)
+) {
+    fun normalizedStockGroups(): List<String> {
+        return stockGroups
+            .map(::normalizeStockGroupValue)
+            .filter { it.isNotEmpty() }
+            .distinctBy { it.lowercase() }
+    }
+
+    fun groupForStock(code: String): String? {
+        val normalizedCode = code.trim().lowercase()
+        val assignedGroup = stockGroupAssignments[normalizedCode] ?: stockGroupAssignments.entries
+            .firstOrNull { it.key.equals(normalizedCode, ignoreCase = true) }
+            ?.value
+        val groups = normalizedStockGroups()
+        return assignedGroup
+            ?.let(::normalizeStockGroupValue)
+            ?.takeIf { group -> groups.any { it.equals(group, ignoreCase = true) } }
+    }
+}
+
+internal fun normalizeStockGroupValue(rawGroupName: String): String = rawGroupName.trim()
 
 data class MoFishSortSettings(
     val quoteField: MoFishQuoteSortField = MoFishQuoteSortField.DAILY_CHANGE_PERCENT,

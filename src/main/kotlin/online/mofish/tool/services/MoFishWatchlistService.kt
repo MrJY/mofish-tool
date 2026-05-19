@@ -15,6 +15,7 @@ import online.mofish.tool.settings.MoFishSettingsService
 import online.mofish.tool.settings.MoFishSettingsState
 import online.mofish.tool.settings.MoFishSortSettings
 import online.mofish.tool.settings.MoFishWatchlistSettings
+import online.mofish.tool.settings.normalizeStockGroupValue
 import online.mofish.tool.state.MoFishProjectEvent
 import online.mofish.tool.state.MoFishWatchlistState
 import kotlinx.coroutines.CoroutineScope
@@ -150,6 +151,77 @@ class MoFishWatchlistService(
         }
     }
 
+    fun addStockGroup(groupName: String) {
+        val normalizedGroup = normalizeStockGroupName(groupName)
+        if (normalizedGroup.isEmpty()) {
+            return
+        }
+        updateWatchlist { watchlist ->
+            watchlist.copy(
+                stockGroups = upsertStockGroup(watchlist.normalizedStockGroups(), normalizedGroup),
+            )
+        }
+    }
+
+    fun assignStockToGroup(
+        code: String,
+        groupName: String,
+    ) {
+        val normalizedCode = normalizeStockCode(code)
+        val normalizedGroup = normalizeStockGroupName(groupName)
+        if (normalizedCode.isEmpty()) {
+            return
+        }
+        updateWatchlist { watchlist ->
+            val assignments = watchlist.stockGroupAssignments
+                .filterKeys { !it.equals(normalizedCode, ignoreCase = true) }
+            if (normalizedGroup.isEmpty()) {
+                return@updateWatchlist watchlist.copy(stockGroupAssignments = assignments)
+            }
+            val groups = upsertStockGroup(watchlist.normalizedStockGroups(), normalizedGroup)
+            watchlist.copy(
+                stockGroups = groups,
+                stockGroupAssignments = assignments.plus(normalizedCode to normalizedGroup),
+            )
+        }
+    }
+
+    fun removeStockGroup(groupName: String) {
+        val normalizedGroup = normalizeStockGroupName(groupName)
+        if (normalizedGroup.isEmpty()) {
+            return
+        }
+        updateWatchlist { watchlist ->
+            watchlist.copy(
+                stockGroups = watchlist.normalizedStockGroups()
+                    .filterNot { it.equals(normalizedGroup, ignoreCase = true) },
+                stockGroupAssignments = watchlist.stockGroupAssignments
+                    .filterValues { !it.equals(normalizedGroup, ignoreCase = true) },
+            )
+        }
+    }
+
+    fun moveStockGroup(groupName: String, direction: Int) {
+        val normalizedGroup = normalizeStockGroupName(groupName)
+        if (normalizedGroup.isEmpty() || direction == 0) {
+            return
+        }
+        updateWatchlist { watchlist ->
+            val groups = watchlist.normalizedStockGroups().toMutableList()
+            val index = groups.indexOfFirst { it.equals(normalizedGroup, ignoreCase = true) }
+            if (index < 0) {
+                return@updateWatchlist watchlist
+            }
+            val targetIndex = (index + direction).coerceIn(0, groups.lastIndex)
+            if (index == targetIndex) {
+                return@updateWatchlist watchlist
+            }
+            val movedGroup = groups.removeAt(index)
+            groups.add(targetIndex, movedGroup)
+            watchlist.copy(stockGroups = groups)
+        }
+    }
+
     fun addCryptoCode(code: String) {
         val normalizedCode = normalizeCryptoCode(code)
         if (normalizedCode.isEmpty()) {
@@ -170,6 +242,8 @@ class MoFishWatchlistService(
         updateWatchlist { watchlist ->
             watchlist.copy(
                 stockCodes = removeWatchlistCode(watchlist.stockCodes, normalizedCode),
+                stockGroupAssignments = watchlist.stockGroupAssignments
+                    .filterKeys { !it.equals(normalizedCode, ignoreCase = true) },
             )
         }
     }
@@ -259,6 +333,22 @@ internal fun normalizeFundCode(rawCode: String): String = rawCode.trim()
 internal fun normalizeStockCode(rawCode: String): String = rawCode.trim().lowercase()
 
 internal fun normalizeCryptoCode(rawCode: String): String = rawCode.trim().lowercase()
+
+internal fun normalizeStockGroupName(rawGroupName: String): String = normalizeStockGroupValue(rawGroupName)
+
+internal fun upsertStockGroup(
+    currentGroups: List<String>,
+    newGroup: String,
+): List<String> {
+    val normalizedGroup = normalizeStockGroupName(newGroup)
+    if (normalizedGroup.isEmpty()) {
+        return currentGroups
+    }
+    return (currentGroups + normalizedGroup)
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .distinctBy { it.lowercase() }
+}
 
 internal fun upsertWatchlistCode(
     currentCodes: List<String>,

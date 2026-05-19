@@ -35,6 +35,7 @@ import online.mofish.tool.settings.MoFishQuoteSortField
 import online.mofish.tool.settings.MoFishSortSettings
 import online.mofish.tool.settings.MoFishSettingsConfigurable
 import online.mofish.tool.settings.MoFishSortDirection
+import online.mofish.tool.settings.normalizeStockGroupValue
 import online.mofish.tool.state.MoFishProjectEvent
 import online.mofish.tool.state.MoFishSelectionChangedEvent
 import online.mofish.tool.state.MoFishWatchlistState
@@ -51,6 +52,7 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.FlowLayout
 import java.awt.GridBagLayout
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -61,14 +63,19 @@ import javax.swing.DefaultListCellRenderer
 import javax.swing.DropMode
 import javax.swing.JLabel
 import javax.swing.DefaultListModel
+import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JEditorPane
 import javax.swing.JList
+import javax.swing.JMenu
+import javax.swing.JMenuItem
 import javax.swing.JPanel
+import javax.swing.JPopupMenu
 import javax.swing.JTable
 import javax.swing.ListSelectionModel
 import javax.swing.ScrollPaneConstants
 import javax.swing.TransferHandler
+import javax.swing.table.TableCellEditor
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
 import java.awt.datatransfer.DataFlavor
@@ -102,6 +109,8 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     private val stockTable = createAssetTable(stockTableModel)
     private val stockSummaryLabel = JBLabel("摸鱼股票列表加载中...")
     private val stockDetail = createHtmlPane()
+    private val stockGroupBar = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(12), 0))
+    private val stockGroupSelectorButton = JButton()
     private val indexListModel = DefaultListModel<IndexListItem>()
     private val indexList = JList(indexListModel)
     private val indexTableModel = IndexTableModel()
@@ -158,6 +167,9 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
 
     @Volatile
     private var fundGroupFilter = FundGroupFilter.ALL
+
+    @Volatile
+    private var stockGroupFilter: String? = null
 
     @Volatile
     private var syncingListSelection = false
@@ -235,6 +247,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         installContextSelection(stockTable, "MoFishStocksPopup") {
             createStockPopupGroup()
         }
+        installStockGroupColumnPopup()
         installOpenDetailOnDoubleClick(stockTable) {
             openSelectedStockDetail()
         }
@@ -500,7 +513,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     private fun createStockTab(): JComponent {
-        stockListPanel = createAssetListPanel(createStockToolbar(), createStockListContent(), stockSummaryLabel)
+        stockListPanel = createAssetListPanel(createStockToolbarPanel(), createStockListContent(), stockSummaryLabel)
         stockDetailPanel = createDetailPage("摸鱼股票详情", stockDetail) {
             setStockDetailVisible(false)
             eventStatus.text = "已返回摸鱼股票列表。"
@@ -541,6 +554,38 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
 
     private fun createForexTab(): JComponent {
         return createAssetListPanel(createForexToolbar(), createForexListContent(), forexSummaryLabel)
+    }
+
+    private fun createStockToolbarPanel(): JComponent {
+        val panel = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(6)))
+        panel.add(createStockToolbar(), BorderLayout.NORTH)
+        stockGroupSelectorButton.isFocusable = false
+        stockGroupSelectorButton.margin = JBUI.insets(3, 12)
+        stockGroupSelectorButton.addActionListener {
+            showStockGroupFilterPopup(stockGroupSelectorButton)
+        }
+        stockGroupBar.border = JBUI.Borders.empty(4, 2, 2, 2)
+        stockGroupBar.add(stockGroupSelectorButton)
+        stockGroupBar.add(createStockGroupCommandButton("新建分组", AllIcons.General.Add) {
+            createStockGroupFromUi()
+        })
+        stockGroupBar.add(createStockGroupCommandButton("管理分组", AllIcons.General.Settings) {
+            showStockGroupManagePopup(it)
+        })
+        panel.add(stockGroupBar, BorderLayout.SOUTH)
+        return panel
+    }
+
+    private fun createStockGroupCommandButton(
+        text: String,
+        icon: javax.swing.Icon,
+        action: (JButton) -> Unit,
+    ): JButton {
+        return JButton(text, icon).apply {
+            isFocusable = false
+            margin = JBUI.insets(3, 10)
+            addActionListener { action(this) }
+        }
     }
 
     private fun createStockListContent(): JComponent {
@@ -629,11 +674,14 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     private fun configureStockTable() {
-        stockTable.setDefaultRenderer(Any::class.java, StockTableCellRenderer())
+            stockTable.setDefaultRenderer(Any::class.java, StockTableCellRenderer())
         stockTable.columnModel.getColumn(0).preferredWidth = JBUI.scale(116)
         stockTable.columnModel.getColumn(1).preferredWidth = JBUI.scale(180)
-        stockTable.columnModel.getColumn(2).preferredWidth = JBUI.scale(88)
-        stockTable.columnModel.getColumn(3).preferredWidth = JBUI.scale(92)
+        stockTable.columnModel.getColumn(2).preferredWidth = JBUI.scale(96)
+        stockTable.columnModel.getColumn(3).preferredWidth = JBUI.scale(88)
+        stockTable.columnModel.getColumn(4).preferredWidth = JBUI.scale(92)
+        stockTable.setDefaultEditor(StockGroupTableValue::class.java, StockGroupCellEditor())
+        stockTable.columnModel.getColumn(2).cellEditor = StockGroupCellEditor()
     }
 
     private fun configureFundTable() {
@@ -749,6 +797,9 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             RefreshStockAction(),
             AddStockAction(),
             RemoveSelectedStockAction(),
+            MoveSelectedStockToGroupAction(),
+            CreateStockGroupAction(),
+            ManageStockGroupsAction(),
             OpenStockTrendAction(),
             ToggleStockListViewAction(),
             CycleQuoteSortFieldAction(),
@@ -868,10 +919,13 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     private fun renderStocks(snapshot: MoFishWatchlistState) {
+        normalizeStockGroupFilter(snapshot)
+        renderStockGroupBar(snapshot)
         val rows = buildStockRows(snapshot)
         val preferredCode = resolvePreferredStockSelectionCode(snapshot, rows)
         replaceStockRows(rows, preferredCode)
 
+        val groupText = currentStockGroupFilterLabel(snapshot)
         stockSummaryLabel.text = buildAssetSummary(
             countText = "共 ${rows.size} 支",
             profitText = if (snapshot.settingsState.showHoldingProfit) {
@@ -881,6 +935,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             } else {
                 null
             },
+            extraText = "分组 $groupText",
             sortSettings = snapshot.settingsState.sortSettings,
         )
 
@@ -890,6 +945,11 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         if (isStockView(snapshot.projectState.selectedViewId)) {
             syncActiveAssetSelection(snapshot.projectState.selectedAssetCode, selectedRow?.quote?.code)
         }
+    }
+
+    private fun renderStockGroupBar(snapshot: MoFishWatchlistState) {
+        stockGroupSelectorButton.text = "分组：${currentStockGroupFilterLabel(snapshot)}"
+        stockGroupSelectorButton.icon = AllIcons.Actions.GroupBy
     }
 
     private fun renderSettingsSummary(snapshot: MoFishWatchlistState) {
@@ -1018,11 +1078,15 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         val profitsByCode = snapshot.profitSnapshot.stockSummary.items.associateBy { it.code.lowercase() }
 
         val rows = snapshot.projectState.workspace.stockQuotes.map { quote ->
+            val groupName = snapshot.settingsState.watchlist.groupForStock(quote.code)
             StockListItem(
                 quote = quote,
+                groupName = groupName,
                 holding = holdingsByCode[quote.code.lowercase()],
                 profit = profitsByCode[quote.code.lowercase()],
             )
+        }.filter { row ->
+            stockGroupFilter == null || row.groupName?.equals(stockGroupFilter, ignoreCase = true) == true
         }
         return rows.sortedWith(stockComparator(snapshot))
     }
@@ -1128,7 +1192,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
 
     private fun stockComparator(snapshot: MoFishWatchlistState): Comparator<StockListItem> {
         val sortSettings = snapshot.settingsState.sortSettings
-        val comparator = when (sortSettings.quoteField) {
+        val quoteComparator = when (sortSettings.quoteField) {
             MoFishQuoteSortField.DISPLAY_NAME ->
                 compareBy<StockListItem> { it.quote.name.lowercase() }
             MoFishQuoteSortField.DAILY_CHANGE_PERCENT ->
@@ -1136,10 +1200,194 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             MoFishQuoteSortField.UPDATED_AT ->
                 compareBy<StockListItem> { it.quote.updatedAt }
         }
+        val comparator = compareBy<StockListItem> { stockGroupPriority(snapshot, it.groupName) }
+            .then(quoteComparator)
         return when (sortSettings.quoteDirection) {
             MoFishSortDirection.ASC -> comparator
-            MoFishSortDirection.DESC -> comparator.reversed()
+            MoFishSortDirection.DESC -> compareBy<StockListItem> { stockGroupPriority(snapshot, it.groupName) }
+                .then(quoteComparator.reversed())
         }
+    }
+
+    private fun stockGroupPriority(snapshot: MoFishWatchlistState, groupName: String?): Int {
+        val groups = snapshot.settingsState.watchlist.normalizedStockGroups()
+        if (groupName.isNullOrBlank()) {
+            return Int.MAX_VALUE
+        }
+        val index = groups.indexOfFirst { it.equals(groupName, ignoreCase = true) }
+        return if (index >= 0) index else Int.MAX_VALUE
+    }
+
+    private fun currentStockGroupFilterLabel(snapshot: MoFishWatchlistState): String {
+        val filter = stockGroupFilter
+        val groups = snapshot.settingsState.watchlist.normalizedStockGroups()
+        if (filter.isNullOrBlank()) {
+            return "全部"
+        }
+        return groups.firstOrNull { it.equals(filter, ignoreCase = true) } ?: filter
+    }
+
+    private fun availableStockGroups(snapshot: MoFishWatchlistState): List<String> {
+        return snapshot.settingsState.watchlist.normalizedStockGroups()
+            .map(::normalizeStockGroupValue)
+            .filter { it.isNotEmpty() }
+            .distinctBy { it.lowercase() }
+    }
+
+    private fun stockGroupCounts(snapshot: MoFishWatchlistState): Map<String, Int> {
+        return snapshot.projectState.workspace.stockQuotes
+            .mapNotNull { quote -> snapshot.settingsState.watchlist.groupForStock(quote.code) }
+            .groupingBy { it.lowercase() }
+            .eachCount()
+    }
+
+    private fun normalizeStockGroupFilter(snapshot: MoFishWatchlistState) {
+        val filter = stockGroupFilter ?: return
+        val matchedGroup = availableStockGroups(snapshot).firstOrNull { it.equals(filter, ignoreCase = true) }
+        stockGroupFilter = matchedGroup
+    }
+
+    private fun stockGroupLabel(
+        groupName: String?,
+        count: Int? = null,
+    ): String {
+        val displayName = groupName?.takeIf { it.isNotBlank() } ?: ALL_STOCK_GROUP
+        return if (count == null) displayName else "$displayName（$count）"
+    }
+
+    private fun createStockGroupFilterPopup(snapshot: MoFishWatchlistState): JPopupMenu {
+        val popup = JPopupMenu()
+        val groups = availableStockGroups(snapshot)
+        val counts = stockGroupCounts(snapshot)
+        popup.add(JMenuItem(stockGroupLabel(null, snapshot.projectState.workspace.stockQuotes.size)).apply {
+            icon = if (stockGroupFilter == null) AllIcons.Actions.Checked else null
+            addActionListener {
+                stockGroupFilter = null
+                watchlistService.selectView("stocks")
+                render(watchlistService.snapshot() ?: snapshot)
+            }
+        })
+        groups.forEach { group ->
+            popup.add(JMenuItem(stockGroupLabel(group, counts[group.lowercase()] ?: 0)).apply {
+                icon = if (group.equals(stockGroupFilter, ignoreCase = true)) AllIcons.Actions.Checked else null
+                addActionListener {
+                    stockGroupFilter = group
+                    watchlistService.selectView("stocks")
+                    render(watchlistService.snapshot() ?: snapshot)
+                }
+            })
+        }
+        popup.addSeparator()
+        popup.add(JMenuItem("新建分组", AllIcons.General.Add).apply {
+            addActionListener { createStockGroupFromUi() }
+        })
+        popup.add(JMenuItem("管理分组", AllIcons.General.Settings).apply {
+            addActionListener { showStockGroupManagePopup(stockGroupSelectorButton) }
+        })
+        return popup
+    }
+
+    private fun showStockGroupFilterPopup(anchor: Component) {
+        val snapshot = watchlistService.snapshot() ?: return
+        val popup = createStockGroupFilterPopup(snapshot)
+        val source = stockPopupAnchor(anchor)
+        popup.show(source, 0, source.height.coerceAtLeast(1))
+    }
+
+    private fun createStockGroupFromUi() {
+        val groupName = askStockGroupName(
+            title = "新建摸鱼股票分组",
+            message = "输入新的分组名称：",
+            initialValue = "",
+        ) ?: return
+        watchlistService.addStockGroup(groupName)
+        stockGroupFilter = groupName
+        watchlistService.selectView("stocks")
+        eventStatus.text = "已创建摸鱼股票分组 $groupName。"
+    }
+
+    private fun showStockGroupManagePopup(anchor: Component) {
+        val snapshot = watchlistService.snapshot() ?: return
+        val groups = availableStockGroups(snapshot)
+        val popup = JPopupMenu()
+        if (groups.isEmpty()) {
+            popup.add(JMenuItem("暂无可管理分组").apply { isEnabled = false })
+        }
+        groups.forEachIndexed { index, group ->
+            val menu = JMenu(group)
+            menu.add(JMenuItem("设为当前分组", AllIcons.Actions.Checked).apply {
+                addActionListener {
+                    stockGroupFilter = group
+                    watchlistService.selectView("stocks")
+                    render(watchlistService.snapshot() ?: snapshot)
+                }
+            })
+            menu.add(JMenuItem("上移", AllIcons.Actions.MoveUp).apply {
+                isEnabled = index > 0
+                addActionListener {
+                    watchlistService.moveStockGroup(group, -1)
+                    watchlistService.selectView("stocks")
+                    eventStatus.text = "已前移摸鱼股票分组 $group。"
+                }
+            })
+            menu.add(JMenuItem("下移", AllIcons.Actions.MoveDown).apply {
+                isEnabled = index < groups.lastIndex
+                addActionListener {
+                    watchlistService.moveStockGroup(group, 1)
+                    watchlistService.selectView("stocks")
+                    eventStatus.text = "已后移摸鱼股票分组 $group。"
+                }
+            })
+            menu.addSeparator()
+            menu.add(JMenuItem("删除", AllIcons.General.Remove).apply {
+                addActionListener {
+                    deleteStockGroup(group)
+                }
+            })
+            popup.add(menu)
+        }
+        if (groups.isNotEmpty()) {
+            popup.addSeparator()
+        }
+        popup.add(JMenuItem("新建分组", AllIcons.General.Add).apply {
+            addActionListener { createStockGroupFromUi() }
+        })
+        val source = stockPopupAnchor(anchor)
+        popup.show(source, 0, source.height.coerceAtLeast(1))
+    }
+
+    private fun deleteStockGroup(groupName: String) {
+        val confirm = Messages.showYesNoDialog(
+            project,
+            "确认删除股票分组 $groupName 吗？该分组下的股票会变为无分组。",
+            "删除摸鱼股票分组",
+            AllIcons.General.WarningDialog,
+        )
+        if (confirm != Messages.YES) {
+            return
+        }
+        watchlistService.removeStockGroup(groupName)
+        if (groupName.equals(stockGroupFilter, ignoreCase = true)) {
+            stockGroupFilter = null
+        }
+        watchlistService.selectView("stocks")
+        eventStatus.text = "已删除摸鱼股票分组 $groupName。"
+    }
+
+    private fun askStockGroupName(
+        title: String,
+        message: String,
+        initialValue: String = "",
+    ): String? {
+        val groupName = Messages.showInputDialog(
+            project,
+            message,
+            title,
+            null,
+            initialValue,
+            null,
+        )?.trim()
+        return groupName?.takeIf { it.isNotEmpty() }
     }
 
     private fun buildStockDetailHtml(
@@ -1166,6 +1414,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             <body style='padding: 8px;'>
               <h3>${escape(row.quote.name)}</h3>
               <p>代码：<code>${escape(row.quote.code)}</code></p>
+              <p>分组：<code>${escape(row.groupName ?: "无分组")}</code></p>
               <p>交易所：<code>${row.quote.exchange}</code> | 状态：<code>${row.quote.status}</code></p>
               <p>现价：<code>${row.quote.currentPrice?.toPlainString() ?: "--"}</code></p>
               <p>涨跌幅：<code>${row.quote.changePercent?.toPlainString() ?: "--"}%</code></p>
@@ -1809,6 +2058,26 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         )
     }
 
+    private fun installStockGroupColumnPopup() {
+        stockTable.addMouseListener(
+            object : MouseAdapter() {
+                override fun mouseClicked(event: MouseEvent) {
+                    if (event.clickCount != 1 || event.isPopupTrigger) {
+                        return
+                    }
+                    val row = stockTable.rowAtPoint(event.point)
+                    val column = stockTable.columnAtPoint(event.point)
+                    if (row < 0 || column != 2) {
+                        return
+                    }
+                    stockTable.selectionModel.setSelectionInterval(row, row)
+                    val item = stockTableModel.itemAt(stockTable.convertRowIndexToModel(row)) ?: return
+                    showStockAssignmentPopup(item, stockTable, event.x, stockTable.getCellRect(row, column, true).y + stockTable.rowHeight)
+                }
+            }
+        )
+    }
+
     private fun showContextPopup(
         component: JComponent,
         popupPlace: String,
@@ -2185,6 +2454,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
                 <html>
                 <body>
                   <b>${escape(row.quote.name)}</b> <span style='color:#888888;'>${escape(row.quote.code.uppercase())}</span><br/>
+                  分组：${escape(row.groupName ?: "无分组")}<br/>
                   现价：$price　涨跌幅：$percent$profitLine
                 </body>
                 </html>
@@ -2312,13 +2582,14 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
 
         override fun getRowCount(): Int = rows.size
 
-        override fun getColumnCount(): Int = 4
+        override fun getColumnCount(): Int = 5
 
         override fun getColumnName(column: Int): String {
             return when (column) {
                 0 -> "代码"
                 1 -> "名称"
-                2 -> "现价"
+                2 -> "分组"
+                3 -> "现价"
                 else -> "涨跌幅"
             }
         }
@@ -2328,7 +2599,8 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             return when (columnIndex) {
                 0 -> row.quote.code.uppercase()
                 1 -> row.quote.name
-                2 -> formatDecimal(row.quote.currentPrice)
+                2 -> StockGroupTableValue(row.groupName)
+                3 -> formatDecimal(row.quote.currentPrice)
                 else -> formatPercent(stockChangePercent(row.quote))
             }
         }
@@ -2531,14 +2803,45 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             val label = component as? JLabel ?: return component
             val item = stockTableModel.itemAt(stockTable.convertRowIndexToModel(row)) ?: return component
             label.border = JBUI.Borders.empty(0, 8)
-            label.horizontalAlignment = if (column >= 2) JLabel.RIGHT else JLabel.LEFT
-            label.foreground = if (column >= 2) {
-                marketColor(stockChangePercent(item.quote))
-            } else {
-                JBColor.foreground()
+            label.horizontalAlignment = if (column >= 3) JLabel.RIGHT else JLabel.LEFT
+            label.foreground = when (column) {
+                2 -> JBColor.namedColor("Link.activeForeground", JBColor(Color(0x2F6BFF), Color(0x86A9FF)))
+                4 -> marketColor(stockChangePercent(item.quote))
+                else -> JBColor.foreground()
             }
             return component
         }
+    }
+
+    private inner class StockGroupCellEditor : TableCellEditor {
+        private val label = JLabel()
+
+        override fun getTableCellEditorComponent(
+            table: JTable?,
+            value: Any?,
+            isSelected: Boolean,
+            row: Int,
+            column: Int,
+        ): Component {
+            label.text = value?.toString().orEmpty()
+            label.border = JBUI.Borders.empty(0, 8)
+            label.foreground = JBColor.namedColor("Link.activeForeground", JBColor(Color(0x2F6BFF), Color(0x86A9FF)))
+            return label
+        }
+
+        override fun getCellEditorValue(): Any = label.text
+
+        override fun isCellEditable(eventObject: java.util.EventObject?): Boolean = true
+
+        override fun shouldSelectCell(eventObject: java.util.EventObject?): Boolean = true
+
+        override fun stopCellEditing(): Boolean = true
+
+        override fun cancelCellEditing() = Unit
+
+        override fun addCellEditorListener(listener: javax.swing.event.CellEditorListener?) = Unit
+
+        override fun removeCellEditorListener(listener: javax.swing.event.CellEditorListener?) = Unit
     }
 
     private inner class FundTableCellRenderer : DefaultTableCellRenderer() {
@@ -2797,6 +3100,101 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         }
     }
 
+    private inner class CreateStockGroupAction : DumbAwareAction("新建分组", "创建摸鱼股票分组", AllIcons.General.Add) {
+        override fun actionPerformed(event: AnActionEvent) {
+            createStockGroupFromUi()
+        }
+    }
+
+    private inner class ManageStockGroupsAction : DumbAwareAction("管理分组", "管理摸鱼股票分组排序与删除", AllIcons.General.Settings) {
+        override fun actionPerformed(event: AnActionEvent) {
+            showStockGroupManagePopup(event.inputEvent?.component ?: stockGroupSelectorButton)
+        }
+    }
+
+    private inner class MoveSelectedStockToGroupAction : DumbAwareAction(
+        "移动分组",
+        "将当前选中的摸鱼股票移动到指定分组",
+        AllIcons.Actions.GroupBy,
+    ) {
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedStockRow() != null
+        }
+
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedStockRow() ?: return
+            showStockAssignmentPopup(selected, stockPopupAnchor(event.inputEvent?.component))
+        }
+    }
+
+    private fun createStockAssignmentPopup(selected: StockListItem): JPopupMenu {
+        val snapshot = watchlistService.snapshot()
+        val groups = snapshot?.let(::availableStockGroups).orEmpty()
+        val popup = JPopupMenu()
+        popup.add(JMenuItem("无分组").apply {
+            icon = if (selected.groupName.isNullOrBlank()) AllIcons.Actions.Checked else null
+            addActionListener { moveSelectedStockToGroup(selected, "") }
+        })
+        if (groups.isNotEmpty()) {
+            popup.addSeparator()
+        }
+        groups.forEach { group ->
+            popup.add(JMenuItem(group).apply {
+                icon = if (selected.groupName?.equals(group, ignoreCase = true) == true) {
+                    AllIcons.Actions.Checked
+                } else {
+                    null
+                }
+                addActionListener { moveSelectedStockToGroup(selected, group) }
+            })
+        }
+        popup.addSeparator()
+        popup.add(JMenuItem("新建分组...", AllIcons.General.Add).apply {
+            addActionListener {
+                val groupName = askStockGroupName(
+                    title = "移动到新分组",
+                    message = "输入新的分组名称：",
+                    initialValue = selected.groupName.orEmpty(),
+                ) ?: return@addActionListener
+                moveSelectedStockToGroup(selected, groupName)
+            }
+        })
+        return popup
+    }
+
+    private fun showStockAssignmentPopup(
+        selected: StockListItem,
+        anchor: Component,
+        x: Int = 0,
+        y: Int = anchor.height.coerceAtLeast(1),
+    ) {
+        val source = stockPopupAnchor(anchor)
+        val popupX = if (source === anchor) x else 0
+        val popupY = if (source === anchor) y else source.height.coerceAtLeast(1)
+        createStockAssignmentPopup(selected).show(source, popupX, popupY)
+    }
+
+    private fun stockPopupAnchor(preferredComponent: Component?): Component {
+        return listOfNotNull(
+            preferredComponent,
+            if (stockViewMode == AssetListViewMode.CARD) stockList else stockTable,
+            stockListContent,
+            stockListPanel.takeIf { ::stockListPanel.isInitialized },
+        ).firstOrNull { it.isShowing } ?: this
+    }
+
+    private fun moveSelectedStockToGroup(selected: StockListItem, groupName: String) {
+        watchlistService.assignStockToGroup(selected.quote.code, groupName)
+        stockGroupFilter = normalizeStockGroupValue(groupName).takeIf { it.isNotEmpty() }
+        watchlistService.selectView("stocks")
+        watchlistService.selectAsset(selected.quote.code)
+        eventStatus.text = if (groupName.isBlank()) {
+            "已将 ${selected.quote.name} 设为无分组。"
+        } else {
+            "已将 ${selected.quote.name} 移动到 $groupName。"
+        }
+    }
+
     private inner class RemoveSelectedStockAction : DumbAwareAction("删除摸鱼股票", "删除当前选中的摸鱼股票", AllIcons.General.Remove) {
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedStockRow() != null
@@ -2957,9 +3355,16 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
 
     private data class StockListItem(
         val quote: StockQuote,
+        val groupName: String?,
         val holding: HoldingConfig?,
         val profit: PositionProfitSnapshot?,
     )
+
+    private data class StockGroupTableValue(
+        val groupName: String?,
+    ) {
+        override fun toString(): String = groupName?.takeIf { it.isNotBlank() } ?: "无分组"
+    }
 
     private data class IndexListItem(
         val quote: StockQuote,
@@ -3111,6 +3516,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     private companion object {
+        private const val ALL_STOCK_GROUP = "全部"
         const val LIST_CARD = "list"
         const val DETAIL_CARD = "detail"
         const val CARD_LIST_CARD = "card"
