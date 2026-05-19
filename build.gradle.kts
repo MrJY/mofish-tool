@@ -20,3 +20,7 @@ dependencies {
         testFramework(TestFrameworkType.Platform)
     }
 }
+
+tasks.named("buildSearchableOptions") {
+    enabled = false
+}

@@ -1,26 +1,15 @@
 package online.mofish.tool.services
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
+import kotlinx.coroutines.flow.*
 import online.mofish.tool.data.MoFishDataSource
 import online.mofish.tool.data.RemoteMoFishDataSource
 import online.mofish.tool.domain.MoFishWorkspace
 import online.mofish.tool.settings.MoFishSettingsService
 import online.mofish.tool.settings.MoFishSettingsState
-import online.mofish.tool.state.MoFishAppState
-import online.mofish.tool.state.MoFishMemoryCacheState
-import online.mofish.tool.state.MoFishProjectEvent
-import online.mofish.tool.state.MoFishProjectState
-import online.mofish.tool.state.MoFishSelectionChangedEvent
-import online.mofish.tool.state.MoFishWorkspaceRefreshedEvent
-import online.mofish.tool.state.WorkspaceLoadOrigin
+import online.mofish.tool.state.*
 import java.time.Instant
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 @Service(Service.Level.PROJECT)
 class MoFishProjectService(
@@ -154,11 +143,11 @@ class MoFishProjectService(
 
     private fun MoFishWorkspace.matches(settingsState: MoFishSettingsState): Boolean {
         return fundQuotes.map { it.code } == settingsState.watchlist.fundCodes &&
-            stockQuotes.map { it.code } == settingsState.watchlist.stockCodes &&
-            cryptoQuotes.map { it.code } == settingsState.watchlist.cryptoIds &&
-            holdings == settingsState.holdings &&
-            reminderRules == settingsState.reminders &&
-            aiConfig == settingsState.aiConfig
+                stockQuotes.map { it.code } == settingsState.watchlist.stockCodes &&
+                cryptoQuotes.map { it.code } == settingsState.watchlist.cryptoIds &&
+                holdings == settingsState.holdings &&
+                reminderRules == settingsState.reminders &&
+                aiConfig == settingsState.aiConfig
     }
 
     private fun publishSelectionChanged(state: MoFishProjectState) {

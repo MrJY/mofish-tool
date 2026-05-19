@@ -1,10 +1,12 @@
 <idea-plugin>
     <id>online.mofish.tool</id>
-    <name>摸鱼工具</name>
-    <vendor url="https://github.com/lvjiayu">mofish</vendor>
+    <name>MoFish Tool</name>
+    <vendor url="https://github.com/MrJY/mofish-tool">MrJY</vendor>
     <description><![CDATA[
-        <p>摸鱼工具是一款 IntelliJ IDEA 摸鱼助手插件。</p>
-        <p>内置多个摸鱼行情模块，支持摸鱼股票、摸鱼基金、摸鱼指数、摸鱼虚拟币、摸鱼外汇行情查看，持仓盈亏计算，价格提醒等功能。</p>
+        <p>MoFish Tool is a lightweight IntelliJ IDEA plugin for tracking market data without leaving the IDE.</p>
+        <p>It provides watchlists, market quotes, portfolio profit calculations, configurable refresh behavior, status bar summaries, and price or percentage-change reminders.</p>
+        <p>Supported quote modules include stocks, market indexes, funds, cryptocurrencies, and foreign exchange rates.</p>
+        <p>摸鱼工具是一款 IntelliJ IDEA 行情助手插件，支持股票、指数、基金、虚拟币、外汇行情、持仓盈亏和价格提醒。</p>
     ]]></description>
     <idea-version since-build="253"/>
     <depends>com.intellij.modules.platform</depends>

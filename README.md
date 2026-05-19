@@ -11,7 +11,7 @@
 各模块在界面和产品概念上独立展示，底层共享行情拉取、缓存、自动刷新、持仓收益计算、提醒通知和设置持久化能力。
 
 - **插件 ID**：`online.mofish.tool`
-- **版本**：`1.0.0-SNAPSHOT`
+- **版本**：`1.0.0`
 - **支持平台**：IntelliJ IDEA `2025.3+`
 - **主要语言**：Kotlin
 - **UI 技术**：IntelliJ Swing/JB UI
@@ -96,3 +96,9 @@
 ```
 
 发布前需配置 JetBrains Marketplace Token，并按目标版本执行 `verifyPlugin`。
+
+## 许可与隐私
+
+- License: [MIT](LICENSE)
+- EULA: [EULA.md](EULA.md)
+- Privacy Policy: [PRIVACY.md](PRIVACY.md)
