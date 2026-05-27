@@ -21,8 +21,8 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.FlowLayout
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
 import java.math.BigDecimal
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JButton
@@ -31,13 +31,12 @@ import javax.swing.JEditorPane
 import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.JMenu
-import javax.swing.JMenuItem
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JTable
 import javax.swing.ListCellRenderer
+import javax.swing.SwingUtilities
 import javax.swing.table.DefaultTableCellRenderer
-import javax.swing.table.TableCellEditor
 
 internal class StockModulePanel(
     callbacks: AssetModuleCallbacks,
@@ -51,37 +50,41 @@ internal class StockModulePanel(
         isEditable = false
         putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true)
     }
-    private val stockGroupBar = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(12), 0))
-    private val stockGroupSelectorButton = JButton()
+    private val stockGroupBar = JPanel(GridBagLayout())
+    private val stockGroupButtonRow = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0))
+    private val stockGroupSelectorButton: JButton = MoFishUiStyle.groupDropdownButton {
+        showStockGroupFilterPopup(it)
+    }
     private var stockGroupFilter: String? = null
 
     override fun moduleViewId(): String = "stocks"
 
     override fun hasDetailPage(): Boolean = true
 
-    override fun createComponent(): JComponent {
-        val component = super.createComponent()
-        installStockGroupColumnPopup()
-        return component
-    }
-
     override fun createToolbarPanel(): JComponent {
-        val panel = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(6)))
+        val panel = JPanel(BorderLayout())
         panel.add(super.createToolbarPanel(), BorderLayout.NORTH)
 
-        stockGroupSelectorButton.isFocusable = false
-        stockGroupSelectorButton.margin = JBUI.insets(3, 12)
-        stockGroupSelectorButton.addActionListener {
-            showStockGroupFilterPopup(stockGroupSelectorButton)
-        }
-        stockGroupBar.border = JBUI.Borders.empty(4, 2, 2, 2)
-        stockGroupBar.add(stockGroupSelectorButton)
-        stockGroupBar.add(createStockGroupCommandButton("新建分组", AllIcons.General.Add) {
-            createStockGroupFromUi()
-        })
-        stockGroupBar.add(createStockGroupCommandButton("管理分组", AllIcons.General.Settings) {
-            showStockGroupManagePopup(it)
-        })
+        stockGroupButtonRow.isOpaque = false
+        stockGroupBar.isOpaque = false
+        stockGroupBar.border = JBUI.Borders.empty(0, 2, 0, 2)
+        stockGroupBar.add(
+            stockGroupButtonRow,
+            GridBagConstraints().apply {
+                gridx = 0
+                weightx = 1.0
+                fill = GridBagConstraints.HORIZONTAL
+                anchor = GridBagConstraints.WEST
+            },
+        )
+        stockGroupBar.add(
+            stockGroupSelectorButton,
+            GridBagConstraints().apply {
+                gridx = 1
+                weightx = 0.0
+                anchor = GridBagConstraints.EAST
+            },
+        )
         panel.add(stockGroupBar, BorderLayout.SOUTH)
         return panel
     }
@@ -136,11 +139,8 @@ internal class StockModulePanel(
         table.setDefaultRenderer(Any::class.java, StockTableCellRenderer())
         table.columnModel.getColumn(0).preferredWidth = JBUI.scale(116)
         table.columnModel.getColumn(1).preferredWidth = JBUI.scale(180)
-        table.columnModel.getColumn(2).preferredWidth = JBUI.scale(96)
-        table.columnModel.getColumn(3).preferredWidth = JBUI.scale(88)
-        table.columnModel.getColumn(4).preferredWidth = JBUI.scale(92)
-        table.setDefaultEditor(StockGroupTableValue::class.java, StockGroupCellEditor())
-        table.columnModel.getColumn(2).cellEditor = StockGroupCellEditor()
+        table.columnModel.getColumn(2).preferredWidth = JBUI.scale(88)
+        table.columnModel.getColumn(3).preferredWidth = JBUI.scale(92)
     }
 
     override fun createToolbarActions(): List<AnAction> {
@@ -162,8 +162,6 @@ internal class StockModulePanel(
             AddStockAction(),
             RemoveSelectedStockAction(),
             MoveSelectedStockToGroupAction(),
-            CreateStockGroupAction(),
-            ManageStockGroupsAction(),
             OpenStockTrendAction(),
             ToggleStockListViewAction(),
             CycleQuoteSortFieldAction(),
@@ -175,21 +173,39 @@ internal class StockModulePanel(
         openSelectedStockDetail()
     }
 
-    private fun createStockGroupCommandButton(
-        text: String,
-        icon: javax.swing.Icon,
-        action: (JButton) -> Unit,
-    ): JButton {
-        return JButton(text, icon).apply {
-            isFocusable = false
-            margin = JBUI.insets(3, 10)
-            addActionListener { action(this) }
+    private fun renderStockGroupBar(snapshot: MoFishWatchlistState) {
+        val groups = availableStockGroups(snapshot)
+        val counts = stockGroupCounts(snapshot)
+        val current = stockGroupFilter
+        val visibleGroups = listOf<String?>(null) + groups.take(maxVisibleStockGroups())
+        stockGroupButtonRow.removeAll()
+        visibleGroups.forEach { group ->
+            val selected = when {
+                group == null -> current == null
+                current == null -> false
+                else -> group.equals(current, ignoreCase = true)
+            }
+            val count = if (group == null) snapshot.projectState.workspace.stockQuotes.size else counts[group.lowercase()] ?: 0
+            stockGroupButtonRow.add(
+                MoFishUiStyle.groupChip(stockGroupLabel(group, count), selected) {
+                    stockGroupFilter = group
+                    callbacks.watchlistService.selectView(moduleViewId())
+                    render(callbacks.watchlistService.snapshot() ?: snapshot)
+                }
+            )
         }
+        stockGroupButtonRow.revalidate()
+        stockGroupButtonRow.repaint()
     }
 
-    private fun renderStockGroupBar(snapshot: MoFishWatchlistState) {
-        stockGroupSelectorButton.text = "分组：${currentStockGroupFilterLabel(snapshot)}"
-        stockGroupSelectorButton.icon = AllIcons.Actions.GroupBy
+    private fun maxVisibleStockGroups(): Int {
+        val width = SwingUtilities.getWindowAncestor(this)?.width ?: width
+        return when {
+            width >= JBUI.scale(1200) -> 5
+            width >= JBUI.scale(980) -> 4
+            width >= JBUI.scale(760) -> 3
+            else -> 2
+        }
     }
 
     private fun stockComparator(snapshot: MoFishWatchlistState): Comparator<StockListItem> {
@@ -258,31 +274,31 @@ internal class StockModulePanel(
         val popup = JPopupMenu()
         val groups = availableStockGroups(snapshot)
         val counts = stockGroupCounts(snapshot)
-        popup.add(JMenuItem(stockGroupLabel(null, snapshot.projectState.workspace.stockQuotes.size)).apply {
-            icon = if (stockGroupFilter == null) AllIcons.Actions.Checked else null
-            addActionListener {
+        popup.add(
+            MoFishUiStyle.menuItem(
+                stockGroupLabel(null, snapshot.projectState.workspace.stockQuotes.size),
+                selected = stockGroupFilter == null,
+            ) {
                 stockGroupFilter = null
                 callbacks.watchlistService.selectView(moduleViewId())
                 render(callbacks.watchlistService.snapshot() ?: snapshot)
             }
-        })
+        )
         groups.forEach { group ->
-            popup.add(JMenuItem(stockGroupLabel(group, counts[group.lowercase()] ?: 0)).apply {
-                icon = if (group.equals(stockGroupFilter, ignoreCase = true)) AllIcons.Actions.Checked else null
-                addActionListener {
+            popup.add(
+                MoFishUiStyle.menuItem(
+                    stockGroupLabel(group, counts[group.lowercase()] ?: 0),
+                    selected = group.equals(stockGroupFilter, ignoreCase = true),
+                ) {
                     stockGroupFilter = group
                     callbacks.watchlistService.selectView(moduleViewId())
                     render(callbacks.watchlistService.snapshot() ?: snapshot)
                 }
-            })
+            )
         }
         popup.addSeparator()
-        popup.add(JMenuItem("新建分组", AllIcons.General.Add).apply {
-            addActionListener { createStockGroupFromUi() }
-        })
-        popup.add(JMenuItem("管理分组", AllIcons.General.Settings).apply {
-            addActionListener { showStockGroupManagePopup(stockGroupSelectorButton) }
-        })
+        popup.add(MoFishUiStyle.menuItem("新建分组") { createStockGroupFromUi() })
+        popup.add(MoFishUiStyle.menuItem("管理分组") { showStockGroupManagePopup(stockGroupSelectorButton) })
         return popup
     }
 
@@ -309,45 +325,39 @@ internal class StockModulePanel(
         val groups = availableStockGroups(snapshot)
         val popup = JPopupMenu()
         if (groups.isEmpty()) {
-            popup.add(JMenuItem("暂无可管理分组").apply { isEnabled = false })
+            popup.add(MoFishUiStyle.menuItem("暂无可管理分组") { }.apply { isEnabled = false })
         }
         groups.forEachIndexed { index, group ->
             val menu = JMenu(group)
-            menu.add(JMenuItem("设为当前分组", AllIcons.Actions.Checked).apply {
-                addActionListener {
+            menu.add(
+                MoFishUiStyle.menuItem("设为当前分组", selected = group.equals(stockGroupFilter, ignoreCase = true)) {
                     stockGroupFilter = group
                     callbacks.watchlistService.selectView(moduleViewId())
                     render(callbacks.watchlistService.snapshot() ?: snapshot)
                 }
-            })
-            menu.add(JMenuItem("上移", AllIcons.Actions.MoveUp).apply {
-                isEnabled = index > 0
-                addActionListener {
+            )
+            menu.add(
+                MoFishUiStyle.menuItem("上移") {
                     callbacks.watchlistService.moveStockGroup(group, -1)
                     callbacks.watchlistService.selectView(moduleViewId())
                     callbacks.eventStatus.text = "已前移摸鱼股票分组 $group。"
-                }
-            })
-            menu.add(JMenuItem("下移", AllIcons.Actions.MoveDown).apply {
-                isEnabled = index < groups.lastIndex
-                addActionListener {
+                }.apply { isEnabled = index > 0 }
+            )
+            menu.add(
+                MoFishUiStyle.menuItem("下移") {
                     callbacks.watchlistService.moveStockGroup(group, 1)
                     callbacks.watchlistService.selectView(moduleViewId())
                     callbacks.eventStatus.text = "已后移摸鱼股票分组 $group。"
-                }
-            })
+                }.apply { isEnabled = index < groups.lastIndex }
+            )
             menu.addSeparator()
-            menu.add(JMenuItem("删除", AllIcons.General.Remove).apply {
-                addActionListener { deleteStockGroup(group) }
-            })
+            menu.add(MoFishUiStyle.menuItem("删除") { deleteStockGroup(group) })
             popup.add(menu)
         }
         if (groups.isNotEmpty()) {
             popup.addSeparator()
         }
-        popup.add(JMenuItem("新建分组", AllIcons.General.Add).apply {
-            addActionListener { createStockGroupFromUi() }
-        })
+        popup.add(MoFishUiStyle.menuItem("新建分组") { createStockGroupFromUi() })
         val source = stockPopupAnchor(anchor)
         popup.show(source, 0, source.height.coerceAtLeast(1))
     }
@@ -442,26 +452,6 @@ internal class StockModulePanel(
         return "<ul>$content</ul>"
     }
 
-    private fun installStockGroupColumnPopup() {
-        table.addMouseListener(
-            object : MouseAdapter() {
-                override fun mouseClicked(event: MouseEvent) {
-                    if (event.clickCount != 1 || event.isPopupTrigger) {
-                        return
-                    }
-                    val row = table.rowAtPoint(event.point)
-                    val column = table.columnAtPoint(event.point)
-                    if (row < 0 || column != 2) {
-                        return
-                    }
-                    table.selectionModel.setSelectionInterval(row, row)
-                    val item = tableModel.itemAt(table.convertRowIndexToModel(row)) ?: return
-                    showStockAssignmentPopup(item, table, event.x, table.getCellRect(row, column, true).y + table.rowHeight)
-                }
-            }
-        )
-    }
-
     private fun stockChangePercent(quote: StockQuote): BigDecimal? {
         return quote.changePercent ?: quote.afterHoursChangePercent
     }
@@ -518,14 +508,13 @@ internal class StockModulePanel(
     }
 
     private inner class StockTableModel : AssetTableModel<StockListItem>() {
-        override fun getColumnCount(): Int = 5
+        override fun getColumnCount(): Int = 4
 
         override fun getColumnName(column: Int): String {
             return when (column) {
                 0 -> "代码"
                 1 -> "名称"
-                2 -> "分组"
-                3 -> "现价"
+                2 -> "现价"
                 else -> "涨跌幅"
             }
         }
@@ -535,8 +524,7 @@ internal class StockModulePanel(
             return when (columnIndex) {
                 0 -> row.quote.code.uppercase()
                 1 -> row.quote.name
-                2 -> StockGroupTableValue(row.groupName)
-                3 -> formatDecimal(row.quote.currentPrice)
+                2 -> formatDecimal(row.quote.currentPrice)
                 else -> formatPercent(stockChangePercent(row.quote))
             }
         }
@@ -557,45 +545,13 @@ internal class StockModulePanel(
             val label = component as? JLabel ?: return component
             val item = tableModel.itemAt(this@StockModulePanel.table.convertRowIndexToModel(row)) ?: return component
             label.border = JBUI.Borders.empty(0, 8)
-            label.horizontalAlignment = if (column >= 3) JLabel.RIGHT else JLabel.LEFT
+            label.horizontalAlignment = if (column >= 2) JLabel.RIGHT else JLabel.LEFT
             label.foreground = when (column) {
-                2 -> JBColor.namedColor("Link.activeForeground", JBColor(Color(0x2F6BFF), Color(0x86A9FF)))
-                4 -> marketColor(stockChangePercent(item.quote))
+                3 -> marketColor(stockChangePercent(item.quote))
                 else -> JBColor.foreground()
             }
             return component
         }
-    }
-
-    private inner class StockGroupCellEditor : TableCellEditor {
-        private val label = JLabel()
-
-        override fun getTableCellEditorComponent(
-            table: JTable?,
-            value: Any?,
-            isSelected: Boolean,
-            row: Int,
-            column: Int,
-        ): Component {
-            label.text = value?.toString().orEmpty()
-            label.border = JBUI.Borders.empty(0, 8)
-            label.foreground = JBColor.namedColor("Link.activeForeground", JBColor(Color(0x2F6BFF), Color(0x86A9FF)))
-            return label
-        }
-
-        override fun getCellEditorValue(): Any = label.text
-
-        override fun isCellEditable(eventObject: java.util.EventObject?): Boolean = true
-
-        override fun shouldSelectCell(eventObject: java.util.EventObject?): Boolean = true
-
-        override fun stopCellEditing(): Boolean = true
-
-        override fun cancelCellEditing() = Unit
-
-        override fun addCellEditorListener(listener: javax.swing.event.CellEditorListener?) = Unit
-
-        override fun removeCellEditorListener(listener: javax.swing.event.CellEditorListener?) = Unit
     }
 
     private inner class RefreshStockAction : DumbAwareAction(
@@ -639,18 +595,6 @@ internal class StockModulePanel(
         }
     }
 
-    private inner class CreateStockGroupAction : DumbAwareAction("新建分组", "创建摸鱼股票分组", AllIcons.General.Add) {
-        override fun actionPerformed(event: AnActionEvent) {
-            createStockGroupFromUi()
-        }
-    }
-
-    private inner class ManageStockGroupsAction : DumbAwareAction("管理分组", "管理摸鱼股票分组排序与删除", AllIcons.General.Settings) {
-        override fun actionPerformed(event: AnActionEvent) {
-            showStockGroupManagePopup(event.inputEvent?.component ?: stockGroupSelectorButton)
-        }
-    }
-
     private inner class MoveSelectedStockToGroupAction : DumbAwareAction(
         "移动分组",
         "将当前选中的摸鱼股票移动到指定分组",
@@ -670,34 +614,21 @@ internal class StockModulePanel(
         val snapshot = callbacks.watchlistService.snapshot()
         val groups = snapshot?.let(::availableStockGroups).orEmpty()
         val popup = JPopupMenu()
-        popup.add(JMenuItem("无分组").apply {
-            icon = if (selected.groupName.isNullOrBlank()) AllIcons.Actions.Checked else null
-            addActionListener { moveSelectedStockToGroup(selected, "") }
-        })
+        popup.add(
+            MoFishUiStyle.menuItem("无分组", selected = selected.groupName.isNullOrBlank()) {
+                moveSelectedStockToGroup(selected, "")
+            }
+        )
         if (groups.isNotEmpty()) {
             popup.addSeparator()
         }
         groups.forEach { group ->
-            popup.add(JMenuItem(group).apply {
-                icon = if (selected.groupName?.equals(group, ignoreCase = true) == true) {
-                    AllIcons.Actions.Checked
-                } else {
-                    null
+            popup.add(
+                MoFishUiStyle.menuItem(group, selected = selected.groupName?.equals(group, ignoreCase = true) == true) {
+                    moveSelectedStockToGroup(selected, group)
                 }
-                addActionListener { moveSelectedStockToGroup(selected, group) }
-            })
+            )
         }
-        popup.addSeparator()
-        popup.add(JMenuItem("新建分组...", AllIcons.General.Add).apply {
-            addActionListener {
-                val groupName = askStockGroupName(
-                    title = "移动到新分组",
-                    message = "输入新的分组名称：",
-                    initialValue = selected.groupName.orEmpty(),
-                ) ?: return@addActionListener
-                moveSelectedStockToGroup(selected, groupName)
-            }
-        })
         return popup
     }
 

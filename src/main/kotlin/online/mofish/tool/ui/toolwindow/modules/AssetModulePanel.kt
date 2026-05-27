@@ -194,7 +194,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
             JBUI.Borders.customLine(com.intellij.ui.JBColor.border(), 1),
             JBUI.Borders.empty(8),
         )
-        panel.background = com.intellij.ui.JBColor(java.awt.Color(0xFFFFFF), java.awt.Color(0x25272B))
+        panel.background = MoFishUiStyle.surface
         panel.add(content, BorderLayout.CENTER)
         return panel
     }
@@ -209,7 +209,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
             tableHeader.reorderingAllowed = false
             columnSelectionAllowed = false
             border = JBUI.Borders.empty()
-            selectionBackground = com.intellij.ui.JBColor(java.awt.Color(0xE9EEFD), java.awt.Color(0x3A4254))
+            selectionBackground = MoFishUiStyle.selectionBackground
         }
     }
 

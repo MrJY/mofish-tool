@@ -127,7 +127,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             JBUI.Borders.customLine(JBColor.border(), 0, 0, 0, 1),
             JBUI.Borders.empty(8, 8, 8, 6),
         )
-        moduleNavPanel.background = JBColor(Color(0xF7F8FA), Color(0x2B2D30))
+        moduleNavPanel.background = MoFishUiStyle.navSurface
         moduleNavPanel.preferredSize = Dimension(MODULE_NAV_WIDTH, 0)
         moduleNavPanel.add(createExpandedModuleNavHeader(), BorderLayout.NORTH)
         moduleNavPanel.add(moduleList, BorderLayout.CENTER)
@@ -138,7 +138,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             JBUI.Borders.customLine(JBColor.border(), 1),
             JBUI.Borders.empty(10),
         )
-        contentPanel.background = JBColor(Color(0xFFFFFF), Color(0x1E1F22))
+        contentPanel.background = MoFishUiStyle.contentSurface
         contentPanel.add(moduleContent, BorderLayout.CENTER)
 
         moduleShell.add(moduleNavPanel, BorderLayout.WEST)
@@ -169,7 +169,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     private fun configureCollapsedModuleNav() {
-        collapsedModuleNav.background = JBColor(Color(0xF7F8FA), Color(0x2B2D30))
+        collapsedModuleNav.background = MoFishUiStyle.navSurface
         collapsedModuleNav.border = JBUI.Borders.compound(
             JBUI.Borders.customLine(JBColor.border(), 0, 0, 0, 1),
             JBUI.Borders.empty(8, 0, 10, 0),
