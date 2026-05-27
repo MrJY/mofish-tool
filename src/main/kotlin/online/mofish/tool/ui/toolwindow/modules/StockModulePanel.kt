@@ -3,13 +3,17 @@ package online.mofish.tool.ui.toolwindow.modules
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
 import com.intellij.util.PlatformIcons
 import com.intellij.util.ui.JBUI
+import online.mofish.tool.data.stock.StockDetailClient
 import online.mofish.tool.domain.PositionProfitSnapshot
+import online.mofish.tool.domain.StockDetailSnapshot
 import online.mofish.tool.domain.StockQuote
 import online.mofish.tool.settings.MoFishQuoteSortField
 import online.mofish.tool.settings.MoFishSortDirection
@@ -24,6 +28,7 @@ import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.math.BigDecimal
+import java.util.concurrent.ConcurrentHashMap
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JButton
 import javax.swing.JComponent
@@ -37,6 +42,11 @@ import javax.swing.JTable
 import javax.swing.ListCellRenderer
 import javax.swing.SwingUtilities
 import javax.swing.table.DefaultTableCellRenderer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 internal class StockModulePanel(
     callbacks: AssetModuleCallbacks,
@@ -46,6 +56,10 @@ internal class StockModulePanel(
     popupPlace = "MoFishStocksPopup",
 ) {
     override val tableModel: AssetTableModel<StockListItem> = StockTableModel()
+    private val detailScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val stockDetailClient = StockDetailClient()
+    private val detailCache = ConcurrentHashMap<String, StockDetailSnapshot>()
+    private var detailState = StockDetailUiState()
     private val detailPane = JEditorPane("text/html", "").apply {
         isEditable = false
         putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true)
@@ -92,7 +106,19 @@ internal class StockModulePanel(
     override fun createDetailComponent(): JComponent = createDetailPage("摸鱼股票详情", detailPane)
 
     override fun updateDetail(snapshot: MoFishWatchlistState, row: StockListItem?) {
-        detailPane.text = buildDetailHtml(snapshot, row)
+        val reminderRules = stockReminderRules(snapshot, row)
+        val nextCode = row?.quote?.code
+        if (nextCode == null) {
+            detailState = StockDetailUiState()
+        } else if (!detailState.code.equals(nextCode, ignoreCase = true)) {
+            val cached = detailCache[nextCode.lowercase()]
+            detailState = StockDetailUiState(code = nextCode, snapshot = cached, loading = cached == null)
+            if (cached == null) {
+                loadStockDetail(row.quote)
+            }
+        }
+        detailPane.text = StockDetailHtmlRenderer.render(row, reminderRules, detailState)
+        detailPane.caretPosition = 0
     }
 
     override fun buildRows(snapshot: MoFishWatchlistState): List<StockListItem> {
@@ -171,6 +197,10 @@ internal class StockModulePanel(
 
     override fun onOpenDetail() {
         openSelectedStockDetail()
+    }
+
+    fun dispose() {
+        detailScope.cancel()
     }
 
     private fun renderStockGroupBar(snapshot: MoFishWatchlistState) {
@@ -396,60 +426,41 @@ internal class StockModulePanel(
         return groupName?.takeIf { it.isNotEmpty() }
     }
 
-    private fun buildDetailHtml(snapshot: MoFishWatchlistState, row: StockListItem?): String {
-        if (row == null) {
-            return """
-                <html>
-                <body style='padding: 8px;'>
-                  <p>请选择一支股票查看详情。</p>
-                  <p>从列表页双击股票，或使用右键菜单中的"查看详情"，即可进入详情页面。</p>
-                </body>
-                </html>
-            """.trimIndent()
-        }
-        val holding = row.holding
-        val profit = row.profit
-        val reminderRules = snapshot.settingsState.reminders
-            .filter { it.code.equals(row.quote.code, ignoreCase = true) }
-        val holdingValue = profit?.currentValue?.toPlainString() ?: "--"
-        return """
-            <html>
-            <body style='padding: 8px;'>
-              <h3>${escape(row.quote.name)}</h3>
-              <p>代码：<code>${escape(row.quote.code)}</code></p>
-              <p>分组：<code>${escape(row.groupName ?: "无分组")}</code></p>
-              <p>交易所：<code>${row.quote.exchange}</code> | 状态：<code>${row.quote.status}</code></p>
-              <p>现价：<code>${row.quote.currentPrice?.toPlainString() ?: "--"}</code></p>
-              <p>涨跌幅：<code>${row.quote.changePercent?.toPlainString() ?: "--"}%</code></p>
-              <p>涨跌额：<code>${row.quote.changeAmount?.toPlainString() ?: "--"}</code></p>
-              <p>开盘：<code>${row.quote.openPrice?.toPlainString() ?: "--"}</code> | 昨收：<code>${row.quote.previousClose?.toPlainString() ?: "--"}</code></p>
-              <p>最高：<code>${row.quote.highPrice?.toPlainString() ?: "--"}</code> | 最低：<code>${row.quote.lowPrice?.toPlainString() ?: "--"}</code></p>
-              <p>成交量：<code>${row.quote.volume?.toPlainString() ?: "--"}</code> | 成交额：<code>${row.quote.turnover?.toPlainString() ?: "--"}</code></p>
-              <p>更新时间：<code>${row.quote.updatedAt?.toString() ?: "--"}</code></p>
-              <hr/>
-              <p>持仓数量：<code>${holding?.quantity?.toPlainString() ?: "--"}</code></p>
-              <p>持仓成本：<code>${holding?.costPrice?.toPlainString() ?: "--"}</code></p>
-              <p>持仓市值：<code>$holdingValue</code></p>
-              <p>总收益：<code>${profit?.totalProfit?.toPlainString() ?: "--"}</code></p>
-              <p>总收益率：<code>${profit?.totalProfitPercent?.toPlainString() ?: "--"}%</code></p>
-              <p>今日收益：<code>${profit?.todayProfit?.toPlainString() ?: "--"}</code></p>
-              <p>今日收益率：<code>${profit?.todayProfitPercent?.toPlainString() ?: "--"}%</code></p>
-              <hr/>
-              <p>提醒规则：<code>${reminderRules.size}</code> 条</p>
-              ${buildReminderRulesHtml(reminderRules)}
-            </body>
-            </html>
-        """.trimIndent()
+    private fun stockReminderRules(snapshot: MoFishWatchlistState, row: StockListItem?): List<online.mofish.tool.domain.ReminderRule> {
+        val code = row?.quote?.code ?: return emptyList()
+        return snapshot.settingsState.reminders.filter { it.code.equals(code, ignoreCase = true) }
     }
 
-    private fun buildReminderRulesHtml(reminderRules: List<online.mofish.tool.domain.ReminderRule>): String {
-        if (reminderRules.isEmpty()) {
-            return "<p>当前资产暂无提醒规则。</p>"
+    private fun loadStockDetail(quote: StockQuote) {
+        val code = quote.code
+        detailScope.launch(Dispatchers.IO) {
+            val result = runCatching { stockDetailClient.fetchDetail(quote) }
+            ApplicationManager.getApplication().invokeLater({
+                if (!detailState.code.equals(code, ignoreCase = true)) {
+                    return@invokeLater
+                }
+                detailState = result.fold(
+                    onSuccess = { snapshot ->
+                        detailCache[code.lowercase()] = snapshot
+                        StockDetailUiState(code = code, snapshot = snapshot)
+                    },
+                    onFailure = { error ->
+                        StockDetailUiState(
+                            code = code,
+                            error = error.message ?: "增强信息暂不可用，请稍后重试。",
+                        )
+                    },
+                )
+                callbacks.watchlistService.snapshot()?.let { currentSnapshot ->
+                    detailPane.text = StockDetailHtmlRenderer.render(
+                        selectedRow(),
+                        stockReminderRules(currentSnapshot, selectedRow()),
+                        detailState,
+                    )
+                    detailPane.caretPosition = 0
+                }
+            }, ModalityState.any())
         }
-        val content = reminderRules.joinToString(separator = "") { rule ->
-            "<li>${escape(rule.displayName)}：${rule.metric} ${rule.direction} ${rule.threshold.toPlainString()}</li>"
-        }
-        return "<ul>$content</ul>"
     }
 
     private fun stockChangePercent(quote: StockQuote): BigDecimal? {

@@ -99,6 +99,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
 
     override fun dispose() {
         disposed = true
+        stockModule.dispose()
         watchlistService.deactivate()
         scope.cancel()
     }
