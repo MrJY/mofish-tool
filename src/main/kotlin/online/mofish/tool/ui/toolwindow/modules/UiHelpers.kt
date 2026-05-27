@@ -4,6 +4,7 @@ import com.intellij.ui.JBColor
 import online.mofish.tool.settings.MoFishSortSettings
 import java.awt.Color
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -35,6 +36,17 @@ internal fun formatDateTime(value: LocalDateTime?): String {
 internal fun formatPercent(value: BigDecimal?): String {
     return value?.toPlainString()?.let { "$it%" } ?: "--"
 }
+
+internal fun formatTenThousand(value: BigDecimal?): String {
+    return value
+        ?.divide(BigDecimal("10000"), 2, RoundingMode.HALF_UP)
+        ?.stripTrailingZeros()
+        ?.toPlainString()
+        ?.let { "${it}万" }
+        ?: "--"
+}
+
+internal fun colorHex(color: Color): String = "#%02x%02x%02x".format(color.red, color.green, color.blue)
 
 internal fun buildAssetSummary(
     countText: String,

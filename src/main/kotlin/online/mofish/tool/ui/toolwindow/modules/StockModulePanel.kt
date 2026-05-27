@@ -491,6 +491,11 @@ internal class StockModulePanel(
             val price = formatDecimal(row.quote.currentPrice)
             val percent = formatPercent(stockChangePercent(row.quote))
             val profitLine = holdingProfitLine(row.profit)
+            val changeColor = colorHex(marketColor(stockChangePercent(row.quote)))
+            val openPrice = formatDecimal(row.quote.openPrice)
+            val previousClose = formatDecimal(row.quote.previousClose)
+            val volume = formatTenThousand(row.quote.volume)
+            val turnover = formatTenThousand(row.quote.turnover)
             label.border = JBUI.Borders.empty(6, 8)
             label.verticalAlignment = JLabel.TOP
             label.text =
@@ -498,8 +503,9 @@ internal class StockModulePanel(
                 <html>
                 <body>
                   <b>${escape(row.quote.name)}</b> <span style='color:#888888;'>${escape(row.quote.code.uppercase())}</span><br/>
-                  分组：${escape(row.groupName ?: "无分组")}<br/>
-                  现价：$price　涨跌幅：$percent$profitLine
+                  现价：$price　涨跌幅：<span style='color:$changeColor;'>$percent</span><br/>
+                  开盘：$openPrice　昨收：$previousClose<br/>
+                  成交量：$volume　成交额：$turnover$profitLine
                 </body>
                 </html>
                 """.trimIndent()

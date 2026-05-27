@@ -42,7 +42,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     private val tabContainer = JPanel(tabLayout)
     private lateinit var listPanel: JComponent
     private var detailVisible = false
-    private var viewMode = AssetListViewMode.CARD
+    private var viewMode = AssetListViewMode.TABLE
     private var lastSelectionCode: String? = null
     private var syncingSelection = false
 

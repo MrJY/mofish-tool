@@ -58,8 +58,7 @@ class StaticMoFishDataSource : MoFishDataSource {
 }
 
 private fun buildStaticFundQuotes(settings: MoFishSettingsState): List<FundQuote> {
-    val codes = settings.watchlist.fundCodes.ifEmpty { listOf(DEFAULT_FUND_CODE) }
-    return codes.map { code ->
+    return settings.watchlist.fundCodes.map { code ->
         if (code == DEFAULT_FUND_CODE) {
             sampleFundQuote()
         } else {
@@ -72,8 +71,7 @@ private fun buildStaticStockQuotes(
     watchlist: MoFishWatchlistSettings,
     settings: MoFishSettingsState,
 ): List<StockQuote> {
-    val codes = watchlist.stockCodes.ifEmpty { listOf(DEFAULT_STOCK_CODE) }
-    return codes.map { code ->
+    return watchlist.stockCodes.map { code ->
         if (code.equals(DEFAULT_STOCK_CODE, ignoreCase = true)) {
             sampleStockQuote()
         } else {

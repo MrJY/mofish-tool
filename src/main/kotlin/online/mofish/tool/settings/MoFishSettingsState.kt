@@ -41,8 +41,8 @@ enum class MoFishReminderSortField(
 }
 
 data class MoFishWatchlistSettings(
-    val fundCodes: List<String> = listOf("161725"),
-    val stockCodes: List<String> = listOf("sz300750"),
+    val fundCodes: List<String> = emptyList(),
+    val stockCodes: List<String> = emptyList(),
     val stockGroups: List<String> = emptyList(),
     val stockGroupAssignments: Map<String, String> = emptyMap(),
     val cryptoIds: List<String> = listOf("bitcoin"),
@@ -96,7 +96,7 @@ data class MoFishSettingsState(
     val sortSettings: MoFishSortSettings = MoFishSortSettings(),
     val refresh: MoFishRefreshSettings = MoFishRefreshSettings(),
     val showStatusBarWidget: Boolean = true,
-    val showHoldingProfit: Boolean = true,
+    val showHoldingProfit: Boolean = false,
 ) {
     val refreshIntervalSeconds: Int
         get() = refresh.intervalSeconds
