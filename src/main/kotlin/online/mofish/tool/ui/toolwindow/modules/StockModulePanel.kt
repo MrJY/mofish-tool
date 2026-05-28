@@ -63,6 +63,46 @@ internal class StockModulePanel(
     private val detailPane = JEditorPane("text/html", "").apply {
         isEditable = false
         putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true)
+        addHyperlinkListener { event ->
+            if (event.eventType == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED) {
+                val rawUrl = event.url?.toString() ?: event.description
+                if (!rawUrl.isNullOrBlank()) {
+                    if (rawUrl.startsWith("https://data.eastmoney.com/report/info/")) {
+                        val uri = java.net.URI(rawUrl)
+                        val query = uri.query
+                        val titleParam = query?.split("&")
+                            ?.firstOrNull { it.startsWith("title=") }
+                            ?.substringAfter("title=")
+                            ?.let { java.net.URLDecoder.decode(it, "UTF-8") }
+                        val cleanUrl = if (query != null) rawUrl.substringBefore("?") else rawUrl
+                        val tabTitle = titleParam?.let { "研报 - $it" } ?: "研报详情"
+                        
+                        MoFishWebEditorService.open(
+                            callbacks.project,
+                            online.mofish.tool.ui.web.MoFishWebRequest.Url(title = tabTitle, url = cleanUrl)
+                        )
+                    } else {
+                        com.intellij.ide.BrowserUtil.browse(rawUrl)
+                    }
+                }
+            }
+        }
+        addComponentListener(object : java.awt.event.ComponentAdapter() {
+            override fun componentResized(e: java.awt.event.ComponentEvent?) {
+                val wide = this@apply.width >= 550
+                if (detailState.isWide != wide) {
+                    detailState = detailState.copy(isWide = wide)
+                    callbacks.watchlistService.snapshot()?.let { currentSnapshot ->
+                        this@apply.text = StockDetailHtmlRenderer.render(
+                            selectedRow(),
+                            stockReminderRules(currentSnapshot, selectedRow()),
+                            detailState,
+                        )
+                        this@apply.caretPosition = 0
+                    }
+                }
+            }
+        })
     }
     private val stockGroupBar = JPanel(GridBagLayout())
     private val stockGroupButtonRow = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0))

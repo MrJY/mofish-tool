@@ -95,8 +95,10 @@ internal class EastmoneyStockNewsProvider(
 private fun toReportItem(item: JsonElement): StockResearchReportItem? {
     val obj = item.jsonObject
     val title = obj.stringValue("title") ?: return null
+    val infoCode = obj.stringValue("infoCode")
     return StockResearchReportItem(
         title = title,
+        infoCode = infoCode,
         publishDate = obj.stringValue("publishDate")?.take(10),
         organization = obj.stringValue("orgSName"),
         rating = obj.stringValue("emRatingName"),

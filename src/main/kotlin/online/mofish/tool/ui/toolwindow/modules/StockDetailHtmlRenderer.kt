@@ -10,6 +10,11 @@ import online.mofish.tool.domain.StockResearchReportItem
 import java.math.BigDecimal
 
 internal object StockDetailHtmlRenderer {
+
+    private val subtleBorder = com.intellij.ui.JBColor(java.awt.Color(240, 240, 245), java.awt.Color(48, 48, 50))
+    private val RISE_BG = com.intellij.ui.JBColor(java.awt.Color(253, 242, 242), java.awt.Color(60, 26, 26))
+    private val FALL_BG = com.intellij.ui.JBColor(java.awt.Color(246, 255, 237), java.awt.Color(20, 48, 20))
+
     fun render(
         row: StockListItem?,
         reminderRules: List<ReminderRule>,
@@ -26,14 +31,45 @@ internal object StockDetailHtmlRenderer {
             )
         }
 
+        val cardsHtml = if (detailState.isWide) {
+            val leftCol = """
+                ${quoteCard(row.quote)}
+                ${profileCard(row, detailState.snapshot)}
+                ${reportsCard(detailState.snapshot?.reports.orEmpty())}
+            """.trimIndent()
+            
+            val rightCol = """
+                ${metricsCard(detailState.snapshot)}
+                ${holdingCard(row.holding, row.profit)}
+                ${newsCard(detailState.snapshot?.news.orEmpty())}
+            """.trimIndent()
+            
+            """
+            <table width='100%' cellspacing='0' cellpadding='0' style='table-layout: fixed;'>
+              <tr>
+                <td valign='top' style='width: 50%; padding-right: 6px;'>$leftCol</td>
+                <td valign='top' style='width: 50%; padding-left: 6px;'>$rightCol</td>
+              </tr>
+            </table>
+            ${remindersCard(reminderRules)}
+            """.trimIndent()
+        } else {
+            """
+            ${quoteCard(row.quote)}
+            ${metricsCard(detailState.snapshot)}
+            ${profileCard(row, detailState.snapshot)}
+            ${holdingCard(row.holding, row.profit)}
+            ${reportsCard(detailState.snapshot?.reports.orEmpty())}
+            ${newsCard(detailState.snapshot?.news.orEmpty())}
+            ${remindersCard(reminderRules)}
+            """.trimIndent()
+        }
+
         return page(
             """
             ${hero(row.quote)}
             ${statusBlock(detailState)}
-            ${cardRow(quoteCard(row.quote), metricsCard(detailState.snapshot))}
-            ${cardRow(profileCard(row, detailState.snapshot), holdingCard(row.holding, row.profit))}
-            ${cardRow(reportsCard(detailState.snapshot?.reports.orEmpty()), newsCard(detailState.snapshot?.news.orEmpty()))}
-            ${remindersCard(reminderRules)}
+            $cardsHtml
             """.trimIndent()
         )
     }
@@ -45,32 +81,191 @@ internal object StockDetailHtmlRenderer {
         val contentSurface = colorHex(MoFishUiStyle.contentSurface)
         val soft = colorHex(MoFishUiStyle.hoverSoftBackground)
         val link = colorHex(MoFishUiStyle.linkForeground)
+        
         return """
             <html>
             <head>
               <style>
-                body { font-family: sans-serif; color: $foreground; background: $contentSurface; padding: 10px; }
-                h2, h3 { margin: 0; }
-                p { margin: 4px 0; }
-                .hero { border: 1px solid $border; background: $surface; padding: 12px; margin-bottom: 8px; }
-                .hero-title { font-size: 18px; font-weight: bold; }
-                .muted { color: #888888; }
-                .price { font-size: 22px; font-weight: bold; margin-top: 6px; }
-                .status { border: 1px solid $border; background: $soft; padding: 8px; margin-bottom: 8px; }
-                .card { border: 1px solid $border; background: $surface; padding: 10px; margin: 0 0 8px 0; }
-                .card h3 { font-size: 13px; margin-bottom: 8px; }
-                .card-cell { width: 50%; vertical-align: top; padding-right: 6px; }
+                body { 
+                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+                  color: $foreground; 
+                  background-color: $contentSurface; 
+                  padding-top: 10px; 
+                  padding-bottom: 10px; 
+                  padding-left: 10px; 
+                  padding-right: 10px; 
+                  margin-top: 0;
+                  margin-bottom: 0;
+                  margin-left: 0;
+                  margin-right: 0;
+                }
+                h2, h3 { 
+                  margin-top: 0;
+                  margin-bottom: 0;
+                  margin-left: 0;
+                  margin-right: 0;
+                }
+                p { 
+                  margin-top: 4px;
+                  margin-bottom: 4px;
+                  margin-left: 0;
+                  margin-right: 0;
+                }
+                
+                .hero { 
+                  border-width: 1px;
+                  border-style: solid;
+                  border-color: $border;
+                  background-color: $surface; 
+                  padding-top: 16px; 
+                  padding-bottom: 16px; 
+                  padding-left: 16px; 
+                  padding-right: 16px; 
+                  margin-bottom: 12px; 
+                }
+                .hero-title { 
+                  font-size: 20px; 
+                  font-weight: bold; 
+                }
+                .hero-code {
+                  color: #888888;
+                  font-size: 14px;
+                  font-weight: normal;
+                  margin-left: 6px;
+                }
+                .hero-subtitle {
+                  color: #888888;
+                  font-size: 11px;
+                  margin-top: 4px;
+                }
+                .price { 
+                  font-size: 26px; 
+                  font-weight: bold; 
+                }
+                
+                .rise-badge { 
+                  color: ${colorHex(RISE_COLOR)}; 
+                  background-color: ${colorHex(RISE_BG)}; 
+                  padding-top: 3px; 
+                  padding-bottom: 3px; 
+                  padding-left: 8px; 
+                  padding-right: 8px; 
+                  font-weight: bold; 
+                  font-size: 13px; 
+                }
+                .fall-badge { 
+                  color: ${colorHex(FALL_COLOR)}; 
+                  background-color: ${colorHex(FALL_BG)}; 
+                  padding-top: 3px; 
+                  padding-bottom: 3px; 
+                  padding-left: 8px; 
+                  padding-right: 8px; 
+                  font-weight: bold; 
+                  font-size: 13px; 
+                }
+                .neutral-badge { 
+                  color: #888888; 
+                  background-color: $soft; 
+                  padding-top: 3px; 
+                  padding-bottom: 3px; 
+                  padding-left: 8px; 
+                  padding-right: 8px; 
+                  font-weight: bold; 
+                  font-size: 13px; 
+                }
+                
+                .status { 
+                  border-width: 1px;
+                  border-style: solid;
+                  border-color: $border;
+                  background-color: $soft; 
+                  padding-top: 10px; 
+                  padding-bottom: 10px; 
+                  padding-left: 14px; 
+                  padding-right: 14px; 
+                  margin-bottom: 12px; 
+                  font-size: 12px;
+                }
+                
+                .card { 
+                  border-width: 1px;
+                  border-style: solid;
+                  border-color: $border;
+                  background-color: $surface; 
+                  padding-top: 14px; 
+                  padding-bottom: 14px; 
+                  padding-left: 16px; 
+                  padding-right: 16px; 
+                  margin-bottom: 12px; 
+                }
+                .card h3 { 
+                  font-size: 14px; 
+                  font-weight: bold; 
+                }
+                
                 .metrics { width: 100%; }
-                .metric-label { width: 35%; color: #888888; font-size: 11px; padding: 2px 6px 2px 0; }
-                .metric-value { width: 65%; font-weight: bold; padding: 2px 0; }
-                .label { color: #888888; font-size: 11px; }
-                .value { font-weight: bold; }
-                .rise { color: ${colorHex(RISE_COLOR)}; }
-                .fall { color: ${colorHex(FALL_COLOR)}; }
-                .link { color: $link; }
-                ul { margin: 4px 0 0 16px; padding: 0; }
-                li { margin-bottom: 5px; }
-                .empty { border: 1px solid $border; background: $surface; padding: 14px; }
+                .metric-label { 
+                  width: 45%; 
+                  color: #8E8E93; 
+                  font-size: 12px; 
+                  padding-top: 4px; 
+                  padding-bottom: 4px; 
+                  padding-left: 0; 
+                  padding-right: 6px; 
+                }
+                .metric-value { 
+                  width: 55%; 
+                  font-weight: bold; 
+                  font-size: 12px;
+                  padding-top: 4px; 
+                  padding-bottom: 4px; 
+                  padding-left: 6px; 
+                  padding-right: 0; 
+                }
+                
+                .item-title {
+                  font-size: 12px;
+                }
+                .item-meta {
+                  color: #8E8E93;
+                  font-size: 11px;
+                  margin-top: 2px;
+                }
+                .item-eps {
+                  color: #8E8E93;
+                  font-size: 11px;
+                  margin-top: 2px;
+                }
+                .item-desc {
+                  color: #666666;
+                  font-size: 11px;
+                  margin-top: 4px;
+                }
+                
+                .link { 
+                  color: $link; 
+                  text-decoration: none; 
+                }
+                
+                .empty { 
+                  border-width: 1px;
+                  border-style: solid;
+                  border-color: $border;
+                  background-color: $surface; 
+                  padding-top: 20px; 
+                  padding-bottom: 20px; 
+                  padding-left: 20px; 
+                  padding-right: 20px; 
+                  text-align: center;
+                }
+                .empty h2 {
+                  font-size: 18px;
+                  margin-bottom: 8px;
+                }
+                .empty p {
+                  color: #888888;
+                  font-size: 13px;
+                }
               </style>
             </head>
             <body>
@@ -82,13 +277,36 @@ internal object StockDetailHtmlRenderer {
 
     private fun hero(quote: StockQuote): String {
         val percent = quote.changePercent ?: quote.afterHoursChangePercent
-        val changeClass = changeClass(percent)
+        val changeAmount = quote.changeAmount
+        val badgeClass = when {
+            percent == null -> "neutral-badge"
+            percent > BigDecimal.ZERO -> "rise-badge"
+            percent < BigDecimal.ZERO -> "fall-badge"
+            else -> "neutral-badge"
+        }
+        val badgeText = buildString {
+            if (changeAmount != null && changeAmount > BigDecimal.ZERO) append("+")
+            append(formatDecimal(changeAmount))
+            append(" (")
+            if (percent != null && percent > BigDecimal.ZERO) append("+")
+            append(formatPercent(percent))
+            append(")")
+        }
+        
         return """
             <div class='hero'>
-              <div class='hero-title'>${escape(quote.name)} <span class='muted'>${escape(quote.code.uppercase())}</span></div>
-              <div class='muted'>${quote.exchange} · ${quote.status} · 更新时间 ${formatDateTime(quote.updatedAt)}</div>
-              <div class='price $changeClass'>${formatDecimal(quote.currentPrice)}</div>
-              <div class='$changeClass'>涨跌额 ${formatDecimal(quote.changeAmount)} · 涨跌幅 ${formatPercent(percent)}</div>
+              <table width='100%' cellspacing='0' cellpadding='0'>
+                <tr>
+                  <td valign='middle'>
+                    <div class='hero-title'>${escape(quote.name)} <span class='hero-code'>${escape(quote.code.uppercase())}</span></div>
+                    <div class='hero-subtitle'>${quote.exchange} · ${quote.status} · 更新时间 ${formatDateTime(quote.updatedAt)}</div>
+                  </td>
+                </tr>
+              </table>
+              <div style='margin-top: 14px;'>
+                <span class='price'>${formatDecimal(quote.currentPrice)}</span>
+                <span class='$badgeClass' style='margin-left: 8px; vertical-align: middle;'>$badgeText</span>
+              </div>
             </div>
         """.trimIndent()
     }
@@ -168,79 +386,92 @@ internal object StockDetailHtmlRenderer {
     }
 
     private fun reportsCard(reports: List<StockResearchReportItem>): String {
+        val subtleBorderColor = colorHex(subtleBorder)
         val content = if (reports.isEmpty()) {
             "<p class='muted'>暂无研报摘要。</p>"
         } else {
-            "<ul>" + reports.joinToString("") { report ->
+            reports.mapIndexed { index, report ->
+                val titleHtml = if (report.infoCode != null) {
+                    val encodedTitle = java.net.URLEncoder.encode(report.title, "UTF-8")
+                    "<a href='https://data.eastmoney.com/report/info/${report.infoCode}.html?title=$encodedTitle' class='link'>${escape(report.title)}</a>"
+                } else {
+                    escape(report.title)
+                }
+                val isLast = index == reports.size - 1
+                val separator = if (isLast) "" else "<hr size='1' color='$subtleBorderColor' style='margin: 8px 0; border: none;' />"
                 """
-                <li>
-                  <b>${escape(report.title)}</b><br/>
-                  <span class='muted'>${escape(listOfNotNull(report.publishDate, report.organization, report.rating).joinToString(" · ").ifBlank { "--" })}</span><br/>
-                  <span class='muted'>EPS ${formatDecimal(report.thisYearEps)} / ${formatDecimal(report.nextYearEps)} / ${formatDecimal(report.nextTwoYearEps)}</span>
-                </li>
+                <div>
+                  <div class='item-title'><b>$titleHtml</b></div>
+                  <div class='item-meta'>${escape(listOfNotNull(report.publishDate, report.organization, report.rating).joinToString(" · ").ifBlank { "--" })}</div>
+                  <div class='item-eps'>EPS ${formatDecimal(report.thisYearEps)} / ${formatDecimal(report.nextYearEps)} / ${formatDecimal(report.nextTwoYearEps)}</div>
+                </div>
+                $separator
                 """.trimIndent()
-            } + "</ul>"
+            }.joinToString("")
         }
         return card("最近研报", content)
     }
 
     private fun newsCard(news: List<StockNewsItem>): String {
+        val subtleBorderColor = colorHex(subtleBorder)
         val content = if (news.isEmpty()) {
             "<p class='muted'>暂无相关新闻。</p>"
         } else {
-            "<ul>" + news.joinToString("") { item ->
+            news.mapIndexed { index, item ->
+                val isLast = index == news.size - 1
+                val separator = if (isLast) "" else "<hr size='1' color='$subtleBorderColor' style='margin: 8px 0; border: none;' />"
                 """
-                <li>
-                  <b>${escape(item.title)}</b><br/>
-                  <span class='muted'>${escape(listOfNotNull(item.time, item.source).joinToString(" · ").ifBlank { "--" })}</span>
-                  ${item.content?.takeIf { it.isNotBlank() }?.let { "<br/><span class='muted'>${escape(it)}</span>" } ?: ""}
-                </li>
+                <div>
+                  <div class='item-title'><b>${escape(item.title)}</b></div>
+                  <div class='item-meta'>${escape(listOfNotNull(item.time, item.source).joinToString(" · ").ifBlank { "--" })}</div>
+                  ${item.content?.takeIf { it.isNotBlank() }?.let { "<div class='item-desc'>${escape(it)}</div>" } ?: ""}
+                </div>
+                $separator
                 """.trimIndent()
-            } + "</ul>"
+            }.joinToString("")
         }
         return card("相关新闻", content)
     }
 
     private fun remindersCard(reminderRules: List<ReminderRule>): String {
+        val subtleBorderColor = colorHex(subtleBorder)
         val content = if (reminderRules.isEmpty()) {
             "<p class='muted'>当前资产暂无提醒规则。</p>"
         } else {
-            "<ul>" + reminderRules.joinToString("") { rule ->
-                "<li>${escape(rule.displayName)}：${rule.metric} ${rule.direction} ${rule.threshold.toPlainString()}</li>"
-            } + "</ul>"
+            reminderRules.mapIndexed { index, rule ->
+                val isLast = index == reminderRules.size - 1
+                val separator = if (isLast) "" else "<hr size='1' color='$subtleBorderColor' style='margin: 6px 0; border: none;' />"
+                """
+                <div style='font-size: 12px;'>
+                  ${escape(rule.displayName)}：<b>${rule.metric} ${rule.direction} ${rule.threshold.toPlainString()}</b>
+                </div>
+                $separator
+                """.trimIndent()
+            }.joinToString("")
         }
         return card("提醒规则", content)
     }
 
     private fun card(title: String, content: String): String {
+        val subtleBorderColor = colorHex(subtleBorder)
         return """
             <div class='card'>
               <h3>${escape(title)}</h3>
+              <hr size='1' color='$subtleBorderColor' style='margin: 6px 0 10px 0; border: none;' />
               $content
             </div>
         """.trimIndent()
     }
 
     private fun metrics(vararg items: Pair<String, String>): String {
-        return "<table class='metrics' cellspacing='0' cellpadding='0'>" + items.joinToString("") { (label, value) ->
+        return "<table class='metrics' cellspacing='0' cellpadding='0'>" + items.map { (label, value) ->
             """
             <tr>
               <td class='metric-label'>${escape(label)}</td>
               <td class='metric-value'>${escape(value)}</td>
             </tr>
             """.trimIndent()
-        } + "</table>"
-    }
-
-    private fun cardRow(left: String, right: String): String {
-        return """
-            <table width='100%' cellspacing='0' cellpadding='0'>
-              <tr>
-                <td class='card-cell'>$left</td>
-                <td class='card-cell'>$right</td>
-              </tr>
-            </table>
-        """.trimIndent()
+        }.joinToString("") + "</table>"
     }
 
     private fun changeClass(value: BigDecimal?): String {
@@ -271,4 +502,5 @@ internal data class StockDetailUiState(
     val loading: Boolean = false,
     val snapshot: StockDetailSnapshot? = null,
     val error: String? = null,
+    val isWide: Boolean = false,
 )

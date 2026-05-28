@@ -36,6 +36,7 @@ data class StockCompanyProfile(
 
 data class StockResearchReportItem(
     val title: String,
+    val infoCode: String? = null,
     val publishDate: String? = null,
     val organization: String? = null,
     val rating: String? = null,
