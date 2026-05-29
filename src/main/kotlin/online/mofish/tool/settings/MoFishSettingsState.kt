@@ -4,6 +4,7 @@ import online.mofish.tool.domain.AiConfig
 import online.mofish.tool.domain.AiStockHistoryRange
 import online.mofish.tool.domain.AssetType
 import online.mofish.tool.domain.HoldingConfig
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.ReminderDirection
 import online.mofish.tool.domain.ReminderMetric
 import online.mofish.tool.domain.ReminderRule
@@ -80,6 +81,7 @@ data class MoFishRefreshSettings(
     val autoRefreshEnabled: Boolean = true,
     val autoRefreshStartMinuteOfDay: Int = 9 * 60 + 30,
     val autoRefreshEndMinuteOfDay: Int = 15 * 60,
+    val autoRefreshModules: Set<MoFishRefreshModule> = MoFishRefreshModule.defaultAutoRefreshModules,
     val openToolWindowOnStartup: Boolean = false,
 )
 

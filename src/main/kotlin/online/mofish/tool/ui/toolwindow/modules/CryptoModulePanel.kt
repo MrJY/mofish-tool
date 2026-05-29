@@ -9,6 +9,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
 import online.mofish.tool.domain.CryptoQuote
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.settings.MoFishQuoteSortField
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
@@ -75,17 +76,7 @@ internal class CryptoModulePanel(
     }
 
     override fun buildSummaryText(snapshot: MoFishWatchlistState, rows: List<CryptoListItem>): String {
-        return buildAssetSummary(
-            countText = "共 ${rows.size} 个",
-            profitText = if (snapshot.settingsState.showHoldingProfit) {
-                val totalProfit = snapshot.profitSnapshot.cryptoSummary.totalProfit.toPlainString()
-                val todayProfit = snapshot.profitSnapshot.cryptoSummary.todayProfit.toPlainString()
-                "总收益 $totalProfit | 今日收益 $todayProfit"
-            } else {
-                null
-            },
-            sortSettings = snapshot.settingsState.sortSettings,
-        )
+        return buildDataUpdateSummary(snapshot, MoFishRefreshModule.CRYPTO)
     }
 
     override fun createListCellRenderer(): ListCellRenderer<in CryptoListItem> = CryptoListRenderer()
@@ -274,7 +265,7 @@ internal class CryptoModulePanel(
     ) {
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.selectView(moduleViewId())
-            callbacks.watchlistService.refresh(force = true)
+            callbacks.watchlistService.refreshModule(MoFishRefreshModule.CRYPTO)
         }
     }
 

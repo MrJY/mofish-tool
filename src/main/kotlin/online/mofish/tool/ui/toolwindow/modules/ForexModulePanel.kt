@@ -8,6 +8,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
 import online.mofish.tool.domain.ForexRate
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.state.MoFishWatchlistState
 import java.awt.Component
 import javax.swing.DefaultListCellRenderer
@@ -39,8 +40,7 @@ internal class ForexModulePanel(
     }
 
     override fun buildSummaryText(snapshot: MoFishWatchlistState, rows: List<ForexListItem>): String {
-        val latestPublishedAt = rows.maxByOrNull { it.quote.publishedAt ?: java.time.LocalDateTime.MIN }?.quote?.publishedAt
-        return "共 ${rows.size} 条 | 数据源 中国银行 | 最新时间 ${formatDateTime(latestPublishedAt)} | 展示 ${currentViewMode().displayName}"
+        return buildDataUpdateSummary(snapshot, MoFishRefreshModule.FOREX)
     }
 
     override fun createListCellRenderer(): ListCellRenderer<in ForexListItem> = ForexListRenderer()
@@ -142,7 +142,7 @@ internal class ForexModulePanel(
     ) {
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.selectView(moduleViewId())
-            callbacks.watchlistService.refresh(force = true)
+            callbacks.watchlistService.refreshModule(MoFishRefreshModule.FOREX)
         }
     }
 

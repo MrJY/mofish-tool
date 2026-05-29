@@ -12,6 +12,7 @@ import com.intellij.ui.table.JBTable
 import com.intellij.util.PlatformIcons
 import com.intellij.util.ui.JBUI
 import online.mofish.tool.data.stock.StockDetailClient
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.PositionProfitSnapshot
 import online.mofish.tool.domain.StockDetailSnapshot
 import online.mofish.tool.domain.StockQuote
@@ -185,18 +186,7 @@ internal class StockModulePanel(
     }
 
     override fun buildSummaryText(snapshot: MoFishWatchlistState, rows: List<StockListItem>): String {
-        return buildAssetSummary(
-            countText = "共 ${rows.size} 支",
-            profitText = if (snapshot.settingsState.showHoldingProfit) {
-                val totalProfit = snapshot.profitSnapshot.stockSummary.totalProfit.toPlainString()
-                val todayProfit = snapshot.profitSnapshot.stockSummary.todayProfit.toPlainString()
-                "总收益 $totalProfit | 今日收益 $todayProfit"
-            } else {
-                null
-            },
-            extraText = "分组 ${currentStockGroupFilterLabel(snapshot)}",
-            sortSettings = snapshot.settingsState.sortSettings,
-        )
+        return buildDataUpdateSummary(snapshot, MoFishRefreshModule.STOCKS)
     }
 
     override fun createListCellRenderer(): ListCellRenderer<in StockListItem> = StockListRenderer()
@@ -618,7 +608,7 @@ internal class StockModulePanel(
     ) {
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.selectView(moduleViewId())
-            callbacks.watchlistService.refresh(force = true)
+            callbacks.watchlistService.refreshModule(MoFishRefreshModule.STOCKS)
         }
     }
 

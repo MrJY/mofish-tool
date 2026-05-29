@@ -15,7 +15,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filterNotNull
 import online.mofish.tool.data.stock.canonicalizeStockInputCode
 import online.mofish.tool.services.MoFishWatchlistService
-import online.mofish.tool.state.*
+import online.mofish.tool.state.MoFishWatchlistState
 import online.mofish.tool.ui.dialogs.MoFishSearchableChoiceDialog
 import online.mofish.tool.ui.dialogs.SearchableChoice
 import online.mofish.tool.ui.toolwindow.modules.*
@@ -58,7 +58,6 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     private val cryptoModule = CryptoModulePanel(moduleCallbacks)
     private val fundModule = FundModulePanel(moduleCallbacks)
     private val newsPlaceholder = createPlaceholderPane("快讯页已预留，后续会接入筛选与详情。")
-    private val settingsPlaceholder = createPlaceholderPane("设置页入口已保留，可先使用打开设置。")
 
     @Volatile
     private var disposed = false
@@ -77,21 +76,13 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         moduleContent.add(cryptoModule.createComponent(), "crypto")
         moduleContent.add(forexModule.createComponent(), "forex")
         moduleContent.add(wrapPlaceholderPanel(newsPlaceholder), "news")
-        moduleContent.add(wrapPlaceholderPanel(settingsPlaceholder), "settings")
 
-        eventStatus.foreground = JBColor.foreground()
-        eventStatus.border = JBUI.Borders.compound(
-            JBUI.Borders.customLine(JBColor.border(), 1, 0, 0, 0),
-            JBUI.Borders.empty(10, 14),
-        )
         val container = JPanel(BorderLayout())
         container.border = JBUI.Borders.empty(8)
         container.add(createModuleShell(), BorderLayout.CENTER)
-        container.add(eventStatus, BorderLayout.SOUTH)
         setContent(container)
 
         observeState()
-        observeEvents()
         watchlistService.activate()
         eventStatus.text = "正在加载项目数据..."
         watchlistService.refresh(force = true)
@@ -255,16 +246,6 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         }
     }
 
-    private fun observeEvents() {
-        scope.launch {
-            watchlistService.events.collect { event ->
-                onUiThread {
-                    eventStatus.text = describe(event)
-                }
-            }
-        }
-    }
-
     private fun render(snapshot: MoFishWatchlistState) {
         syncModuleView(snapshot.projectState.selectedViewId)
         stockModule.render(snapshot)
@@ -272,32 +253,6 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         fundModule.render(snapshot)
         cryptoModule.render(snapshot)
         forexModule.render(snapshot)
-        renderSettingsSummary(snapshot)
-    }
-
-    private fun renderSettingsSummary(snapshot: MoFishWatchlistState) {
-        val schedulerState = snapshot.schedulerState
-        settingsPlaceholder.text =
-            """
-            <html>
-            <body style='padding: 8px;'>
-              <h3>设置摘要</h3>
-              <p>自选基金：${snapshot.settingsState.watchlist.fundCodes.size} 个</p>
-              <p>自选股票：${snapshot.settingsState.watchlist.stockCodes.size} 个</p>
-              <p>内置指数：${snapshot.projectState.workspace.indexQuotes.size} 个</p>
-              <p>自选虚拟币：${snapshot.settingsState.watchlist.cryptoIds.size} 个</p>
-              <p>外汇牌价：${snapshot.projectState.workspace.forexRates.size} 条</p>
-              <p>持仓条目：${snapshot.settingsState.holdings.size} 条</p>
-              <p>提醒规则：${snapshot.settingsState.reminders.size} 条</p>
-              <p>数据刷新间隔：${snapshot.settingsState.refresh.intervalSeconds} 秒</p>
-              <p>自动刷新：${if (schedulerState.autoRefreshEnabled) "已开启" else "已关闭"}</p>
-              <p>自动刷新时间范围：${snapshot.settingsState.autoRefreshWindowText}</p>
-              <p>AI 模型：${escape(snapshot.settingsState.aiConfig.model)}</p>
-              <p>最新刷新时间：${instantFormatter.format(snapshot.projectState.lastRefreshAt)}</p>
-              <p>可先使用工具栏中的"打开设置"进入完整配置页。</p>
-            </body>
-            </html>
-            """.trimIndent()
     }
 
     private fun syncModuleView(viewId: String) {
@@ -338,21 +293,6 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             },
             ModalityState.any(),
         )
-    }
-
-    private fun describe(event: MoFishProjectEvent): String = when (event) {
-        is MoFishWorkspaceRefreshedEvent -> {
-            val source = when (event.loadOrigin) {
-                WorkspaceLoadOrigin.PLACEHOLDER -> "本地占位数据"
-                WorkspaceLoadOrigin.DATA_SOURCE -> "数据源"
-                WorkspaceLoadOrigin.MEMORY_CACHE -> "内存缓存"
-            }
-            val mode = if (event.cacheHit) "使用缓存结果" else "已拉取最新数据"
-            "最近事件：已从 $source 刷新，$mode"
-        }
-
-        is MoFishSelectionChangedEvent ->
-            "最近事件：视图=${event.selectedViewId}，资产=${event.selectedAssetCode ?: "无"}"
     }
 
     private fun maybeResolveStockCode(rawInput: String): String? {

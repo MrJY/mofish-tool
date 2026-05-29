@@ -1,11 +1,15 @@
 package online.mofish.tool.ui.toolwindow.modules
 
 import com.intellij.ui.JBColor
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.settings.MoFishSortSettings
+import online.mofish.tool.state.MoFishWatchlistState
 import java.awt.Color
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 internal val RISE_COLOR = JBColor(Color(0xD4380D), Color(0xFF7875))
@@ -31,6 +35,24 @@ internal fun formatDecimal(value: BigDecimal?): String = value?.toPlainString() 
 
 internal fun formatDateTime(value: LocalDateTime?): String {
     return value?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) ?: "--"
+}
+
+internal fun formatInstant(value: Instant?): String {
+    return value
+        ?.let {
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(ZoneId.systemDefault())
+                .format(it)
+        }
+        ?: "--"
+}
+
+internal fun buildDataUpdateSummary(
+    snapshot: MoFishWatchlistState,
+    module: MoFishRefreshModule,
+): String {
+    val refreshedAt = snapshot.projectState.moduleRefreshAt[module] ?: snapshot.projectState.lastRefreshAt
+    return "数据更新时间：${formatInstant(refreshedAt)}"
 }
 
 internal fun formatPercent(value: BigDecimal?): String {

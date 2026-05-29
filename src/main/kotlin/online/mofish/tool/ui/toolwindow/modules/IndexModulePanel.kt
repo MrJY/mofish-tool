@@ -9,6 +9,7 @@ import com.intellij.ui.table.JBTable
 import com.intellij.util.PlatformIcons
 import com.intellij.util.ui.JBUI
 import online.mofish.tool.data.index.marketIndexDefinitionFor
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.StockExchange
 import online.mofish.tool.domain.StockQuote
 import online.mofish.tool.settings.MoFishQuoteSortField
@@ -60,9 +61,7 @@ internal class IndexModulePanel(
     }
 
     override fun buildSummaryText(snapshot: MoFishWatchlistState, rows: List<IndexListItem>): String {
-        val riseCount = rows.count { (stockChangePercent(it.quote) ?: BigDecimal.ZERO) > BigDecimal.ZERO }
-        val fallCount = rows.count { (stockChangePercent(it.quote) ?: BigDecimal.ZERO) < BigDecimal.ZERO }
-        return "共 ${rows.size} 个 | 上涨 $riseCount | 下跌 $fallCount | 排序 ${snapshot.settingsState.sortSettings.quoteField} / ${snapshot.settingsState.sortSettings.quoteDirection}"
+        return buildDataUpdateSummary(snapshot, MoFishRefreshModule.INDICES)
     }
 
     override fun createListCellRenderer(): ListCellRenderer<in IndexListItem> = IndexListRenderer()
@@ -176,7 +175,7 @@ internal class IndexModulePanel(
     ) {
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.selectView(moduleViewId())
-            callbacks.watchlistService.refresh(force = true)
+            callbacks.watchlistService.refreshModule(MoFishRefreshModule.INDICES)
         }
     }
 

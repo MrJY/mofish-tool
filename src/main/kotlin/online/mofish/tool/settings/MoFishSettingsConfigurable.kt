@@ -12,6 +12,7 @@ import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import online.mofish.tool.domain.AiStockHistoryRange
 import online.mofish.tool.domain.HoldingConfig
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.ReminderRule
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -44,6 +45,7 @@ class MoFishSettingsConfigurable : Configurable {
     private var autoRefreshEndHourSpinner: JSpinner? = null
     private var autoRefreshEndMinuteSpinner: JSpinner? = null
     private var autoRefreshCheckBox: JBCheckBox? = null
+    private var autoRefreshModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
     private var openToolWindowOnStartupCheckBox: JBCheckBox? = null
     private var showStatusBarWidgetCheckBox: JBCheckBox? = null
     private var showHoldingProfitCheckBox: JBCheckBox? = null
@@ -92,6 +94,7 @@ class MoFishSettingsConfigurable : Configurable {
                 .addComponent(ui.autoRefreshCheckBox)
                 .addLabeledComponent("自动刷新时间范围：", createTimeRangePanel(ui))
                 .addComponent(JBLabel("支持跨天时段；开始时间与结束时间相同表示全天允许自动刷新。"))
+                .addLabeledComponent("自动刷新生效模块：", createAutoRefreshModulesPanel(ui))
                 .addComponent(ui.openToolWindowOnStartupCheckBox)
                 .addComponent(ui.showStatusBarWidgetCheckBox)
                 .addComponent(ui.showHoldingProfitCheckBox)
@@ -132,6 +135,9 @@ class MoFishSettingsConfigurable : Configurable {
             autoRefreshEndHourSpinner = createTimeSpinner(initialValue = 15, maxValue = 23),
             autoRefreshEndMinuteSpinner = createTimeSpinner(initialValue = 0, maxValue = 59),
             autoRefreshCheckBox = JBCheckBox("启用定时刷新"),
+            autoRefreshModuleCheckBoxes = MoFishRefreshModule.defaultAutoRefreshModules.associateWith { module ->
+                JBCheckBox(module.toString())
+            },
             openToolWindowOnStartupCheckBox = JBCheckBox("IDE 启动时自动打开摸鱼工具窗口"),
             showStatusBarWidgetCheckBox = JBCheckBox("在状态栏显示今日收益"),
             showHoldingProfitCheckBox = JBCheckBox("在行情列表显示持仓收益"),
@@ -160,6 +166,7 @@ class MoFishSettingsConfigurable : Configurable {
         autoRefreshEndHourSpinner = ui.autoRefreshEndHourSpinner
         autoRefreshEndMinuteSpinner = ui.autoRefreshEndMinuteSpinner
         autoRefreshCheckBox = ui.autoRefreshCheckBox
+        autoRefreshModuleCheckBoxes = ui.autoRefreshModuleCheckBoxes
         openToolWindowOnStartupCheckBox = ui.openToolWindowOnStartupCheckBox
         showStatusBarWidgetCheckBox = ui.showStatusBarWidgetCheckBox
         showHoldingProfitCheckBox = ui.showHoldingProfitCheckBox
@@ -204,6 +211,7 @@ class MoFishSettingsConfigurable : Configurable {
         autoRefreshEndHourSpinner = null
         autoRefreshEndMinuteSpinner = null
         autoRefreshCheckBox = null
+        autoRefreshModuleCheckBoxes = emptyMap()
         openToolWindowOnStartupCheckBox = null
         showStatusBarWidgetCheckBox = null
         showHoldingProfitCheckBox = null
@@ -239,6 +247,9 @@ class MoFishSettingsConfigurable : Configurable {
             minuteSpinner = autoRefreshEndMinuteSpinner,
         )
         autoRefreshCheckBox?.isSelected = state.refresh.autoRefreshEnabled
+        autoRefreshModuleCheckBoxes.forEach { (module, checkBox) ->
+            checkBox.isSelected = module in state.refresh.autoRefreshModules
+        }
         openToolWindowOnStartupCheckBox?.isSelected = state.refresh.openToolWindowOnStartup
         showStatusBarWidgetCheckBox?.isSelected = state.showStatusBarWidget
         showHoldingProfitCheckBox?.isSelected = state.showHoldingProfit
@@ -293,6 +304,7 @@ class MoFishSettingsConfigurable : Configurable {
                     minuteSpinner = autoRefreshEndMinuteSpinner,
                     fallbackMinuteOfDay = baseState.refresh.autoRefreshEndMinuteOfDay,
                 ),
+                autoRefreshModules = readAutoRefreshModules(baseState.refresh.autoRefreshModules),
                 openToolWindowOnStartup = openToolWindowOnStartupCheckBox?.isSelected
                     ?: baseState.refresh.openToolWindowOnStartup,
             ),
@@ -354,6 +366,22 @@ class MoFishSettingsConfigurable : Configurable {
         panel.add(JBLabel("至"))
         panel.add(createTimeEditor(ui.autoRefreshEndHourSpinner, ui.autoRefreshEndMinuteSpinner))
         return panel
+    }
+
+    private fun createAutoRefreshModulesPanel(ui: SettingsEditorFields): JPanel {
+        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
+        panel.isOpaque = false
+        ui.autoRefreshModuleCheckBoxes.values.forEach(panel::add)
+        return panel
+    }
+
+    private fun readAutoRefreshModules(fallbackModules: Set<MoFishRefreshModule>): Set<MoFishRefreshModule> {
+        if (autoRefreshModuleCheckBoxes.isEmpty()) {
+            return fallbackModules
+        }
+        return autoRefreshModuleCheckBoxes
+            .filterValues { it.isSelected }
+            .keys
     }
 
     private fun createTimeEditor(hourSpinner: JSpinner, minuteSpinner: JSpinner): JPanel {
@@ -422,6 +450,7 @@ private data class SettingsEditorFields(
     val autoRefreshEndHourSpinner: JSpinner,
     val autoRefreshEndMinuteSpinner: JSpinner,
     val autoRefreshCheckBox: JBCheckBox,
+    val autoRefreshModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,
     val openToolWindowOnStartupCheckBox: JBCheckBox,
     val showStatusBarWidgetCheckBox: JBCheckBox,
     val showHoldingProfitCheckBox: JBCheckBox,

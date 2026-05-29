@@ -3,6 +3,7 @@ package online.mofish.tool.services
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.flow.*
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.data.MoFishDataSource
 import online.mofish.tool.data.RemoteMoFishDataSource
 import online.mofish.tool.domain.MoFishWorkspace
@@ -41,6 +42,7 @@ class MoFishProjectService(
             selectedViewId = current?.selectedViewId ?: DEFAULT_VIEW_ID,
             selectedAssetCode = current?.selectedAssetCode,
             lastRefreshAt = now,
+            moduleRefreshAt = MoFishRefreshModule.entries.associateWith { now },
             loadOrigin = WorkspaceLoadOrigin.PLACEHOLDER,
             cacheHit = false,
         )
@@ -93,8 +95,50 @@ class MoFishProjectService(
             selectedViewId = previous?.selectedViewId ?: DEFAULT_VIEW_ID,
             selectedAssetCode = previous?.selectedAssetCode,
             lastRefreshAt = now,
+            moduleRefreshAt = MoFishRefreshModule.entries.associateWith { now },
             loadOrigin = if (cachedEntry == null) WorkspaceLoadOrigin.DATA_SOURCE else WorkspaceLoadOrigin.MEMORY_CACHE,
             cacheHit = cachedEntry != null,
+        )
+        stateFlow.value = newState
+        eventFlow.tryEmit(
+            MoFishWorkspaceRefreshedEvent(
+                projectName = projectName,
+                forced = force,
+                loadOrigin = newState.loadOrigin,
+                cacheHit = newState.cacheHit,
+                occurredAt = now,
+            )
+        )
+        return newState
+    }
+
+    @Synchronized
+    fun refreshModules(
+        projectName: String,
+        modules: Set<MoFishRefreshModule>,
+        force: Boolean = false,
+    ): MoFishProjectState {
+        if (modules.isEmpty()) {
+            return getState(projectName)
+        }
+
+        val now = Instant.now()
+        val settingsSnapshot = settings
+        val previous = stateFlow.value ?: ensureState(projectName)
+        val workspace = dataSource.loadWorkspaceModules(
+            projectName = projectName,
+            settings = settingsSnapshot,
+            currentWorkspace = previous.workspace,
+            modules = modules,
+        )
+        service<MoFishMemoryCacheService>().putWorkspace(projectName, workspace, now)
+
+        val newState = previous.copy(
+            workspace = workspace,
+            lastRefreshAt = now,
+            moduleRefreshAt = previous.moduleRefreshAt + modules.associateWith { now },
+            loadOrigin = WorkspaceLoadOrigin.DATA_SOURCE,
+            cacheHit = false,
         )
         stateFlow.value = newState
         eventFlow.tryEmit(

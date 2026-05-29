@@ -18,5 +18,4 @@ internal val DEFAULT_MODULES = listOf(
     ModuleNavItem("crypto", "摸鱼虚拟币"),
     ModuleNavItem("forex", "摸鱼外汇"),
     ModuleNavItem("news", "快讯"),
-    ModuleNavItem("settings", "设置"),
 )

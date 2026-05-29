@@ -6,6 +6,7 @@ import online.mofish.tool.data.fund.FundQuoteClient
 import online.mofish.tool.data.index.defaultMarketIndexCodes
 import online.mofish.tool.data.stock.StockQuoteClient
 import online.mofish.tool.domain.MoFishWorkspace
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.settings.MoFishSettingsState
 
 class RemoteMoFishDataSource(
@@ -60,5 +61,76 @@ class RemoteMoFishDataSource(
             forexRates = liveForexRates,
             indexQuotes = liveIndexQuotes,
         )
+    }
+
+    override fun loadWorkspaceModules(
+        projectName: String,
+        settings: MoFishSettingsState,
+        currentWorkspace: MoFishWorkspace,
+        modules: Set<MoFishRefreshModule>,
+    ): MoFishWorkspace {
+        if (modules.isEmpty()) {
+            return currentWorkspace
+        }
+
+        val fallbackWorkspace = fallbackDataSource.loadWorkspace(projectName, settings)
+        var nextWorkspace = currentWorkspace.copy(
+            holdings = settings.holdings,
+            reminderRules = settings.reminders,
+            aiConfig = settings.aiConfig,
+        )
+
+        if (MoFishRefreshModule.FUNDS in modules) {
+            val fallbackFundQuotes = fallbackWorkspace.fundQuotes
+            val liveFundQuotes = fallbackFundQuotes.map { fallbackQuote ->
+                runCatching { fundQuoteClient.fetchQuote(fallbackQuote.code) }
+                    .getOrElse { fallbackQuote }
+            }
+            nextWorkspace = nextWorkspace.copy(fundQuotes = liveFundQuotes)
+        }
+
+        if (MoFishRefreshModule.STOCKS in modules) {
+            val fallbackStockQuotes = fallbackWorkspace.stockQuotes
+            val liveStockQuotes = runCatching {
+                val fetchedQuotes = stockQuoteClient.fetchQuotes(fallbackStockQuotes.map { it.code })
+                val quoteByCode = fetchedQuotes.associateBy { it.code }
+                fallbackStockQuotes.map { fallbackQuote ->
+                    quoteByCode[fallbackQuote.code] ?: fallbackQuote
+                }
+            }.getOrElse { fallbackStockQuotes }
+            nextWorkspace = nextWorkspace.copy(stockQuotes = liveStockQuotes)
+        }
+
+        if (MoFishRefreshModule.CRYPTO in modules) {
+            val fallbackCryptoQuotes = fallbackWorkspace.cryptoQuotes
+            val liveCryptoQuotes = runCatching {
+                val fetchedQuotes = cryptoQuoteClient.fetchQuotes(fallbackCryptoQuotes.map { it.code })
+                val quoteByCode = fetchedQuotes.associateBy { it.code }
+                fallbackCryptoQuotes.map { fallbackQuote ->
+                    quoteByCode[fallbackQuote.code] ?: fallbackQuote
+                }
+            }.getOrElse { fallbackCryptoQuotes }
+            nextWorkspace = nextWorkspace.copy(cryptoQuotes = liveCryptoQuotes)
+        }
+
+        if (MoFishRefreshModule.INDICES in modules) {
+            val liveIndexQuotes = runCatching { marketIndexQuoteClient.fetchQuotes(marketIndexCodes) }
+                .map { quotes -> quotes.ifEmpty { fallbackWorkspace.indexQuotes } }
+                .getOrElse { fallbackWorkspace.indexQuotes }
+            nextWorkspace = nextWorkspace.copy(indexQuotes = liveIndexQuotes)
+        }
+
+        if (MoFishRefreshModule.FOREX in modules) {
+            val liveForexRates = runCatching { bocForexClient.fetchRates() }
+                .map { rates -> rates.ifEmpty { fallbackWorkspace.forexRates } }
+                .getOrElse { fallbackWorkspace.forexRates }
+            nextWorkspace = nextWorkspace.copy(forexRates = liveForexRates)
+        }
+
+        if (MoFishRefreshModule.NEWS in modules) {
+            nextWorkspace = nextWorkspace.copy(flashNews = fallbackWorkspace.flashNews)
+        }
+
+        return nextWorkspace
     }
 }

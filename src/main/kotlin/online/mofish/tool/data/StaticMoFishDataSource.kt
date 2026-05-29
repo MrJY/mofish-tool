@@ -10,6 +10,7 @@ import online.mofish.tool.domain.FlashNewsSource
 import online.mofish.tool.domain.ForexRate
 import online.mofish.tool.domain.FundQuote
 import online.mofish.tool.domain.MoFishWorkspace
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.QuoteStatus
 import online.mofish.tool.domain.StockExchange
 import online.mofish.tool.domain.StockQuote
@@ -53,6 +54,29 @@ class StaticMoFishDataSource : MoFishDataSource {
             flashNews = sampleFlashNews(),
             forexRates = sampleForexRates(),
             indexQuotes = sampleIndexQuotes(),
+        )
+    }
+
+    override fun loadWorkspaceModules(
+        projectName: String,
+        settings: MoFishSettingsState,
+        currentWorkspace: MoFishWorkspace,
+        modules: Set<MoFishRefreshModule>,
+    ): MoFishWorkspace {
+        if (modules.isEmpty()) {
+            return currentWorkspace
+        }
+        val fallbackWorkspace = loadWorkspace(projectName, settings)
+        return currentWorkspace.copy(
+            fundQuotes = if (MoFishRefreshModule.FUNDS in modules) fallbackWorkspace.fundQuotes else currentWorkspace.fundQuotes,
+            stockQuotes = if (MoFishRefreshModule.STOCKS in modules) fallbackWorkspace.stockQuotes else currentWorkspace.stockQuotes,
+            cryptoQuotes = if (MoFishRefreshModule.CRYPTO in modules) fallbackWorkspace.cryptoQuotes else currentWorkspace.cryptoQuotes,
+            forexRates = if (MoFishRefreshModule.FOREX in modules) fallbackWorkspace.forexRates else currentWorkspace.forexRates,
+            indexQuotes = if (MoFishRefreshModule.INDICES in modules) fallbackWorkspace.indexQuotes else currentWorkspace.indexQuotes,
+            flashNews = if (MoFishRefreshModule.NEWS in modules) fallbackWorkspace.flashNews else currentWorkspace.flashNews,
+            holdings = settings.holdings,
+            reminderRules = settings.reminders,
+            aiConfig = settings.aiConfig,
         )
     }
 }

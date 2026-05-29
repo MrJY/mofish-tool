@@ -76,10 +76,8 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
 
         add(createToolbarPanel(), BorderLayout.NORTH)
         add(createRaisedContent(createListContent()), BorderLayout.CENTER)
-        summaryLabel.border = JBUI.Borders.compound(
-            JBUI.Borders.customLine(com.intellij.ui.JBColor.border(), 1, 0, 0, 0),
-            JBUI.Borders.empty(8, 10),
-        )
+        summaryLabel.border = JBUI.Borders.empty(6, 10, 0, 10)
+        summaryLabel.font = summaryLabel.font.deriveFont(summaryLabel.font.size2D - 1f)
         add(summaryLabel, BorderLayout.SOUTH)
         listPanel = this
 

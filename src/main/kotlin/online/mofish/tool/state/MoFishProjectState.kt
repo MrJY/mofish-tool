@@ -1,6 +1,7 @@
 package online.mofish.tool.state
 
 import online.mofish.tool.domain.MoFishWorkspace
+import online.mofish.tool.domain.MoFishRefreshModule
 import java.time.Instant
 
 enum class WorkspaceLoadOrigin {
@@ -15,6 +16,7 @@ data class MoFishProjectState(
     val selectedViewId: String = "stocks",
     val selectedAssetCode: String? = null,
     val lastRefreshAt: Instant,
+    val moduleRefreshAt: Map<MoFishRefreshModule, Instant> = emptyMap(),
     val loadOrigin: WorkspaceLoadOrigin,
     val cacheHit: Boolean,
 )

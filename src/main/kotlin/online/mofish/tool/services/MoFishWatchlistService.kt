@@ -8,6 +8,7 @@ import online.mofish.tool.data.fund.FundQuoteClient
 import online.mofish.tool.data.stock.StockQuoteClient
 import online.mofish.tool.domain.CryptoSearchSuggestion
 import online.mofish.tool.domain.FundSearchSuggestion
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.StockSearchSuggestion
 import online.mofish.tool.settings.MoFishQuoteSortField
 import online.mofish.tool.settings.MoFishSortDirection
@@ -84,7 +85,7 @@ class MoFishWatchlistService(
         activated = true
         projectService.ensureState(project.name)
         refreshSchedulerService.registerProject(project.name) {
-            projectService.refreshState(project.name, force = true)
+            refreshConfiguredModules(force = true)
         }
     }
 
@@ -105,6 +106,24 @@ class MoFishWatchlistService(
         scope.launch(Dispatchers.IO) {
             projectService.refreshState(project.name, force = force)
         }
+    }
+
+    fun refreshModule(module: MoFishRefreshModule, force: Boolean = true) {
+        refreshModules(setOf(module), force)
+    }
+
+    fun refreshModules(modules: Set<MoFishRefreshModule>, force: Boolean = true) {
+        scope.launch(Dispatchers.IO) {
+            projectService.refreshModules(project.name, modules, force = force)
+        }
+    }
+
+    private fun refreshConfiguredModules(force: Boolean = true) {
+        val modules = settingsService.snapshot().refresh.autoRefreshModules
+        if (modules.isEmpty()) {
+            return
+        }
+        projectService.refreshModules(project.name, modules, force = force)
     }
 
     fun selectView(viewId: String) {
