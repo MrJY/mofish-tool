@@ -8,15 +8,23 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
+import online.mofish.tool.domain.AssetType
 import online.mofish.tool.domain.FundQuote
+import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
+import online.mofish.tool.domain.ReminderDirection
+import online.mofish.tool.domain.ReminderMetric
+import online.mofish.tool.domain.ReminderRule
+import online.mofish.tool.settings.MoFishHoldingsDialog
 import online.mofish.tool.settings.MoFishQuoteSortField
+import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
 import online.mofish.tool.ui.web.MoFishFundTrend
 import online.mofish.tool.ui.web.MoFishWebEditorService
 import java.awt.Component
 import java.math.BigDecimal
+import java.util.UUID
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JEditorPane
 import javax.swing.JLabel
@@ -103,6 +111,8 @@ internal class FundModulePanel(
             RefreshFundAction(),
             AddFundAction(),
             RemoveSelectedFundAction(),
+            AddSelectedFundHoldingAction(),
+            AddSelectedFundReminderAction(),
             OpenFundTrendAction(),
             ToggleFundListViewAction(),
             CycleFundGroupFilterAction(),
@@ -335,6 +345,79 @@ internal class FundModulePanel(
             }
             callbacks.watchlistService.removeFundCode(selected.quote.code)
             callbacks.eventStatus.text = "已删除摸鱼基金 ${selected.quote.code}，正在刷新。"
+        }
+    }
+
+    private inner class AddSelectedFundHoldingAction : DumbAwareAction(
+        "添加持仓",
+        "为当前摸鱼基金追加持仓",
+        AllIcons.Nodes.DataTables,
+    ) {
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedRow() ?: return
+            val costPrice = selected.quote.estimatedNetValue ?: selected.quote.previousNetValue ?: BigDecimal.ZERO
+            val template = HoldingConfig(
+                id = "fund:${selected.quote.code}:${UUID.randomUUID()}",
+                assetType = AssetType.FUND,
+                code = selected.quote.code,
+                displayName = selected.quote.name,
+                quantity = BigDecimal.ZERO,
+                costPrice = costPrice,
+                todayCostPrice = selected.quote.previousNetValue,
+            )
+            val dialog = MoFishHoldingsDialog(
+                initialHoldings = listOf(template),
+                newRowTemplate = template,
+                dialogTitle = "添加 ${selected.quote.name} 持仓",
+            )
+            if (!dialog.showAndGet()) {
+                return
+            }
+            callbacks.watchlistService.addHoldings(dialog.result)
+            callbacks.watchlistService.selectView(moduleViewId())
+            callbacks.watchlistService.selectAsset(selected.quote.code)
+            callbacks.eventStatus.text = "已添加摸鱼基金 ${selected.quote.name} 的持仓。"
+        }
+    }
+
+    private inner class AddSelectedFundReminderAction : DumbAwareAction(
+        "添加提醒",
+        "为当前摸鱼基金添加提醒规则",
+        AllIcons.General.Balloon,
+    ) {
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedRow() ?: return
+            val threshold = selected.quote.estimatedNetValue ?: selected.quote.previousNetValue ?: BigDecimal.ZERO
+            val template = ReminderRule(
+                id = "rule-${UUID.randomUUID()}",
+                assetType = AssetType.FUND,
+                code = selected.quote.code,
+                displayName = selected.quote.name,
+                metric = ReminderMetric.PRICE,
+                direction = ReminderDirection.ABOVE,
+                threshold = threshold,
+                enabled = true,
+            )
+            val dialog = MoFishRemindersDialog(
+                initialReminders = listOf(template),
+                newRowTemplate = template,
+                dialogTitle = "添加 ${selected.quote.name} 提醒",
+            )
+            if (!dialog.showAndGet()) {
+                return
+            }
+            callbacks.watchlistService.addReminders(dialog.result)
+            callbacks.watchlistService.selectView(moduleViewId())
+            callbacks.watchlistService.selectAsset(selected.quote.code)
+            callbacks.eventStatus.text = "已添加摸鱼基金 ${selected.quote.name} 的提醒。"
         }
     }
 

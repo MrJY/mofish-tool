@@ -19,6 +19,8 @@ import javax.swing.table.AbstractTableModel
 
 class MoFishRemindersDialog(
     initialReminders: List<ReminderRule>,
+    private val newRowTemplate: ReminderRule? = null,
+    dialogTitle: String = "编辑提醒",
 ) : DialogWrapper(true) {
     private val rows = initialReminders.map { EditableReminderRow.from(it) }.toMutableList()
     private val tableModel = RemindersTableModel(rows)
@@ -28,7 +30,7 @@ class MoFishRemindersDialog(
         private set
 
     init {
-        title = "编辑提醒"
+        title = dialogTitle
         setOKButtonText("确定")
         setCancelButtonText("取消")
         init()
@@ -52,17 +54,7 @@ class MoFishRemindersDialog(
                 .setRemoveActionName("删除所选提醒")
                 .setAddAction {
                     stopEditing()
-                    tableModel.addRow(
-                        EditableReminderRow(
-                            assetType = AssetType.STOCK,
-                            code = "",
-                            displayName = "",
-                            metric = ReminderMetric.PRICE,
-                            direction = ReminderDirection.ABOVE,
-                            threshold = "",
-                            enabled = true,
-                        )
-                    )
+                    tableModel.addRow(newEditableReminderRow())
                 }
                 .setRemoveAction {
                     stopEditing()
@@ -108,6 +100,20 @@ class MoFishRemindersDialog(
                 editor.cancelCellEditing()
             }
         }
+    }
+
+    private fun newEditableReminderRow(): EditableReminderRow {
+        return newRowTemplate
+            ?.let(EditableReminderRow::from)
+            ?: EditableReminderRow(
+                assetType = AssetType.STOCK,
+                code = "",
+                displayName = "",
+                metric = ReminderMetric.PRICE,
+                direction = ReminderDirection.ABOVE,
+                threshold = "",
+                enabled = true,
+            )
     }
 
     private class RemindersTableModel(

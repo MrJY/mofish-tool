@@ -41,6 +41,32 @@ enum class MoFishReminderSortField(
     override fun toString(): String = displayName
 }
 
+enum class MoFishStockTableColumn(
+    private val displayName: String,
+) {
+    CODE("代码"),
+    NAME("名称"),
+    CURRENT_PRICE("现价"),
+    CHANGE_PERCENT("涨跌幅"),
+    OPEN_PRICE("开盘"),
+    PREVIOUS_CLOSE("昨收"),
+    VOLUME("成交量"),
+    TURNOVER("成交额"),
+    TOTAL_PROFIT("持仓收益"),
+    ;
+
+    override fun toString(): String = displayName
+
+    companion object {
+        val defaultColumns: Set<MoFishStockTableColumn> = setOf(
+            CODE,
+            NAME,
+            CURRENT_PRICE,
+            CHANGE_PERCENT,
+        )
+    }
+}
+
 data class MoFishWatchlistSettings(
     val fundCodes: List<String> = emptyList(),
     val stockCodes: List<String> = emptyList(),
@@ -85,6 +111,12 @@ data class MoFishRefreshSettings(
     val openToolWindowOnStartup: Boolean = false,
 )
 
+data class MoFishUiSettings(
+    val moduleContentMinWidth: Int = 500,
+    val stockTableColumns: Set<MoFishStockTableColumn> = MoFishStockTableColumn.defaultColumns,
+    val enabledModules: Set<MoFishRefreshModule> = MoFishRefreshModule.defaultEnabledModules,
+)
+
 data class MoFishSettingsState(
     val watchlist: MoFishWatchlistSettings = MoFishWatchlistSettings(),
     val holdings: List<HoldingConfig> = defaultHoldings(),
@@ -97,6 +129,7 @@ data class MoFishSettingsState(
     ),
     val sortSettings: MoFishSortSettings = MoFishSortSettings(),
     val refresh: MoFishRefreshSettings = MoFishRefreshSettings(),
+    val ui: MoFishUiSettings = MoFishUiSettings(),
     val showStatusBarWidget: Boolean = true,
     val showHoldingProfit: Boolean = false,
 ) {

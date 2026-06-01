@@ -46,6 +46,9 @@ class MoFishSettingsConfigurable : Configurable {
     private var autoRefreshEndMinuteSpinner: JSpinner? = null
     private var autoRefreshCheckBox: JBCheckBox? = null
     private var autoRefreshModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
+    private var moduleContentMinWidthSpinner: JSpinner? = null
+    private var stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox> = emptyMap()
+    private var enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
     private var openToolWindowOnStartupCheckBox: JBCheckBox? = null
     private var showStatusBarWidgetCheckBox: JBCheckBox? = null
     private var showHoldingProfitCheckBox: JBCheckBox? = null
@@ -74,27 +77,16 @@ class MoFishSettingsConfigurable : Configurable {
             }
 
             rootPanel = FormBuilder.createFormBuilder()
-                .addComponent(TitledSeparator("自选列表"))
-                .addLabeledComponent("摸鱼基金代码：", ui.fundCodesField)
-                .addLabeledComponent("股票代码：", ui.stockCodesField)
-                .addLabeledComponent("虚拟币 ID：", ui.cryptoCodesField)
-                .addComponent(JBLabel("多个代码可使用逗号、空格或换行分隔。"))
-                .addComponent(TitledSeparator("AI 配置"))
-                .addLabeledComponent("接口地址：", ui.aiBaseUrlField)
-                .addLabeledComponent("模型：", ui.aiModelField)
-                .addLabeledComponent("API 密钥：", ui.aiApiKeyField)
-                .addLabeledComponent("历史区间：", ui.aiHistoryRangeCombo)
-                .addComponent(TitledSeparator("排序"))
-                .addLabeledComponent("行情排序字段：", ui.quoteSortFieldCombo)
-                .addLabeledComponent("行情排序方向：", ui.quoteSortDirectionCombo)
-                .addLabeledComponent("提醒排序字段：", ui.reminderSortFieldCombo)
-                .addLabeledComponent("提醒排序方向：", ui.reminderSortDirectionCombo)
                 .addComponent(TitledSeparator("刷新"))
                 .addLabeledComponent("数据刷新间隔（秒）：", ui.refreshIntervalSpinner)
                 .addComponent(ui.autoRefreshCheckBox)
                 .addLabeledComponent("自动刷新时间范围：", createTimeRangePanel(ui))
                 .addComponent(JBLabel("支持跨天时段；开始时间与结束时间相同表示全天允许自动刷新。"))
                 .addLabeledComponent("自动刷新生效模块：", createAutoRefreshModulesPanel(ui))
+                .addComponent(TitledSeparator("界面"))
+                .addLabeledComponent("启用模块：", createEnabledModulesPanel(ui))
+                .addLabeledComponent("模块内容最小宽度（px）：", ui.moduleContentMinWidthSpinner)
+                .addLabeledComponent("股票表格显示列：", createStockTableColumnsPanel(ui))
                 .addComponent(ui.openToolWindowOnStartupCheckBox)
                 .addComponent(ui.showStatusBarWidgetCheckBox)
                 .addComponent(ui.showHoldingProfitCheckBox)
@@ -138,6 +130,13 @@ class MoFishSettingsConfigurable : Configurable {
             autoRefreshModuleCheckBoxes = MoFishRefreshModule.defaultAutoRefreshModules.associateWith { module ->
                 JBCheckBox(module.toString())
             },
+            moduleContentMinWidthSpinner = JSpinner(SpinnerNumberModel(500, 1, 1600, 10)),
+            stockTableColumnCheckBoxes = MoFishStockTableColumn.entries.associateWith { column ->
+                JBCheckBox(column.toString())
+            },
+            enabledModuleCheckBoxes = MoFishRefreshModule.entries.associateWith { module ->
+                JBCheckBox(module.toString())
+            },
             openToolWindowOnStartupCheckBox = JBCheckBox("IDE 启动时自动打开摸鱼工具窗口"),
             showStatusBarWidgetCheckBox = JBCheckBox("在状态栏显示今日收益"),
             showHoldingProfitCheckBox = JBCheckBox("在行情列表显示持仓收益"),
@@ -167,6 +166,9 @@ class MoFishSettingsConfigurable : Configurable {
         autoRefreshEndMinuteSpinner = ui.autoRefreshEndMinuteSpinner
         autoRefreshCheckBox = ui.autoRefreshCheckBox
         autoRefreshModuleCheckBoxes = ui.autoRefreshModuleCheckBoxes
+        moduleContentMinWidthSpinner = ui.moduleContentMinWidthSpinner
+        stockTableColumnCheckBoxes = ui.stockTableColumnCheckBoxes
+        enabledModuleCheckBoxes = ui.enabledModuleCheckBoxes
         openToolWindowOnStartupCheckBox = ui.openToolWindowOnStartupCheckBox
         showStatusBarWidgetCheckBox = ui.showStatusBarWidgetCheckBox
         showHoldingProfitCheckBox = ui.showHoldingProfitCheckBox
@@ -212,6 +214,9 @@ class MoFishSettingsConfigurable : Configurable {
         autoRefreshEndMinuteSpinner = null
         autoRefreshCheckBox = null
         autoRefreshModuleCheckBoxes = emptyMap()
+        moduleContentMinWidthSpinner = null
+        stockTableColumnCheckBoxes = emptyMap()
+        enabledModuleCheckBoxes = emptyMap()
         openToolWindowOnStartupCheckBox = null
         showStatusBarWidgetCheckBox = null
         showHoldingProfitCheckBox = null
@@ -249,6 +254,13 @@ class MoFishSettingsConfigurable : Configurable {
         autoRefreshCheckBox?.isSelected = state.refresh.autoRefreshEnabled
         autoRefreshModuleCheckBoxes.forEach { (module, checkBox) ->
             checkBox.isSelected = module in state.refresh.autoRefreshModules
+        }
+        moduleContentMinWidthSpinner?.value = state.ui.moduleContentMinWidth
+        stockTableColumnCheckBoxes.forEach { (column, checkBox) ->
+            checkBox.isSelected = column in state.ui.stockTableColumns
+        }
+        enabledModuleCheckBoxes.forEach { (module, checkBox) ->
+            checkBox.isSelected = module in state.ui.enabledModules
         }
         openToolWindowOnStartupCheckBox?.isSelected = state.refresh.openToolWindowOnStartup
         showStatusBarWidgetCheckBox?.isSelected = state.showStatusBarWidget
@@ -307,6 +319,12 @@ class MoFishSettingsConfigurable : Configurable {
                 autoRefreshModules = readAutoRefreshModules(baseState.refresh.autoRefreshModules),
                 openToolWindowOnStartup = openToolWindowOnStartupCheckBox?.isSelected
                     ?: baseState.refresh.openToolWindowOnStartup,
+            ),
+            ui = MoFishUiSettings(
+                moduleContentMinWidth = (moduleContentMinWidthSpinner?.value as? Int)
+                    ?: baseState.ui.moduleContentMinWidth,
+                stockTableColumns = readStockTableColumns(baseState.ui.stockTableColumns),
+                enabledModules = readEnabledModules(baseState.ui.enabledModules),
             ),
             showStatusBarWidget = showStatusBarWidgetCheckBox?.isSelected ?: baseState.showStatusBarWidget,
             showHoldingProfit = showHoldingProfitCheckBox?.isSelected ?: baseState.showHoldingProfit,
@@ -375,6 +393,20 @@ class MoFishSettingsConfigurable : Configurable {
         return panel
     }
 
+    private fun createStockTableColumnsPanel(ui: SettingsEditorFields): JPanel {
+        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
+        panel.isOpaque = false
+        ui.stockTableColumnCheckBoxes.values.forEach(panel::add)
+        return panel
+    }
+
+    private fun createEnabledModulesPanel(ui: SettingsEditorFields): JPanel {
+        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
+        panel.isOpaque = false
+        ui.enabledModuleCheckBoxes.values.forEach(panel::add)
+        return panel
+    }
+
     private fun readAutoRefreshModules(fallbackModules: Set<MoFishRefreshModule>): Set<MoFishRefreshModule> {
         if (autoRefreshModuleCheckBoxes.isEmpty()) {
             return fallbackModules
@@ -382,6 +414,26 @@ class MoFishSettingsConfigurable : Configurable {
         return autoRefreshModuleCheckBoxes
             .filterValues { it.isSelected }
             .keys
+    }
+
+    private fun readStockTableColumns(fallbackColumns: Set<MoFishStockTableColumn>): Set<MoFishStockTableColumn> {
+        if (stockTableColumnCheckBoxes.isEmpty()) {
+            return fallbackColumns
+        }
+        return stockTableColumnCheckBoxes
+            .filterValues { it.isSelected }
+            .keys
+            .ifEmpty { MoFishStockTableColumn.defaultColumns }
+    }
+
+    private fun readEnabledModules(fallbackModules: Set<MoFishRefreshModule>): Set<MoFishRefreshModule> {
+        if (enabledModuleCheckBoxes.isEmpty()) {
+            return fallbackModules
+        }
+        return enabledModuleCheckBoxes
+            .filterValues { it.isSelected }
+            .keys
+            .ifEmpty { MoFishRefreshModule.defaultEnabledModules }
     }
 
     private fun createTimeEditor(hourSpinner: JSpinner, minuteSpinner: JSpinner): JPanel {
@@ -451,6 +503,9 @@ private data class SettingsEditorFields(
     val autoRefreshEndMinuteSpinner: JSpinner,
     val autoRefreshCheckBox: JBCheckBox,
     val autoRefreshModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,
+    val moduleContentMinWidthSpinner: JSpinner,
+    val stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox>,
+    val enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,
     val openToolWindowOnStartupCheckBox: JBCheckBox,
     val showStatusBarWidgetCheckBox: JBCheckBox,
     val showHoldingProfitCheckBox: JBCheckBox,

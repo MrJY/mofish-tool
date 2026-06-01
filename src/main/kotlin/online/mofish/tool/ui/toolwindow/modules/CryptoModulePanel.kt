@@ -8,13 +8,21 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
+import online.mofish.tool.domain.AssetType
 import online.mofish.tool.domain.CryptoQuote
+import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
+import online.mofish.tool.domain.ReminderDirection
+import online.mofish.tool.domain.ReminderMetric
+import online.mofish.tool.domain.ReminderRule
+import online.mofish.tool.settings.MoFishHoldingsDialog
 import online.mofish.tool.settings.MoFishQuoteSortField
+import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
 import java.awt.Component
 import java.math.BigDecimal
+import java.util.UUID
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JEditorPane
 import javax.swing.JLabel
@@ -94,6 +102,8 @@ internal class CryptoModulePanel(
             RefreshCryptoAction(),
             AddCryptoAction(),
             RemoveSelectedCryptoAction(),
+            AddSelectedCryptoHoldingAction(),
+            AddSelectedCryptoReminderAction(),
             ToggleCryptoListViewAction(),
         )
     }
@@ -307,6 +317,77 @@ internal class CryptoModulePanel(
             }
             callbacks.watchlistService.removeCryptoCode(selected.quote.code)
             callbacks.eventStatus.text = "已删除摸鱼虚拟币 ${selected.quote.code}，正在刷新。"
+        }
+    }
+
+    private inner class AddSelectedCryptoHoldingAction : DumbAwareAction(
+        "添加持仓",
+        "为当前摸鱼虚拟币追加持仓",
+        AllIcons.Nodes.DataTables,
+    ) {
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedRow() ?: return
+            val template = HoldingConfig(
+                id = "crypto:${selected.quote.code}:${UUID.randomUUID()}",
+                assetType = AssetType.CRYPTO,
+                code = selected.quote.code,
+                displayName = selected.quote.name,
+                quantity = BigDecimal.ZERO,
+                costPrice = selected.quote.currentPrice ?: BigDecimal.ZERO,
+                currency = selected.quote.quoteCurrency,
+            )
+            val dialog = MoFishHoldingsDialog(
+                initialHoldings = listOf(template),
+                newRowTemplate = template,
+                dialogTitle = "添加 ${selected.quote.name} 持仓",
+            )
+            if (!dialog.showAndGet()) {
+                return
+            }
+            callbacks.watchlistService.addHoldings(dialog.result)
+            callbacks.watchlistService.selectView(moduleViewId())
+            callbacks.watchlistService.selectAsset(selected.quote.code)
+            callbacks.eventStatus.text = "已添加摸鱼虚拟币 ${selected.quote.name} 的持仓。"
+        }
+    }
+
+    private inner class AddSelectedCryptoReminderAction : DumbAwareAction(
+        "添加提醒",
+        "为当前摸鱼虚拟币添加提醒规则",
+        AllIcons.General.Balloon,
+    ) {
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedRow() ?: return
+            val template = ReminderRule(
+                id = "rule-${UUID.randomUUID()}",
+                assetType = AssetType.CRYPTO,
+                code = selected.quote.code,
+                displayName = selected.quote.name,
+                metric = ReminderMetric.PRICE,
+                direction = ReminderDirection.ABOVE,
+                threshold = selected.quote.currentPrice ?: BigDecimal.ZERO,
+                enabled = true,
+            )
+            val dialog = MoFishRemindersDialog(
+                initialReminders = listOf(template),
+                newRowTemplate = template,
+                dialogTitle = "添加 ${selected.quote.name} 提醒",
+            )
+            if (!dialog.showAndGet()) {
+                return
+            }
+            callbacks.watchlistService.addReminders(dialog.result)
+            callbacks.watchlistService.selectView(moduleViewId())
+            callbacks.watchlistService.selectAsset(selected.quote.code)
+            callbacks.eventStatus.text = "已添加摸鱼虚拟币 ${selected.quote.name} 的提醒。"
         }
     }
 

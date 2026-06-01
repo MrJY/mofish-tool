@@ -40,15 +40,16 @@ internal object MoFishUiStyle {
         return roundedButton(
             text = "分组",
             selected = false,
-            fixedSize = Dimension(JBUI.scale(76), JBUI.scale(26)),
+            fixedSize = Dimension(JBUI.scale(58), JBUI.scale(26)),
             iconPainter = { button, graphics ->
-                val x = button.width - JBUI.scale(16)
+                val x = button.width - JBUI.scale(14)
                 val y = button.height / 2 - JBUI.scale(2)
                 graphics.drawLine(x, y, x + JBUI.scale(4), y + JBUI.scale(4))
                 graphics.drawLine(x + JBUI.scale(4), y + JBUI.scale(4), x + JBUI.scale(8), y)
             },
         ).apply {
-            horizontalAlignment = SwingConstants.CENTER
+            horizontalAlignment = SwingConstants.LEFT
+            margin = JBUI.insets(1, 8, 1, 2)
             addActionListener { onClick(this) }
         }
     }

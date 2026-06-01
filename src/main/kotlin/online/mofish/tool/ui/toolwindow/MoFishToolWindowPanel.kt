@@ -14,6 +14,7 @@ import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filterNotNull
 import online.mofish.tool.data.stock.canonicalizeStockInputCode
+import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.services.MoFishWatchlistService
 import online.mofish.tool.state.MoFishWatchlistState
 import online.mofish.tool.ui.dialogs.MoFishSearchableChoiceDialog
@@ -247,12 +248,36 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     private fun render(snapshot: MoFishWatchlistState) {
-        syncModuleView(snapshot.projectState.selectedViewId)
+        syncEnabledModules(snapshot)
+        val selectedViewId = enabledViewId(snapshot.projectState.selectedViewId, snapshot.enabledModuleItems())
+        if (selectedViewId != snapshot.projectState.selectedViewId) {
+            watchlistService.selectView(selectedViewId)
+        }
+        syncModuleView(selectedViewId)
         stockModule.render(snapshot)
         indexModule.render(snapshot)
         fundModule.render(snapshot)
         cryptoModule.render(snapshot)
         forexModule.render(snapshot)
+    }
+
+    private fun syncEnabledModules(snapshot: MoFishWatchlistState) {
+        val enabledItems = snapshot.enabledModuleItems()
+        val currentViewIds = (0 until moduleListModel.size()).map { moduleListModel.getElementAt(it).viewId }
+        val nextViewIds = enabledItems.map { it.viewId }
+        if (currentViewIds == nextViewIds) {
+            moduleList.visibleRowCount = enabledItems.size
+            return
+        }
+
+        syncingModuleSelection = true
+        try {
+            moduleListModel.clear()
+            enabledItems.forEach(moduleListModel::addElement)
+            moduleList.visibleRowCount = enabledItems.size
+        } finally {
+            syncingModuleSelection = false
+        }
     }
 
     private fun syncModuleView(viewId: String) {
@@ -272,7 +297,13 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     private fun normalizeViewId(viewId: String): String {
-        return if (DEFAULT_MODULES.any { it.viewId == viewId }) viewId else "stocks"
+        return if (moduleIndexOf(viewId) >= 0) {
+            viewId
+        } else if (moduleListModel.size() > 0) {
+            moduleListModel.getElementAt(0).viewId
+        } else {
+            "stocks"
+        }
     }
 
     private fun moduleIndexOf(viewId: String): Int {
@@ -282,6 +313,21 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             }
         }
         return -1
+    }
+
+    private fun MoFishWatchlistState.enabledModuleItems(): List<ModuleNavItem> {
+        val enabledModules = settingsState.ui.enabledModules.ifEmpty { MoFishRefreshModule.defaultEnabledModules }
+        return DEFAULT_MODULES.filter { item ->
+            enabledModules.any { module -> module.viewId == item.viewId }
+        }.ifEmpty {
+            DEFAULT_MODULES
+        }
+    }
+
+    private fun enabledViewId(viewId: String, enabledItems: List<ModuleNavItem>): String {
+        return enabledItems.firstOrNull { it.viewId == viewId }?.viewId
+            ?: enabledItems.firstOrNull()?.viewId
+            ?: "stocks"
     }
 
     private fun onUiThread(block: () -> Unit) {

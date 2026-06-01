@@ -15,6 +15,8 @@ enum class MoFishRefreshModule(
     override fun toString(): String = displayName
 
     companion object {
+        val defaultEnabledModules: Set<MoFishRefreshModule> = entries.toSet()
+
         val defaultAutoRefreshModules: Set<MoFishRefreshModule> = setOf(
             STOCKS,
             INDICES,

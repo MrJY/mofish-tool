@@ -9,14 +9,20 @@ import com.intellij.ui.table.JBTable
 import com.intellij.util.PlatformIcons
 import com.intellij.util.ui.JBUI
 import online.mofish.tool.data.index.marketIndexDefinitionFor
+import online.mofish.tool.domain.AssetType
 import online.mofish.tool.domain.MoFishRefreshModule
+import online.mofish.tool.domain.ReminderDirection
+import online.mofish.tool.domain.ReminderMetric
+import online.mofish.tool.domain.ReminderRule
 import online.mofish.tool.domain.StockExchange
 import online.mofish.tool.domain.StockQuote
 import online.mofish.tool.settings.MoFishQuoteSortField
+import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
 import java.awt.Component
 import java.math.BigDecimal
+import java.util.UUID
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JLabel
 import javax.swing.JList
@@ -85,7 +91,15 @@ internal class IndexModulePanel(
         )
     }
 
-    override fun createPopupActions(): List<AnAction> = createToolbarActions()
+    override fun createPopupActions(): List<AnAction> {
+        return listOf(
+            RefreshIndexAction(),
+            AddSelectedIndexReminderAction(),
+            ToggleIndexListViewAction(),
+            CycleQuoteSortFieldAction(),
+            ToggleQuoteSortDirectionAction(),
+        )
+    }
 
     private inner class IndexListRenderer : DefaultListCellRenderer() {
         override fun getListCellRendererComponent(
@@ -179,6 +193,42 @@ internal class IndexModulePanel(
         }
     }
 
+    private inner class AddSelectedIndexReminderAction : DumbAwareAction(
+        "添加提醒",
+        "为当前摸鱼指数添加提醒规则",
+        AllIcons.General.Balloon,
+    ) {
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedRow() ?: return
+            val template = ReminderRule(
+                id = "rule-${UUID.randomUUID()}",
+                assetType = AssetType.STOCK,
+                code = selected.quote.code,
+                displayName = selected.quote.name,
+                metric = ReminderMetric.PRICE,
+                direction = ReminderDirection.ABOVE,
+                threshold = selected.quote.currentPrice ?: BigDecimal.ZERO,
+                enabled = true,
+            )
+            val dialog = MoFishRemindersDialog(
+                initialReminders = listOf(template),
+                newRowTemplate = template,
+                dialogTitle = "添加 ${selected.quote.name} 提醒",
+            )
+            if (!dialog.showAndGet()) {
+                return
+            }
+            callbacks.watchlistService.addReminders(dialog.result)
+            callbacks.watchlistService.selectView(moduleViewId())
+            callbacks.watchlistService.selectAsset(selected.quote.code)
+            callbacks.eventStatus.text = "已添加摸鱼指数 ${selected.quote.name} 的提醒。"
+        }
+    }
+
     private inner class ToggleIndexListViewAction : DumbAwareAction("切换视图", "切换摸鱼指数列表展示方式", AllIcons.Nodes.DataTables) {
         override fun update(event: AnActionEvent) {
             event.presentation.text = nextViewMode().displayName
@@ -235,8 +285,6 @@ internal class IndexModulePanel(
             StockExchange.NYSE,
             StockExchange.OTHER,
             -> "美股"
-
-            null -> "A股"
         }
     }
 

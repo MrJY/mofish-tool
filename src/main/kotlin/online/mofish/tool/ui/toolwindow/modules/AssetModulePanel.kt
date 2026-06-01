@@ -12,6 +12,8 @@ import com.intellij.util.ui.JBUI
 import online.mofish.tool.state.MoFishWatchlistState
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Dimension
+import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.DefaultListModel
@@ -20,6 +22,8 @@ import javax.swing.JComponent
 import javax.swing.JEditorPane
 import javax.swing.JList
 import javax.swing.JPanel
+import javax.swing.ScrollPaneConstants
+import javax.swing.Scrollable
 import javax.swing.JTable
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
@@ -75,10 +79,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         installOpenDetailOnDoubleClick(table)
 
         add(createToolbarPanel(), BorderLayout.NORTH)
-        add(createRaisedContent(createListContent()), BorderLayout.CENTER)
-        summaryLabel.border = JBUI.Borders.empty(6, 10, 0, 10)
-        summaryLabel.font = summaryLabel.font.deriveFont(summaryLabel.font.size2D - 1f)
-        add(summaryLabel, BorderLayout.SOUTH)
+        add(createScrollableDataArea(), BorderLayout.CENTER)
         listPanel = this
 
         return if (hasDetailPage()) {
@@ -91,6 +92,71 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         }
     }
 
+    private fun createScrollableDataArea(): JComponent {
+        val dataPanel = createMinWidthPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
+        dataPanel.isOpaque = false
+        dataPanel.add(createRaisedContent(createListContent()), BorderLayout.CENTER)
+        summaryLabel.border = JBUI.Borders.empty(6, 10, 0, 10)
+        summaryLabel.font = summaryLabel.font.deriveFont(summaryLabel.font.size2D - 1f)
+        dataPanel.add(summaryLabel, BorderLayout.SOUTH)
+
+        return wrapMinWidthScrollPane(dataPanel)
+    }
+
+    private fun createMinWidthPanel(layout: BorderLayout): JPanel {
+        return object : JPanel(layout), Scrollable {
+            override fun getMinimumSize(): Dimension {
+                val size = super.getMinimumSize()
+                return Dimension(contentMinWidth(), size.height)
+            }
+
+            override fun getPreferredSize(): Dimension {
+                val size = super.getPreferredSize()
+                val contentMinWidth = contentMinWidth()
+                return Dimension(size.width.coerceAtLeast(contentMinWidth), size.height)
+            }
+
+            override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+
+            override fun getScrollableUnitIncrement(
+                visibleRect: Rectangle,
+                orientation: Int,
+                direction: Int,
+            ): Int = JBUI.scale(16)
+
+            override fun getScrollableBlockIncrement(
+                visibleRect: Rectangle,
+                orientation: Int,
+                direction: Int,
+            ): Int = JBUI.scale(96)
+
+            override fun getScrollableTracksViewportWidth(): Boolean {
+                return (parent?.width ?: 0) >= contentMinWidth()
+            }
+
+            override fun getScrollableTracksViewportHeight(): Boolean = true
+        }
+    }
+
+    private fun wrapMinWidthScrollPane(content: JComponent): JComponent {
+        return JBScrollPane(content).apply {
+            border = JBUI.Borders.empty()
+            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
+            verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+            viewport.isOpaque = false
+            isOpaque = false
+        }
+    }
+
+    private fun contentMinWidth(): Int {
+        val configuredWidth = callbacks.watchlistService.snapshot()
+            ?.settingsState
+            ?.ui
+            ?.moduleContentMinWidth
+            ?: 500
+        return JBUI.scale(configuredWidth.coerceIn(1, 1600))
+    }
+
     fun render(snapshot: MoFishWatchlistState) {
         val rows = buildRows(snapshot)
         val preferredCode = resolvePreferredSelectionCode(snapshot, rows)
@@ -100,6 +166,8 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         if (isActive(snapshot)) {
             syncActiveAssetSelection(snapshot.projectState.selectedAssetCode, selectedRow()?.code)
         }
+        revalidate()
+        repaint()
     }
 
     protected abstract fun buildRows(snapshot: MoFishWatchlistState): List<R>
@@ -158,11 +226,11 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
             callbacks.eventStatus.text = "已返回$title。"
         }, BorderLayout.EAST)
 
-        val detailPanel = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
+        val detailPanel = createMinWidthPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
         detailPanel.border = JBUI.Borders.empty(8)
         detailPanel.add(header, BorderLayout.NORTH)
         detailPanel.add(JBScrollPane(detailPane), BorderLayout.CENTER)
-        return detailPanel
+        return wrapMinWidthScrollPane(detailPanel)
     }
 
     protected fun isActive(snapshot: MoFishWatchlistState): Boolean {
@@ -284,6 +352,8 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
 
     private fun refreshListViewLayout() {
         listContentLayout.show(listContent, viewMode.cardId)
+        listContent.revalidate()
+        listContent.repaint()
     }
 
     private fun refreshTabLayout() {

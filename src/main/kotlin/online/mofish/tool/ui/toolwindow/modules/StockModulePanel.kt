@@ -18,6 +18,7 @@ import online.mofish.tool.domain.StockDetailSnapshot
 import online.mofish.tool.domain.StockQuote
 import online.mofish.tool.settings.MoFishQuoteSortField
 import online.mofish.tool.settings.MoFishSortDirection
+import online.mofish.tool.settings.MoFishStockTableColumn
 import online.mofish.tool.settings.normalizeStockGroupValue
 import online.mofish.tool.state.MoFishWatchlistState
 import online.mofish.tool.ui.web.MoFishStockTrend
@@ -36,7 +37,6 @@ import javax.swing.JComponent
 import javax.swing.JEditorPane
 import javax.swing.JLabel
 import javax.swing.JList
-import javax.swing.JMenu
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
 import javax.swing.JTable
@@ -61,6 +61,7 @@ internal class StockModulePanel(
     private val stockDetailClient = StockDetailClient()
     private val detailCache = ConcurrentHashMap<String, StockDetailSnapshot>()
     private var detailState = StockDetailUiState()
+    private var visibleTableColumns: List<MoFishStockTableColumn> = MoFishStockTableColumn.defaultColumns.toList()
     private val detailPane = JEditorPane("text/html", "").apply {
         isEditable = false
         putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true)
@@ -164,6 +165,7 @@ internal class StockModulePanel(
 
     override fun buildRows(snapshot: MoFishWatchlistState): List<StockListItem> {
         normalizeStockGroupFilter(snapshot)
+        configureVisibleTableColumns(snapshot)
         renderStockGroupBar(snapshot)
 
         val holdingsByCode = snapshot.settingsState.holdings
@@ -193,10 +195,7 @@ internal class StockModulePanel(
 
     override fun configureTable(table: JBTable) {
         table.setDefaultRenderer(Any::class.java, StockTableCellRenderer())
-        table.columnModel.getColumn(0).preferredWidth = JBUI.scale(116)
-        table.columnModel.getColumn(1).preferredWidth = JBUI.scale(180)
-        table.columnModel.getColumn(2).preferredWidth = JBUI.scale(88)
-        table.columnModel.getColumn(3).preferredWidth = JBUI.scale(92)
+        applyStockTableColumnWidths()
     }
 
     override fun createToolbarActions(): List<AnAction> {
@@ -218,6 +217,8 @@ internal class StockModulePanel(
             AddStockAction(),
             RemoveSelectedStockAction(),
             MoveSelectedStockToGroupAction(),
+            EditSelectedStockHoldingAction(),
+            EditSelectedStockReminderAction(),
             OpenStockTrendAction(),
             ToggleStockListViewAction(),
             CycleQuoteSortFieldAction(),
@@ -330,6 +331,43 @@ internal class StockModulePanel(
         return if (count == null) displayName else "$displayName（$count）"
     }
 
+    private fun configureVisibleTableColumns(snapshot: MoFishWatchlistState) {
+        val columns = snapshot.settingsState.ui.stockTableColumns
+            .ifEmpty { MoFishStockTableColumn.defaultColumns }
+            .filter { it != MoFishStockTableColumn.TOTAL_PROFIT || snapshot.settingsState.showHoldingProfit }
+            .ifEmpty { MoFishStockTableColumn.defaultColumns }
+            .toList()
+        if (columns == visibleTableColumns) {
+            return
+        }
+        visibleTableColumns = columns
+        tableModel.fireTableStructureChanged()
+        applyStockTableColumnWidths()
+    }
+
+    private fun applyStockTableColumnWidths() {
+        if (table.columnModel.columnCount != visibleTableColumns.size) {
+            return
+        }
+        visibleTableColumns.forEachIndexed { index, column ->
+            table.columnModel.getColumn(index).preferredWidth = JBUI.scale(stockTableColumnWidth(column))
+        }
+    }
+
+    private fun stockTableColumnWidth(column: MoFishStockTableColumn): Int {
+        return when (column) {
+            MoFishStockTableColumn.CODE -> 116
+            MoFishStockTableColumn.NAME -> 180
+            MoFishStockTableColumn.CURRENT_PRICE -> 88
+            MoFishStockTableColumn.CHANGE_PERCENT -> 92
+            MoFishStockTableColumn.OPEN_PRICE -> 88
+            MoFishStockTableColumn.PREVIOUS_CLOSE -> 88
+            MoFishStockTableColumn.VOLUME -> 104
+            MoFishStockTableColumn.TURNOVER -> 112
+            MoFishStockTableColumn.TOTAL_PROFIT -> 112
+        }
+    }
+
     private fun createStockGroupFilterPopup(snapshot: MoFishWatchlistState): JPopupMenu {
         val popup = JPopupMenu()
         val groups = availableStockGroups(snapshot)
@@ -357,8 +395,7 @@ internal class StockModulePanel(
             )
         }
         popup.addSeparator()
-        popup.add(MoFishUiStyle.menuItem("新建分组") { createStockGroupFromUi() })
-        popup.add(MoFishUiStyle.menuItem("管理分组") { showStockGroupManagePopup(stockGroupSelectorButton) })
+        popup.add(MoFishUiStyle.menuItem("管理分组") { openStockGroupManagementDialog() })
         return popup
     }
 
@@ -368,92 +405,18 @@ internal class StockModulePanel(
         createStockGroupFilterPopup(snapshot).show(source, 0, source.height.coerceAtLeast(1))
     }
 
-    private fun createStockGroupFromUi() {
-        val groupName = askStockGroupName(
-            title = "新建摸鱼股票分组",
-            message = "输入新的分组名称：",
-            initialValue = "",
-        ) ?: return
-        callbacks.watchlistService.addStockGroup(groupName)
-        stockGroupFilter = groupName
-        callbacks.watchlistService.selectView(moduleViewId())
-        callbacks.eventStatus.text = "已创建摸鱼股票分组 $groupName。"
-    }
-
-    private fun showStockGroupManagePopup(anchor: Component) {
+    private fun openStockGroupManagementDialog() {
         val snapshot = callbacks.watchlistService.snapshot() ?: return
-        val groups = availableStockGroups(snapshot)
-        val popup = JPopupMenu()
-        if (groups.isEmpty()) {
-            popup.add(MoFishUiStyle.menuItem("暂无可管理分组") { }.apply { isEnabled = false })
-        }
-        groups.forEachIndexed { index, group ->
-            val menu = JMenu(group)
-            menu.add(
-                MoFishUiStyle.menuItem("设为当前分组", selected = group.equals(stockGroupFilter, ignoreCase = true)) {
-                    stockGroupFilter = group
-                    callbacks.watchlistService.selectView(moduleViewId())
-                    render(callbacks.watchlistService.snapshot() ?: snapshot)
-                }
-            )
-            menu.add(
-                MoFishUiStyle.menuItem("上移") {
-                    callbacks.watchlistService.moveStockGroup(group, -1)
-                    callbacks.watchlistService.selectView(moduleViewId())
-                    callbacks.eventStatus.text = "已前移摸鱼股票分组 $group。"
-                }.apply { isEnabled = index > 0 }
-            )
-            menu.add(
-                MoFishUiStyle.menuItem("下移") {
-                    callbacks.watchlistService.moveStockGroup(group, 1)
-                    callbacks.watchlistService.selectView(moduleViewId())
-                    callbacks.eventStatus.text = "已后移摸鱼股票分组 $group。"
-                }.apply { isEnabled = index < groups.lastIndex }
-            )
-            menu.addSeparator()
-            menu.add(MoFishUiStyle.menuItem("删除") { deleteStockGroup(group) })
-            popup.add(menu)
-        }
-        if (groups.isNotEmpty()) {
-            popup.addSeparator()
-        }
-        popup.add(MoFishUiStyle.menuItem("新建分组") { createStockGroupFromUi() })
-        val source = stockPopupAnchor(anchor)
-        popup.show(source, 0, source.height.coerceAtLeast(1))
-    }
-
-    private fun deleteStockGroup(groupName: String) {
-        val confirm = Messages.showYesNoDialog(
-            callbacks.project,
-            "确认删除股票分组 $groupName 吗？该分组下的股票会变为无分组。",
-            "删除摸鱼股票分组",
-            AllIcons.General.WarningDialog,
-        )
-        if (confirm != Messages.YES) {
+        val dialog = StockGroupManagementDialog(availableStockGroups(snapshot))
+        if (!dialog.showAndGet()) {
             return
         }
-        callbacks.watchlistService.removeStockGroup(groupName)
-        if (groupName.equals(stockGroupFilter, ignoreCase = true)) {
-            stockGroupFilter = null
-        }
+        callbacks.watchlistService.replaceStockGroups(dialog.result)
+        stockGroupFilter = stockGroupFilter
+            ?.let { current -> dialog.result.firstOrNull { it.equals(current, ignoreCase = true) } }
         callbacks.watchlistService.selectView(moduleViewId())
-        callbacks.eventStatus.text = "已删除摸鱼股票分组 $groupName。"
-    }
-
-    private fun askStockGroupName(
-        title: String,
-        message: String,
-        initialValue: String = "",
-    ): String? {
-        val groupName = Messages.showInputDialog(
-            callbacks.project,
-            message,
-            title,
-            null,
-            initialValue,
-            null,
-        )?.trim()
-        return groupName?.takeIf { it.isNotEmpty() }
+        callbacks.eventStatus.text = "已更新摸鱼股票分组。"
+        callbacks.watchlistService.snapshot()?.let(::render)
     }
 
     private fun stockReminderRules(snapshot: MoFishWatchlistState, row: StockListItem?): List<online.mofish.tool.domain.ReminderRule> {
@@ -555,24 +518,25 @@ internal class StockModulePanel(
     }
 
     private inner class StockTableModel : AssetTableModel<StockListItem>() {
-        override fun getColumnCount(): Int = 4
+        override fun getColumnCount(): Int = visibleTableColumns.size
 
         override fun getColumnName(column: Int): String {
-            return when (column) {
-                0 -> "代码"
-                1 -> "名称"
-                2 -> "现价"
-                else -> "涨跌幅"
-            }
+            return visibleTableColumns.getOrNull(column)?.toString().orEmpty()
         }
 
         override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
             val row = rowAt(rowIndex)
-            return when (columnIndex) {
-                0 -> row.quote.code.uppercase()
-                1 -> row.quote.name
-                2 -> formatDecimal(row.quote.currentPrice)
-                else -> formatPercent(stockChangePercent(row.quote))
+            return when (visibleTableColumns.getOrNull(columnIndex)) {
+                MoFishStockTableColumn.CODE -> row.quote.code.uppercase()
+                MoFishStockTableColumn.NAME -> row.quote.name
+                MoFishStockTableColumn.CURRENT_PRICE -> formatDecimal(row.quote.currentPrice)
+                MoFishStockTableColumn.CHANGE_PERCENT -> formatPercent(stockChangePercent(row.quote))
+                MoFishStockTableColumn.OPEN_PRICE -> formatDecimal(row.quote.openPrice)
+                MoFishStockTableColumn.PREVIOUS_CLOSE -> formatDecimal(row.quote.previousClose)
+                MoFishStockTableColumn.VOLUME -> formatTenThousand(row.quote.volume)
+                MoFishStockTableColumn.TURNOVER -> formatTenThousand(row.quote.turnover)
+                MoFishStockTableColumn.TOTAL_PROFIT -> formatDecimal(row.profit?.totalProfit)
+                null -> ""
             }
         }
 
@@ -591,10 +555,12 @@ internal class StockModulePanel(
             val component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
             val label = component as? JLabel ?: return component
             val item = tableModel.itemAt(this@StockModulePanel.table.convertRowIndexToModel(row)) ?: return component
+            val visibleColumn = visibleTableColumns.getOrNull(column)
             label.border = JBUI.Borders.empty(0, 8)
-            label.horizontalAlignment = if (column >= 2) JLabel.RIGHT else JLabel.LEFT
-            label.foreground = when (column) {
-                3 -> marketColor(stockChangePercent(item.quote))
+            label.horizontalAlignment = if (visibleColumn?.isNumericStockColumn() == true) JLabel.RIGHT else JLabel.LEFT
+            label.foreground = when (visibleColumn) {
+                MoFishStockTableColumn.CHANGE_PERCENT -> marketColor(stockChangePercent(item.quote))
+                MoFishStockTableColumn.TOTAL_PROFIT -> marketColor(item.profit?.totalProfit)
                 else -> JBColor.foreground()
             }
             return component
@@ -711,6 +677,52 @@ internal class StockModulePanel(
         }
     }
 
+    private inner class EditSelectedStockHoldingAction : DumbAwareAction(
+        "添加持仓",
+        "为当前摸鱼股票追加持仓",
+        AllIcons.Nodes.DataTables,
+    ) {
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedRow() ?: return
+            val dialog = StockHoldingAddDialog(selected.quote)
+            if (!dialog.showAndGet()) {
+                return
+            }
+            val holding = dialog.result ?: return
+            callbacks.watchlistService.addHoldings(listOf(holding))
+            callbacks.watchlistService.selectView(moduleViewId())
+            callbacks.watchlistService.selectAsset(selected.quote.code)
+            callbacks.eventStatus.text = "已添加摸鱼股票 ${selected.quote.name} 的持仓。"
+        }
+    }
+
+    private inner class EditSelectedStockReminderAction : DumbAwareAction(
+        "添加提醒",
+        "为当前摸鱼股票添加提醒规则",
+        AllIcons.General.Balloon,
+    ) {
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedRow() ?: return
+            val dialog = StockReminderAddDialog(selected.quote)
+            if (!dialog.showAndGet()) {
+                return
+            }
+            val reminder = dialog.result ?: return
+            callbacks.watchlistService.addReminders(listOf(reminder))
+            callbacks.watchlistService.selectView(moduleViewId())
+            callbacks.watchlistService.selectAsset(selected.quote.code)
+            callbacks.eventStatus.text = "已添加摸鱼股票 ${selected.quote.name} 的提醒。"
+        }
+    }
+
     private inner class RemoveSelectedStockAction : DumbAwareAction("删除摸鱼股票", "删除当前选中的摸鱼股票", AllIcons.General.Remove) {
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
@@ -771,5 +783,19 @@ internal class StockModulePanel(
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.toggleQuoteSortDirection()
         }
+    }
+}
+
+private fun MoFishStockTableColumn.isNumericStockColumn(): Boolean {
+    return when (this) {
+        MoFishStockTableColumn.CODE,
+        MoFishStockTableColumn.NAME -> false
+        MoFishStockTableColumn.CURRENT_PRICE,
+        MoFishStockTableColumn.CHANGE_PERCENT,
+        MoFishStockTableColumn.OPEN_PRICE,
+        MoFishStockTableColumn.PREVIOUS_CLOSE,
+        MoFishStockTableColumn.VOLUME,
+        MoFishStockTableColumn.TURNOVER,
+        MoFishStockTableColumn.TOTAL_PROFIT -> true
     }
 }

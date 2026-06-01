@@ -6,9 +6,12 @@ import com.intellij.openapi.project.Project
 import online.mofish.tool.data.crypto.CryptoQuoteClient
 import online.mofish.tool.data.fund.FundQuoteClient
 import online.mofish.tool.data.stock.StockQuoteClient
+import online.mofish.tool.domain.AssetType
 import online.mofish.tool.domain.CryptoSearchSuggestion
 import online.mofish.tool.domain.FundSearchSuggestion
+import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
+import online.mofish.tool.domain.ReminderRule
 import online.mofish.tool.domain.StockSearchSuggestion
 import online.mofish.tool.settings.MoFishQuoteSortField
 import online.mofish.tool.settings.MoFishSortDirection
@@ -220,6 +223,25 @@ class MoFishWatchlistService(
         }
     }
 
+    fun replaceStockGroups(groups: List<String>) {
+        val normalizedGroups = groups
+            .map(::normalizeStockGroupName)
+            .filter { it.isNotEmpty() }
+            .distinctBy { it.lowercase() }
+        updateWatchlist { watchlist ->
+            val groupByLowercase = normalizedGroups.associateBy { it.lowercase() }
+            watchlist.copy(
+                stockGroups = normalizedGroups,
+                stockGroupAssignments = watchlist.stockGroupAssignments
+                    .mapNotNull { (code, group) ->
+                        val normalizedGroup = groupByLowercase[group.lowercase()] ?: return@mapNotNull null
+                        code to normalizedGroup
+                    }
+                    .toMap(),
+            )
+        }
+    }
+
     fun moveStockGroup(groupName: String, direction: Int) {
         val normalizedGroup = normalizeStockGroupName(groupName)
         if (normalizedGroup.isEmpty() || direction == 0) {
@@ -328,6 +350,64 @@ class MoFishWatchlistService(
 
     fun snapshot(): MoFishWatchlistState? = stateFlow.value
 
+    fun replaceStockHoldings(
+        code: String,
+        holdings: List<HoldingConfig>,
+    ) {
+        val normalizedCode = normalizeStockCode(code)
+        if (normalizedCode.isEmpty()) {
+            return
+        }
+        updateSettings { state ->
+            state.copy(
+                holdings = state.holdings
+                    .filterNot { it.code.equals(normalizedCode, ignoreCase = true) && it.assetType == AssetType.STOCK } +
+                        holdings,
+            )
+        }
+    }
+
+    fun addHoldings(holdings: List<HoldingConfig>) {
+        val normalizedHoldings = holdings.filter { it.code.isNotBlank() }
+        if (normalizedHoldings.isEmpty()) {
+            return
+        }
+        updateSettings { state ->
+            state.copy(
+                holdings = mergeHoldings(state.holdings, normalizedHoldings),
+            )
+        }
+    }
+
+    fun replaceStockReminders(
+        code: String,
+        reminders: List<ReminderRule>,
+    ) {
+        val normalizedCode = normalizeStockCode(code)
+        if (normalizedCode.isEmpty()) {
+            return
+        }
+        updateSettings { state ->
+            state.copy(
+                reminders = state.reminders
+                    .filterNot { it.code.equals(normalizedCode, ignoreCase = true) && it.assetType == AssetType.STOCK } +
+                        reminders,
+            )
+        }
+    }
+
+    fun addReminders(reminders: List<ReminderRule>) {
+        val normalizedReminders = reminders.filter { it.code.isNotBlank() }
+        if (normalizedReminders.isEmpty()) {
+            return
+        }
+        updateSettings { state ->
+            state.copy(
+                reminders = state.reminders + normalizedReminders,
+            )
+        }
+    }
+
     private fun updateWatchlist(transform: (MoFishWatchlistSettings) -> MoFishWatchlistSettings) {
         updateSettings { currentSettings ->
             currentSettings.copy(
@@ -345,6 +425,62 @@ class MoFishWatchlistService(
         settingsService.replaceState(nextSettings)
         refresh(force = true)
     }
+}
+
+private fun mergeHoldings(
+    currentHoldings: List<HoldingConfig>,
+    addedHoldings: List<HoldingConfig>,
+): List<HoldingConfig> {
+    return addedHoldings.fold(currentHoldings) { current, added ->
+        val existingIndex = current.indexOfFirst {
+            it.assetType == added.assetType &&
+                it.code.equals(added.code, ignoreCase = true) &&
+                it.currency.equals(added.currency, ignoreCase = true) &&
+                !it.isSellOut
+        }
+        if (existingIndex < 0) {
+            current + added
+        } else {
+            current.toMutableList().apply {
+                this[existingIndex] = mergeHolding(this[existingIndex], added)
+            }
+        }
+    }
+}
+
+private fun mergeHolding(
+    current: HoldingConfig,
+    added: HoldingConfig,
+): HoldingConfig {
+    val currentQuantity = current.quantity
+    val addedQuantity = added.quantity
+    val nextQuantity = when {
+        currentQuantity != null && addedQuantity != null -> currentQuantity + addedQuantity
+        addedQuantity != null -> addedQuantity
+        else -> currentQuantity
+    }
+    val nextInvestedAmount = when {
+        current.investedAmount != null && added.investedAmount != null -> current.investedAmount + added.investedAmount
+        added.investedAmount != null -> added.investedAmount
+        else -> current.investedAmount
+    }
+    val nextCostPrice = if (currentQuantity != null && addedQuantity != null && nextQuantity != null && nextQuantity > java.math.BigDecimal.ZERO) {
+        ((current.costPrice * currentQuantity) + (added.costPrice * addedQuantity)).divide(
+            nextQuantity,
+            8,
+            java.math.RoundingMode.HALF_UP,
+        ).stripTrailingZeros()
+    } else {
+        added.costPrice
+    }
+    return current.copy(
+        displayName = added.displayName.ifBlank { current.displayName },
+        investedAmount = nextInvestedAmount,
+        quantity = nextQuantity,
+        costPrice = nextCostPrice,
+        todayCostPrice = added.todayCostPrice ?: current.todayCostPrice,
+        isSellOut = false,
+    )
 }
 
 internal fun normalizeFundCode(rawCode: String): String = rawCode.trim()

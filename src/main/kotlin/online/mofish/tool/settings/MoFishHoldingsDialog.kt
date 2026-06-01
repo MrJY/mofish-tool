@@ -17,6 +17,8 @@ import javax.swing.table.AbstractTableModel
 
 class MoFishHoldingsDialog(
     initialHoldings: List<HoldingConfig>,
+    private val newRowTemplate: HoldingConfig? = null,
+    dialogTitle: String = "编辑持仓",
 ) : DialogWrapper(true) {
     private val rows = initialHoldings.map { EditableHoldingRow.from(it) }.toMutableList()
     private val tableModel = HoldingsTableModel(rows)
@@ -26,7 +28,7 @@ class MoFishHoldingsDialog(
         private set
 
     init {
-        title = "编辑持仓"
+        title = dialogTitle
         setOKButtonText("确定")
         setCancelButtonText("取消")
         init()
@@ -48,19 +50,7 @@ class MoFishHoldingsDialog(
                 .setRemoveActionName("删除所选持仓")
                 .setAddAction {
                     stopEditing()
-                    tableModel.addRow(
-                        EditableHoldingRow(
-                            assetType = AssetType.FUND,
-                            code = "",
-                            displayName = "",
-                            investedAmount = "",
-                            quantity = "",
-                            costPrice = "",
-                            todayCostPrice = "",
-                            currency = "CNY",
-                            isSellOut = false,
-                        )
-                    )
+                    tableModel.addRow(newEditableHoldingRow())
                 }
                 .setRemoveAction {
                     stopEditing()
@@ -106,6 +96,22 @@ class MoFishHoldingsDialog(
                 editor.cancelCellEditing()
             }
         }
+    }
+
+    private fun newEditableHoldingRow(): EditableHoldingRow {
+        return newRowTemplate
+            ?.let(EditableHoldingRow::from)
+            ?: EditableHoldingRow(
+                assetType = AssetType.FUND,
+                code = "",
+                displayName = "",
+                investedAmount = "",
+                quantity = "",
+                costPrice = "",
+                todayCostPrice = "",
+                currency = "CNY",
+                isSellOut = false,
+            )
     }
 
     private class HoldingsTableModel(

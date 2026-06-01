@@ -42,7 +42,9 @@ class MoFishReminderEngine {
             }
 
             AssetType.STOCK -> {
-                val quote = workspace.stockQuotes.firstOrNull { it.code.equals(rule.code, ignoreCase = true) } ?: return null
+                val quote = workspace.stockQuotes.firstOrNull { it.code.equals(rule.code, ignoreCase = true) }
+                    ?: workspace.indexQuotes.firstOrNull { it.code.equals(rule.code, ignoreCase = true) }
+                    ?: return null
                 when (rule.metric) {
                     ReminderMetric.PRICE -> quote.currentPrice ?: quote.afterHoursPrice
                     ReminderMetric.CHANGE_PERCENT -> quote.changePercent ?: quote.afterHoursChangePercent
@@ -57,7 +59,17 @@ class MoFishReminderEngine {
                 }
             }
 
-            else -> null
+            AssetType.FOREX -> {
+                val rate = workspace.forexRates.firstOrNull { it.currencyCode.equals(rule.code, ignoreCase = true) } ?: return null
+                when (rule.metric) {
+                    ReminderMetric.PRICE -> rate.conversionPrice
+                        ?: rate.spotBuyPrice
+                        ?: rate.cashBuyPrice
+                        ?: rate.spotSellPrice
+                        ?: rate.cashSellPrice
+                    ReminderMetric.CHANGE_PERCENT -> null
+                }
+            }
         }
     }
 

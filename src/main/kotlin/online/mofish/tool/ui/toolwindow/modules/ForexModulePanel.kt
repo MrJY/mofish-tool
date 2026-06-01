@@ -7,10 +7,17 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
+import online.mofish.tool.domain.AssetType
 import online.mofish.tool.domain.ForexRate
 import online.mofish.tool.domain.MoFishRefreshModule
+import online.mofish.tool.domain.ReminderDirection
+import online.mofish.tool.domain.ReminderMetric
+import online.mofish.tool.domain.ReminderRule
+import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.state.MoFishWatchlistState
 import java.awt.Component
+import java.math.BigDecimal
+import java.util.UUID
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JLabel
 import javax.swing.JList
@@ -61,7 +68,13 @@ internal class ForexModulePanel(
         )
     }
 
-    override fun createPopupActions(): List<AnAction> = createToolbarActions()
+    override fun createPopupActions(): List<AnAction> {
+        return listOf(
+            RefreshForexAction(),
+            AddSelectedForexReminderAction(),
+            ToggleForexListViewAction(),
+        )
+    }
 
     private inner class ForexListRenderer : DefaultListCellRenderer() {
         override fun getListCellRendererComponent(
@@ -146,6 +159,43 @@ internal class ForexModulePanel(
         }
     }
 
+    private inner class AddSelectedForexReminderAction : DumbAwareAction(
+        "添加提醒",
+        "为当前摸鱼外汇添加提醒规则",
+        AllIcons.General.Balloon,
+    ) {
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedRow() ?: return
+            val threshold = forexReminderPrice(selected.quote) ?: BigDecimal.ZERO
+            val template = ReminderRule(
+                id = "rule-${UUID.randomUUID()}",
+                assetType = AssetType.FOREX,
+                code = selected.quote.currencyCode,
+                displayName = selected.quote.currencyName,
+                metric = ReminderMetric.PRICE,
+                direction = ReminderDirection.ABOVE,
+                threshold = threshold,
+                enabled = true,
+            )
+            val dialog = MoFishRemindersDialog(
+                initialReminders = listOf(template),
+                newRowTemplate = template,
+                dialogTitle = "添加 ${selected.quote.currencyName} 提醒",
+            )
+            if (!dialog.showAndGet()) {
+                return
+            }
+            callbacks.watchlistService.addReminders(dialog.result)
+            callbacks.watchlistService.selectView(moduleViewId())
+            callbacks.watchlistService.selectAsset(selected.quote.currencyCode)
+            callbacks.eventStatus.text = "已添加摸鱼外汇 ${selected.quote.currencyName} 的提醒。"
+        }
+    }
+
     private inner class ToggleForexListViewAction : DumbAwareAction("切换视图", "切换摸鱼外汇列表展示方式", AllIcons.Nodes.DataTables) {
         override fun update(event: AnActionEvent) {
             event.presentation.text = nextViewMode().displayName
@@ -166,5 +216,13 @@ internal class ForexModulePanel(
     private fun forexPriority(currencyName: String): Int {
         val index = FOREX_PRIORITY_NAMES.indexOf(currencyName)
         return if (index >= 0) index else Int.MAX_VALUE
+    }
+
+    private fun forexReminderPrice(rate: ForexRate): BigDecimal? {
+        return rate.conversionPrice
+            ?: rate.spotBuyPrice
+            ?: rate.cashBuyPrice
+            ?: rate.spotSellPrice
+            ?: rate.cashSellPrice
     }
 }
