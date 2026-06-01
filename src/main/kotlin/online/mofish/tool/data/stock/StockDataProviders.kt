@@ -724,7 +724,9 @@ private fun isSupportedSearchCategory(category: String): Boolean {
         return false
     }
 
-    return normalizedCategory in setOf("GP", "GP-A", "ZS") ||
+    return normalizedCategory == "GP" ||
+        normalizedCategory.startsWith("GP-") ||
+        normalizedCategory == "ZS" ||
         normalizedCategory.contains("ETF") ||
         normalizedCategory.contains("LOF")
 }
