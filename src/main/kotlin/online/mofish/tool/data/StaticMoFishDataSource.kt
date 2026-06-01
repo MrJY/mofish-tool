@@ -21,6 +21,12 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 
 class StaticMoFishDataSource : MoFishDataSource {
+    /**
+     * 创建一个轻量级工作区骨架，用于界面首次打开时先展示占位状态。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createSkeletonWorkspace(
         projectName: String,
         settings: MoFishSettingsState,
@@ -39,6 +45,12 @@ class StaticMoFishDataSource : MoFishDataSource {
         )
     }
 
+    /**
+     * 根据项目名称和当前设置加载完整工作区数据。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+     * @return 处理后的结果或当前状态。
+     */
     override fun loadWorkspace(
         projectName: String,
         settings: MoFishSettingsState,
@@ -57,6 +69,14 @@ class StaticMoFishDataSource : MoFishDataSource {
         )
     }
 
+    /**
+     * 只刷新指定模块的数据，并把结果合并回当前工作区。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+     * @param currentWorkspace 刷新前已有的工作区数据，用于保留未刷新模块的内容。
+     * @param modules 需要刷新或处理的业务模块集合。
+     * @return 处理后的结果或当前状态。
+     */
     override fun loadWorkspaceModules(
         projectName: String,
         settings: MoFishSettingsState,
@@ -81,6 +101,11 @@ class StaticMoFishDataSource : MoFishDataSource {
     }
 }
 
+/**
+ * 构建Static基金行情，供后续界面展示或数据处理使用。
+ * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @return 处理后的结果或当前状态。
+ */
 private fun buildStaticFundQuotes(settings: MoFishSettingsState): List<FundQuote> {
     return settings.watchlist.fundCodes.map { code ->
         if (code == DEFAULT_FUND_CODE) {
@@ -91,6 +116,12 @@ private fun buildStaticFundQuotes(settings: MoFishSettingsState): List<FundQuote
     }
 }
 
+/**
+ * 构建Static股票行情，供后续界面展示或数据处理使用。
+ * @param watchlist watchlist。
+ * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @return 处理后的结果或当前状态。
+ */
 private fun buildStaticStockQuotes(
     watchlist: MoFishWatchlistSettings,
     settings: MoFishSettingsState,
@@ -104,6 +135,12 @@ private fun buildStaticStockQuotes(
     }
 }
 
+/**
+ * 构建Static虚拟币行情，供后续界面展示或数据处理使用。
+ * @param watchlist watchlist。
+ * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @return 处理后的结果或当前状态。
+ */
 private fun buildStaticCryptoQuotes(
     watchlist: MoFishWatchlistSettings,
     settings: MoFishSettingsState,
@@ -118,6 +155,10 @@ private fun buildStaticCryptoQuotes(
     }
 }
 
+/**
+ * 处理 sampleFundQuote 相关逻辑，并返回调用方需要的结果。
+ * @return 处理后的结果或当前状态。
+ */
 private fun sampleFundQuote(): FundQuote {
     return FundQuote(
         code = DEFAULT_FUND_CODE,
@@ -131,6 +172,10 @@ private fun sampleFundQuote(): FundQuote {
     )
 }
 
+/**
+ * 处理 sampleStockQuote 相关逻辑，并返回调用方需要的结果。
+ * @return 处理后的结果或当前状态。
+ */
 private fun sampleStockQuote(): StockQuote {
     return StockQuote(
         code = DEFAULT_STOCK_CODE,
@@ -153,6 +198,10 @@ private fun sampleStockQuote(): StockQuote {
     )
 }
 
+/**
+ * 处理 sampleCryptoQuote 相关逻辑，并返回调用方需要的结果。
+ * @return 处理后的结果或当前状态。
+ */
 private fun sampleCryptoQuote(): CryptoQuote {
     return CryptoQuote(
         code = DEFAULT_CRYPTO_CODE,
@@ -169,6 +218,12 @@ private fun sampleCryptoQuote(): CryptoQuote {
     )
 }
 
+/**
+ * 处理 placeholderFundQuote 相关逻辑，并返回调用方需要的结果。
+ * @param code 资产代码或业务标识。
+ * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @return 处理后的结果或当前状态。
+ */
 private fun placeholderFundQuote(
     code: String,
     settings: MoFishSettingsState,
@@ -186,6 +241,12 @@ private fun placeholderFundQuote(
     )
 }
 
+/**
+ * 处理 placeholderStockQuote 相关逻辑，并返回调用方需要的结果。
+ * @param code 资产代码或业务标识。
+ * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @return 处理后的结果或当前状态。
+ */
 private fun placeholderStockQuote(
     code: String,
     settings: MoFishSettingsState,
@@ -209,6 +270,11 @@ private fun placeholderStockQuote(
     )
 }
 
+/**
+ * 处理 placeholderIndexQuote 相关逻辑，并返回调用方需要的结果。
+ * @param definition definition。
+ * @return 处理后的结果或当前状态。
+ */
 private fun placeholderIndexQuote(definition: MarketIndexDefinition): StockQuote {
     return StockQuote(
         code = definition.code,
@@ -229,6 +295,12 @@ private fun placeholderIndexQuote(definition: MarketIndexDefinition): StockQuote
     )
 }
 
+/**
+ * 处理 placeholderCryptoQuote 相关逻辑，并返回调用方需要的结果。
+ * @param code 资产代码或业务标识。
+ * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @return 处理后的结果或当前状态。
+ */
 private fun placeholderCryptoQuote(
     code: String,
     settings: MoFishSettingsState,
@@ -248,6 +320,12 @@ private fun placeholderCryptoQuote(
     )
 }
 
+/**
+ * 处理 displayNameFor 相关逻辑，并返回调用方需要的结果。
+ * @param code 资产代码或业务标识。
+ * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @return 处理后的结果或当前状态。
+ */
 private fun displayNameFor(
     code: String,
     settings: MoFishSettingsState,
@@ -257,6 +335,11 @@ private fun displayNameFor(
         ?: marketIndexDefinitionFor(code)?.displayName
 }
 
+/**
+ * 根据输入推断交易所。
+ * @param code 资产代码或业务标识。
+ * @return 处理后的结果或当前状态。
+ */
 private fun inferExchange(code: String): StockExchange {
     val normalized = code.lowercase()
     return when {
@@ -269,6 +352,11 @@ private fun inferExchange(code: String): StockExchange {
     }
 }
 
+/**
+ * 规范化股票代码，统一后续处理使用的表示形式。
+ * @param code 资产代码或业务标识。
+ * @return 处理后的结果或当前状态。
+ */
 private fun normalizeStockSymbol(code: String): String {
     return code
         .removePrefix("sh")
@@ -278,6 +366,10 @@ private fun normalizeStockSymbol(code: String): String {
         .removePrefix("us")
 }
 
+/**
+ * 处理 sampleFlashNews 相关逻辑，并返回调用方需要的结果。
+ * @return 处理后的结果或当前状态。
+ */
 private fun sampleFlashNews(): List<FlashNewsItem> {
     return listOf(
         FlashNewsItem(
@@ -305,6 +397,10 @@ private fun sampleFlashNews(): List<FlashNewsItem> {
     )
 }
 
+/**
+ * 处理 sampleForexRates 相关逻辑，并返回调用方需要的结果。
+ * @return 处理后的结果或当前状态。
+ */
 private fun sampleForexRates(): List<ForexRate> {
     return listOf(
         ForexRate(
@@ -330,6 +426,10 @@ private fun sampleForexRates(): List<ForexRate> {
     )
 }
 
+/**
+ * 处理 sampleIndexQuotes 相关逻辑，并返回调用方需要的结果。
+ * @return 处理后的结果或当前状态。
+ */
 private fun sampleIndexQuotes(): List<StockQuote> {
     return listOf(
         StockQuote(
@@ -461,4 +561,9 @@ private const val DEFAULT_STOCK_NAME = "宁德时代"
 private const val DEFAULT_CRYPTO_CODE = "bitcoin"
 private const val DEFAULT_CRYPTO_NAME = "Bitcoin"
 
+/**
+ * 处理 decimal 相关逻辑，并返回调用方需要的结果。
+ * @param value 待解析、格式化或写入的原始值。
+ * @return 处理后的结果或当前状态。
+ */
 private fun decimal(value: String): BigDecimal = BigDecimal(value)

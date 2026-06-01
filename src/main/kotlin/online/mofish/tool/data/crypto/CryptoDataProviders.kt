@@ -23,6 +23,11 @@ class CoinGeckoCryptoQuoteProvider(
 ) : CryptoQuoteProvider {
     override val providerName: String = "coingecko-markets"
 
+    /**
+     * 批量获取请求资产的最新行情。
+     * @param codes codes。
+     * @return 处理后的结果或当前状态。
+     */
     override fun fetchQuotes(codes: List<String>): Map<String, CryptoQuote> {
         val normalizedCodes = codes
             .map(::normalizeCryptoCode)
@@ -47,6 +52,10 @@ class CoinGeckoCryptoSearchIndexProvider(
 ) : CryptoSearchIndexProvider {
     override val providerName: String = "coingecko-list"
 
+    /**
+     * 加载Index数据。
+     * @return 处理后的结果或当前状态。
+     */
     override fun loadIndex(): List<CryptoSearchSuggestion> {
         return httpClient.getJson(listUrlProvider())
             .jsonArray
@@ -62,6 +71,10 @@ class CachedCryptoSearchIndexProvider(
     @Volatile
     private var cache: List<CryptoSearchSuggestion>? = null
 
+    /**
+     * 加载Index数据。
+     * @return 处理后的结果或当前状态。
+     */
     override fun loadIndex(): List<CryptoSearchSuggestion> {
         val cached = cache
         if (cached != null) {
@@ -100,6 +113,11 @@ private fun JsonObject.toCryptoQuote(vsCurrency: String): CryptoQuote? {
     )
 }
 
+/**
+ * 转换为虚拟币搜索建议表示。
+ * @param item item。
+ * @return 处理后的结果或当前状态。
+ */
 private fun toCryptoSearchSuggestion(item: JsonElement): CryptoSearchSuggestion? {
     val payload = item.jsonObject
     val code = payload.stringValue("id") ?: return null
@@ -127,8 +145,18 @@ private fun JsonObject.dateTimeValue(key: String): LocalDateTime? {
     }.getOrNull()
 }
 
+/**
+ * 处理 defaultCoinGeckoListUrl 相关逻辑，并返回调用方需要的结果。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun defaultCoinGeckoListUrl(): String = "https://api.coingecko.com/api/v3/coins/list"
 
+/**
+ * 处理 defaultCoinGeckoMarketsUrl 相关逻辑，并返回调用方需要的结果。
+ * @param vsCurrency vs币种。
+ * @param ids ids。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun defaultCoinGeckoMarketsUrl(
     vsCurrency: String,
     ids: List<String>,
@@ -147,6 +175,11 @@ internal fun defaultCoinGeckoMarketsUrl(
     }
 }
 
+/**
+ * 规范化虚拟币代码，统一后续处理使用的表示形式。
+ * @param rawCode 用户输入或接口返回的原始资产代码。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun normalizeCryptoCode(rawCode: String): String = rawCode.trim().lowercase()
 
 internal const val DEFAULT_VS_CURRENCY = "usd"

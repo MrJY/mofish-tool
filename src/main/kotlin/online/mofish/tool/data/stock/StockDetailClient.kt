@@ -12,6 +12,11 @@ class StockDetailClient(
     private val reportProvider = EastmoneyStockReportProvider(httpClient)
     private val newsProvider = EastmoneyStockNewsProvider(httpClient)
 
+    /**
+     * 获取股票详情快照数据。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     fun fetchDetail(quote: StockQuote): StockDetailSnapshot {
         val requested = normalizeRequestedStock(quote.code)
         if (requested?.market != RequestedMarket.A) {

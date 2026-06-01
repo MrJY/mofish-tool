@@ -57,6 +57,10 @@ class MoFishSearchableChoiceDialog(
         resultList.cellRenderer = SearchableChoiceRenderer()
         resultList.addMouseListener(
             object : MouseAdapter() {
+                /**
+                 * 处理 mouseClicked 相关逻辑，并返回调用方需要的结果。
+                 * @param event IntelliJ 平台传入的动作事件上下文。
+                 */
                 override fun mouseClicked(event: MouseEvent) {
                     if (SwingUtilities.isLeftMouseButton(event) && event.clickCount == 2 && resultList.selectedValue != null) {
                         doOKAction()
@@ -67,17 +71,40 @@ class MoFishSearchableChoiceDialog(
 
         searchField.textEditor.document.addDocumentListener(
             object : DocumentListener {
+                /**
+                 * 处理 insertUpdate 相关逻辑，并返回调用方需要的结果。
+                 * @param event IntelliJ 平台传入的动作事件上下文。
+                 * @return 处理后的结果或当前状态。
+                 */
                 override fun insertUpdate(event: DocumentEvent) = scheduleSearch()
 
+                /**
+                 * 删除Update。
+                 * @param event IntelliJ 平台传入的动作事件上下文。
+                 * @return 处理后的结果或当前状态。
+                 */
                 override fun removeUpdate(event: DocumentEvent) = scheduleSearch()
 
+                /**
+                 * 处理 changedUpdate 相关逻辑，并返回调用方需要的结果。
+                 * @param event IntelliJ 平台传入的动作事件上下文。
+                 * @return 处理后的结果或当前状态。
+                 */
                 override fun changedUpdate(event: DocumentEvent) = scheduleSearch()
             }
         )
     }
 
+    /**
+     * 获取PreferredFocused组件。
+     * @return 处理后的结果或当前状态。
+     */
     override fun getPreferredFocusedComponent(): JComponent = searchField
 
+    /**
+     * 创建对话框或配置页的主体内容面板。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createCenterPanel(): JComponent {
         val panel = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
         panel.preferredSize = JBUI.size(640, 420)
@@ -88,6 +115,9 @@ class MoFishSearchableChoiceDialog(
         return panel
     }
 
+    /**
+     * 在用户确认对话框时校验并提交当前编辑内容。
+     */
     override fun doOKAction() {
         val selected = resultList.selectedValue
         if (selected == null) {
@@ -100,17 +130,26 @@ class MoFishSearchableChoiceDialog(
         super.doOKAction()
     }
 
+    /**
+     * 处理 doCancelAction 相关逻辑，并返回调用方需要的结果。
+     */
     override fun doCancelAction() {
         dialogActive = false
         debounceTimer.stop()
         super.doCancelAction()
     }
 
+    /**
+     * 处理 scheduleSearch 相关逻辑，并返回调用方需要的结果。
+     */
     private fun scheduleSearch() {
         setErrorText(null)
         debounceTimer.restart()
     }
 
+    /**
+     * 处理 performSearch 相关逻辑，并返回调用方需要的结果。
+     */
     private fun performSearch() {
         val keyword = searchField.text.trim()
         val requestId = requestSequence.incrementAndGet()
@@ -146,6 +185,11 @@ class MoFishSearchableChoiceDialog(
         }
     }
 
+    /**
+     * 处理 replaceChoices 相关逻辑，并返回调用方需要的结果。
+     * @param choices choices。
+     * @param hint hint。
+     */
     private fun replaceChoices(choices: List<SearchableChoice>, hint: String) {
         listModel.clear()
         choices.forEach(listModel::addElement)
@@ -156,6 +200,15 @@ class MoFishSearchableChoiceDialog(
     }
 
     private class SearchableChoiceRenderer : DefaultListCellRenderer() {
+        /**
+         * 获取列表CellRenderer组件。
+         * @param list 列表。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param index index。
+         * @param isSelected is选中项。
+         * @param cellHasFocus cellHasFocus。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getListCellRendererComponent(
             list: javax.swing.JList<*>?,
             value: Any?,
@@ -180,6 +233,11 @@ class MoFishSearchableChoiceDialog(
             return component
         }
 
+        /**
+         * 转义 HTML 特殊字符，避免动态文本破坏页面结构。
+         * @param value 待解析、格式化或写入的原始值。
+         * @return 处理后的结果或当前状态。
+         */
         private fun escape(value: String): String {
             return value
                 .replace("&", "&amp;")

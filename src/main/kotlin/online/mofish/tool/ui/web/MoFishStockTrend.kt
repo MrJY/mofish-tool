@@ -4,6 +4,11 @@ import online.mofish.tool.domain.StockExchange
 import online.mofish.tool.domain.StockQuote
 
 object MoFishStockTrend {
+    /**
+     * 处理 requestFor 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     fun requestFor(quote: StockQuote): MoFishWebRequest {
         return MoFishWebRequest.Url(
             title = "摸鱼股票走势 - ${quote.name}",
@@ -11,6 +16,11 @@ object MoFishStockTrend {
         )
     }
 
+    /**
+     * 处理 eastMoneyTrendUrl 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun eastMoneyTrendUrl(quote: StockQuote): String {
         val secId = eastMoneySecId(quote)
         return if (secId != null) {
@@ -20,6 +30,11 @@ object MoFishStockTrend {
         }
     }
 
+    /**
+     * 处理 eastMoneySecId 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun eastMoneySecId(quote: StockQuote): String? {
         val symbol = quote.symbol.trim().lowercase()
         val codeDigits = quote.code.filter(Char::isDigit)
@@ -36,6 +51,11 @@ object MoFishStockTrend {
         }
     }
 
+    /**
+     * 处理 sinaFallbackUrl 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun sinaFallbackUrl(quote: StockQuote): String {
         val normalized = quote.code.lowercase()
         return "https://finance.sina.com.cn/realstock/company/$normalized/nc.shtml"

@@ -24,6 +24,11 @@ internal class SinaAShareQuoteProvider(
 ) : AShareQuoteProvider {
     override val providerName: String = "sina-a-share"
 
+    /**
+     * 批量获取请求资产的最新行情。
+     * @param requestedStocks 需要批量查询行情的股票请求列表。
+     * @return 处理后的结果或当前状态。
+     */
     override fun fetchQuotes(requestedStocks: List<RequestedStock>): Map<String, StockQuote> {
         return fetchSinaQuotes(
             httpClient = httpClient,
@@ -40,6 +45,11 @@ internal class SinaUsQuoteProvider(
 ) : UsQuoteProvider {
     override val providerName: String = "sina-us"
 
+    /**
+     * 批量获取请求资产的最新行情。
+     * @param requestedStocks 需要批量查询行情的股票请求列表。
+     * @return 处理后的结果或当前状态。
+     */
     override fun fetchQuotes(requestedStocks: List<RequestedStock>): Map<String, StockQuote> {
         return fetchSinaQuotes(
             httpClient = httpClient,
@@ -56,6 +66,11 @@ internal class TencentAShareQuoteProvider(
 ) : AShareQuoteProvider {
     override val providerName: String = "tencent-a-share"
 
+    /**
+     * 批量获取请求资产的最新行情。
+     * @param requestedStocks 需要批量查询行情的股票请求列表。
+     * @return 处理后的结果或当前状态。
+     */
     override fun fetchQuotes(requestedStocks: List<RequestedStock>): Map<String, StockQuote> {
         if (requestedStocks.isEmpty()) {
             return emptyMap()
@@ -80,6 +95,11 @@ internal class TencentHongKongQuoteProvider(
 ) : HongKongQuoteProvider {
     override val providerName: String = "tencent-hk"
 
+    /**
+     * 批量获取请求资产的最新行情。
+     * @param requestedStocks 需要批量查询行情的股票请求列表。
+     * @return 处理后的结果或当前状态。
+     */
     override fun fetchQuotes(requestedStocks: List<RequestedStock>): Map<String, StockQuote> {
         if (requestedStocks.isEmpty()) {
             return emptyMap()
@@ -104,6 +124,11 @@ internal class TencentStockSearchSuggestionProvider(
 ) : StockSearchSuggestionProvider {
     override val providerName: String = "tencent-stock-search"
 
+    /**
+     * 根据用户输入搜索可添加的候选资产。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
     override fun searchSuggestions(keyword: String): List<StockSearchSuggestion> {
         val normalizedKeyword = keyword.trim()
         if (normalizedKeyword.isEmpty()) {
@@ -121,6 +146,14 @@ internal class TencentStockSearchSuggestionProvider(
     }
 }
 
+/**
+ * 从远程或本地数据源获取Sina行情数据。
+ * @param httpClient 统一 HTTP 客户端，用于发起请求和解析响应。
+ * @param quoteUrlProvider 根据资产代码列表生成行情接口地址的函数。
+ * @param requestedStocks 需要批量查询行情的股票请求列表。
+ * @param parser 用于把接口字段解析为领域行情模型的解析函数。
+ * @return 处理后的结果或当前状态。
+ */
 private fun fetchSinaQuotes(
     httpClient: MoFishHttpClient,
     quoteUrlProvider: (List<String>) -> String,
@@ -151,6 +184,12 @@ private fun fetchSinaQuotes(
         .toMap()
 }
 
+/**
+ * 解析SinaAShare行情数据，并转换为项目内部可用的结构。
+ * @param requested 已经规范化后的资产请求对象。
+ * @param fields fields。
+ * @return 处理后的结果或当前状态。
+ */
 private fun parseSinaAShareQuote(
     requested: RequestedStock,
     fields: List<String>,
@@ -180,6 +219,12 @@ private fun parseSinaAShareQuote(
     )
 }
 
+/**
+ * 解析SinaUs行情数据，并转换为项目内部可用的结构。
+ * @param requested 已经规范化后的资产请求对象。
+ * @param fields fields。
+ * @return 处理后的结果或当前状态。
+ */
 private fun parseSinaUsQuote(
     requested: RequestedStock,
     fields: List<String>,
@@ -207,6 +252,12 @@ private fun parseSinaUsQuote(
     )
 }
 
+/**
+ * 解析TencentAShare行情数据，并转换为项目内部可用的结构。
+ * @param requested 已经规范化后的资产请求对象。
+ * @param fields fields。
+ * @return 处理后的结果或当前状态。
+ */
 private fun parseTencentAShareQuote(
     requested: RequestedStock,
     fields: JsonArray,
@@ -228,6 +279,12 @@ private fun parseTencentAShareQuote(
     )
 }
 
+/**
+ * 解析TencentHongKong行情数据，并转换为项目内部可用的结构。
+ * @param requested 已经规范化后的资产请求对象。
+ * @param fields fields。
+ * @return 处理后的结果或当前状态。
+ */
 private fun parseTencentHongKongQuote(
     requested: RequestedStock,
     fields: JsonArray,
@@ -249,6 +306,25 @@ private fun parseTencentHongKongQuote(
     )
 }
 
+/**
+ * 构建行情，供后续界面展示或数据处理使用。
+ * @param requested 已经规范化后的资产请求对象。
+ * @param name 名称。
+ * @param exchange 交易所。
+ * @param currentPrice 当前Price。
+ * @param previousClose previousClose。
+ * @param openPrice openPrice。
+ * @param highPrice highPrice。
+ * @param lowPrice lowPrice。
+ * @param volume volume。
+ * @param turnover turnover。
+ * @param updatedAt updatedAt。
+ * @param explicitChangeAmount explicitChange金额。
+ * @param explicitChangePercent explicitChange百分比。
+ * @param afterHoursPrice afterHoursPrice。
+ * @param afterHoursChangePercent afterHoursChange百分比。
+ * @return 处理后的结果或当前状态。
+ */
 private fun buildQuote(
     requested: RequestedStock,
     name: String,
@@ -291,6 +367,11 @@ private fun buildQuote(
     )
 }
 
+/**
+ * 处理 unavailableQuote 相关逻辑，并返回调用方需要的结果。
+ * @param requested 已经规范化后的资产请求对象。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun unavailableQuote(requested: RequestedStock): StockQuote {
     return StockQuote(
         code = requested.originalCode,
@@ -311,6 +392,11 @@ internal fun unavailableQuote(requested: RequestedStock): StockQuote {
     )
 }
 
+/**
+ * 转换为搜索建议表示。
+ * @param item item。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun toSearchSuggestion(item: JsonElement): StockSearchSuggestion? {
     val fields = item.jsonArray
     val market = fields.stringValue(0)?.lowercase() ?: return null
@@ -342,6 +428,11 @@ internal fun toSearchSuggestion(item: JsonElement): StockSearchSuggestion? {
     )
 }
 
+/**
+ * 规范化Requested股票，统一后续处理使用的表示形式。
+ * @param code 资产代码或业务标识。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun normalizeRequestedStock(code: String): RequestedStock? {
     val normalizedCode = canonicalizeStockInputCode(code) ?: return null
     if (normalizedCode.isBlank()) {
@@ -396,6 +487,13 @@ internal fun normalizeRequestedStock(code: String): RequestedStock? {
     }
 }
 
+/**
+ * 创建UsRequested股票实例或展示内容。
+ * @param originalCode original代码。
+ * @param vendorPrefix vendorPrefix。
+ * @param symbol 行情接口使用的资产代码。
+ * @return 处理后的结果或当前状态。
+ */
 private fun createUsRequestedStock(
     originalCode: String,
     vendorPrefix: String,
@@ -415,6 +513,11 @@ private fun createUsRequestedStock(
     )
 }
 
+/**
+ * 根据输入推断Us交易所。
+ * @param symbol 行情接口使用的资产代码。
+ * @return 处理后的结果或当前状态。
+ */
 private fun inferUsExchange(symbol: String): StockExchange {
     return when (symbol.lowercase()) {
         "ixic", "ndx" -> StockExchange.NASDAQ
@@ -423,6 +526,11 @@ private fun inferUsExchange(symbol: String): StockExchange {
     }
 }
 
+/**
+ * 构建HongKongVendor代码，供后续界面展示或数据处理使用。
+ * @param symbol 行情接口使用的资产代码。
+ * @return 处理后的结果或当前状态。
+ */
 private fun buildHongKongVendorCode(symbol: String): String {
     val normalizedSymbol = symbol.trim()
     if (normalizedSymbol.isBlank()) {
@@ -431,11 +539,21 @@ private fun buildHongKongVendorCode(symbol: String): String {
     return "hk" + if (normalizedSymbol.all(Char::isDigit)) normalizedSymbol else normalizedSymbol.uppercase()
 }
 
+/**
+ * 构建HongKongDisplay代码，供后续界面展示或数据处理使用。
+ * @param symbol 行情接口使用的资产代码。
+ * @return 处理后的结果或当前状态。
+ */
 private fun buildHongKongDisplaySymbol(symbol: String): String {
     val normalizedSymbol = symbol.trim()
     return if (normalizedSymbol.all(Char::isDigit)) normalizedSymbol else normalizedSymbol.uppercase()
 }
 
+/**
+ * 处理 marketLabel 相关逻辑，并返回调用方需要的结果。
+ * @param market 市场。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun marketLabel(market: RequestedMarket): String {
     return when (market) {
         RequestedMarket.A -> "A股"
@@ -444,6 +562,12 @@ internal fun marketLabel(market: RequestedMarket): String {
     }
 }
 
+/**
+ * 计算Change金额。
+ * @param currentPrice 当前Price。
+ * @param previousClose previousClose。
+ * @return 处理后的结果或当前状态。
+ */
 private fun calculateChangeAmount(
     currentPrice: BigDecimal?,
     previousClose: BigDecimal?,
@@ -454,6 +578,12 @@ private fun calculateChangeAmount(
     return currentPrice.subtract(previousClose)
 }
 
+/**
+ * 计算Change百分比。
+ * @param changeAmount change金额。
+ * @param previousClose previousClose。
+ * @return 处理后的结果或当前状态。
+ */
 private fun calculateChangePercent(
     changeAmount: BigDecimal?,
     previousClose: BigDecimal?,
@@ -467,6 +597,11 @@ private fun calculateChangePercent(
         .stripTrailingZeros()
 }
 
+/**
+ * 解析Sina日期时间数据，并转换为项目内部可用的结构。
+ * @param value 待解析、格式化或写入的原始值。
+ * @return 处理后的结果或当前状态。
+ */
 private fun parseSinaDateTime(value: String): LocalDateTime? {
     val normalizedValue = value.trim()
     if (normalizedValue.isBlank()) {
@@ -478,6 +613,11 @@ private fun parseSinaDateTime(value: String): LocalDateTime? {
     }
 }
 
+/**
+ * 解析Tencent日期时间数据，并转换为项目内部可用的结构。
+ * @param value 待解析、格式化或写入的原始值。
+ * @return 处理后的结果或当前状态。
+ */
 private fun parseTencentDateTime(value: String): LocalDateTime? {
     val normalizedValue = value.trim()
     if (normalizedValue.isBlank()) {
@@ -486,6 +626,11 @@ private fun parseTencentDateTime(value: String): LocalDateTime? {
     return runCatching { LocalDateTime.parse(normalizedValue, TENCENT_DATE_TIME_FORMATTER) }.getOrNull()
 }
 
+/**
+ * 解析TencentSlash日期时间数据，并转换为项目内部可用的结构。
+ * @param value 待解析、格式化或写入的原始值。
+ * @return 处理后的结果或当前状态。
+ */
 private fun parseTencentSlashDateTime(value: String): LocalDateTime? {
     val normalizedValue = value.trim()
     if (normalizedValue.isBlank()) {
@@ -494,8 +639,18 @@ private fun parseTencentSlashDateTime(value: String): LocalDateTime? {
     return runCatching { LocalDateTime.parse(normalizedValue, TENCENT_SLASH_DATE_TIME_FORMATTER) }.getOrNull()
 }
 
+/**
+ * 处理 stringValue 相关逻辑，并返回调用方需要的结果。
+ * @param value 待解析、格式化或写入的原始值。
+ * @return 处理后的结果或当前状态。
+ */
 private fun stringValue(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() && it != "--" }
 
+/**
+ * 处理 decimalValue 相关逻辑，并返回调用方需要的结果。
+ * @param value 待解析、格式化或写入的原始值。
+ * @return 处理后的结果或当前状态。
+ */
 private fun decimalValue(value: String?): BigDecimal? {
     val normalizedValue = stringValue(value) ?: return null
     return normalizedValue.toBigDecimalOrNull()
@@ -507,6 +662,11 @@ private fun JsonArray.stringValue(index: Int): String? {
 
 private fun JsonArray.decimalValue(index: Int): BigDecimal? = stringValue(index)?.toBigDecimalOrNull()
 
+/**
+ * 处理 trimUsVendorSuffix 相关逻辑，并返回调用方需要的结果。
+ * @param rawCode 用户输入或接口返回的原始资产代码。
+ * @return 处理后的结果或当前状态。
+ */
 private fun trimUsVendorSuffix(rawCode: String): String {
     val parts = rawCode.split('.')
     if (parts.size <= 1) {
@@ -515,24 +675,49 @@ private fun trimUsVendorSuffix(rawCode: String): String {
     return parts.dropLast(1).joinToString(".").lowercase()
 }
 
+/**
+ * 处理 defaultSinaQuoteUrl 相关逻辑，并返回调用方需要的结果。
+ * @param codes codes。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun defaultSinaQuoteUrl(codes: List<String>): String {
     return "https://hq.sinajs.cn/list=${codes.joinToString(",")}"
 }
 
+/**
+ * 处理 defaultTencentAShareQuoteUrl 相关逻辑，并返回调用方需要的结果。
+ * @param codes codes。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun defaultTencentAShareQuoteUrl(codes: List<String>): String {
     return "https://qt.gtimg.cn/q=${codes.joinToString(",")}&fmt=json"
 }
 
+/**
+ * 处理 defaultHongKongQuoteUrl 相关逻辑，并返回调用方需要的结果。
+ * @param codes codes。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun defaultHongKongQuoteUrl(codes: List<String>): String {
     val query = codes.joinToString(",") { "r_$it" }
     return "https://qt.gtimg.cn/q=$query&fmt=json"
 }
 
+/**
+ * 处理 defaultStockSearchUrl 相关逻辑，并返回调用方需要的结果。
+ * @param keyword 用户输入的搜索关键字。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun defaultStockSearchUrl(keyword: String): String {
     val encodedKeyword = URLEncoder.encode(keyword, StandardCharsets.UTF_8)
     return "https://proxy.finance.qq.com/ifzqgtimg/appstock/smartbox/search/get?q=$encodedKeyword"
 }
 
+/**
+ * 判断是否满足Supported搜索Category条件。
+ * @param category category。
+ * @return 处理后的结果或当前状态。
+ */
 private fun isSupportedSearchCategory(category: String): Boolean {
     val normalizedCategory = category.trim().uppercase()
     if (normalizedCategory.isBlank()) {

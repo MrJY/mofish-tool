@@ -32,6 +32,11 @@ class MoFishRefreshSchedulerService {
         }
     }
 
+    /**
+     * 注册项目刷新回调，使调度器可以按配置触发项目刷新。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @param refreshAction 刷新动作。
+     */
     fun registerProject(
         projectName: String,
         refreshAction: suspend (Boolean) -> Unit,
@@ -39,10 +44,20 @@ class MoFishRefreshSchedulerService {
         scheduler.registerProject(projectName, refreshAction)
     }
 
+    /**
+     * 注销项目刷新回调，并停止该项目的自动刷新任务。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     */
     fun unregisterProject(projectName: String) {
         scheduler.unregisterProject(projectName)
     }
 
+    /**
+     * 立即触发指定项目的刷新流程。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @param force 是否跳过缓存并强制重新读取数据。
+     * @return 处理后的结果或当前状态。
+     */
     fun refreshNow(
         projectName: String,
         force: Boolean = false,
@@ -50,8 +65,15 @@ class MoFishRefreshSchedulerService {
         scheduler.triggerNow(projectName, force)
     }
 
+    /**
+     * 返回当前服务或调度器的状态快照。
+     * @return 处理后的结果或当前状态。
+     */
     fun snapshot(): MoFishRefreshSchedulerState = scheduler.snapshot()
 
+    /**
+     * 释放服务持有的后台任务和运行资源。
+     */
     fun dispose() {
         scheduler.close()
         scope.cancel()

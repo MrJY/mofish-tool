@@ -15,6 +15,13 @@ internal object StockDetailHtmlRenderer {
     private val RISE_BG = com.intellij.ui.JBColor(java.awt.Color(253, 242, 242), java.awt.Color(60, 26, 26))
     private val FALL_BG = com.intellij.ui.JBColor(java.awt.Color(246, 255, 237), java.awt.Color(20, 48, 20))
 
+    /**
+     * 根据输入状态渲染 HTML 或界面内容。
+     * @param row 待添加、转换或展示的行数据。
+     * @param reminderRules 当前资产关联的提醒规则列表。
+     * @param detailState 详情状态。
+     * @return 处理后的结果或当前状态。
+     */
     fun render(
         row: StockListItem?,
         reminderRules: List<ReminderRule>,
@@ -74,6 +81,11 @@ internal object StockDetailHtmlRenderer {
         )
     }
 
+    /**
+     * 处理 page 相关逻辑，并返回调用方需要的结果。
+     * @param content 需要渲染或包装的内容。
+     * @return 处理后的结果或当前状态。
+     */
     private fun page(content: String): String {
         val foreground = colorHex(com.intellij.ui.JBColor.foreground())
         val border = colorHex(com.intellij.ui.JBColor.border())
@@ -275,6 +287,11 @@ internal object StockDetailHtmlRenderer {
         """.trimIndent()
     }
 
+    /**
+     * 处理 hero 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun hero(quote: StockQuote): String {
         val percent = quote.changePercent ?: quote.afterHoursChangePercent
         val changeAmount = quote.changeAmount
@@ -311,6 +328,11 @@ internal object StockDetailHtmlRenderer {
         """.trimIndent()
     }
 
+    /**
+     * 处理 statusBlock 相关逻辑，并返回调用方需要的结果。
+     * @param state 状态。
+     * @return 处理后的结果或当前状态。
+     */
     private fun statusBlock(state: StockDetailUiState): String {
         return when {
             state.loading -> "<div class='status'>正在加载估值、资讯和研报信息...</div>"
@@ -321,6 +343,11 @@ internal object StockDetailHtmlRenderer {
         }
     }
 
+    /**
+     * 处理 quoteCard 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun quoteCard(quote: StockQuote): String {
         return card(
             "行情概览",
@@ -335,6 +362,11 @@ internal object StockDetailHtmlRenderer {
         )
     }
 
+    /**
+     * 处理 metricsCard 相关逻辑，并返回调用方需要的结果。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     private fun metricsCard(snapshot: StockDetailSnapshot?): String {
         val metrics = snapshot?.metrics
         return card(
@@ -354,6 +386,12 @@ internal object StockDetailHtmlRenderer {
         )
     }
 
+    /**
+     * 处理 profileCard 相关逻辑，并返回调用方需要的结果。
+     * @param row 待添加、转换或展示的行数据。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     private fun profileCard(row: StockListItem, snapshot: StockDetailSnapshot?): String {
         val profile = snapshot?.profile
         return card(
@@ -370,6 +408,12 @@ internal object StockDetailHtmlRenderer {
         )
     }
 
+    /**
+     * 处理 holdingCard 相关逻辑，并返回调用方需要的结果。
+     * @param holding 当前资产的持仓配置。
+     * @param profit 收益。
+     * @return 处理后的结果或当前状态。
+     */
     private fun holdingCard(holding: HoldingConfig?, profit: PositionProfitSnapshot?): String {
         return card(
             "持仓收益",
@@ -385,6 +429,11 @@ internal object StockDetailHtmlRenderer {
         )
     }
 
+    /**
+     * 处理 reportsCard 相关逻辑，并返回调用方需要的结果。
+     * @param reports 股票详情页展示的研报列表。
+     * @return 处理后的结果或当前状态。
+     */
     private fun reportsCard(reports: List<StockResearchReportItem>): String {
         val subtleBorderColor = colorHex(subtleBorder)
         val content = if (reports.isEmpty()) {
@@ -412,6 +461,11 @@ internal object StockDetailHtmlRenderer {
         return card("最近研报", content)
     }
 
+    /**
+     * 处理 newsCard 相关逻辑，并返回调用方需要的结果。
+     * @param news news。
+     * @return 处理后的结果或当前状态。
+     */
     private fun newsCard(news: List<StockNewsItem>): String {
         val subtleBorderColor = colorHex(subtleBorder)
         val content = if (news.isEmpty()) {
@@ -433,6 +487,11 @@ internal object StockDetailHtmlRenderer {
         return card("相关新闻", content)
     }
 
+    /**
+     * 处理 remindersCard 相关逻辑，并返回调用方需要的结果。
+     * @param reminderRules 当前资产关联的提醒规则列表。
+     * @return 处理后的结果或当前状态。
+     */
     private fun remindersCard(reminderRules: List<ReminderRule>): String {
         val subtleBorderColor = colorHex(subtleBorder)
         val content = if (reminderRules.isEmpty()) {
@@ -452,6 +511,12 @@ internal object StockDetailHtmlRenderer {
         return card("提醒规则", content)
     }
 
+    /**
+     * 处理 card 相关逻辑，并返回调用方需要的结果。
+     * @param title 通知、卡片或窗口标题。
+     * @param content 需要渲染或包装的内容。
+     * @return 处理后的结果或当前状态。
+     */
     private fun card(title: String, content: String): String {
         val subtleBorderColor = colorHex(subtleBorder)
         return """
@@ -463,6 +528,11 @@ internal object StockDetailHtmlRenderer {
         """.trimIndent()
     }
 
+    /**
+     * 处理 metrics 相关逻辑，并返回调用方需要的结果。
+     * @param items items。
+     * @return 处理后的结果或当前状态。
+     */
     private fun metrics(vararg items: Pair<String, String>): String {
         return "<table class='metrics' cellspacing='0' cellpadding='0'>" + items.map { (label, value) ->
             """
@@ -474,6 +544,11 @@ internal object StockDetailHtmlRenderer {
         }.joinToString("") + "</table>"
     }
 
+    /**
+     * 处理 changeClass 相关逻辑，并返回调用方需要的结果。
+     * @param value 待解析、格式化或写入的原始值。
+     * @return 处理后的结果或当前状态。
+     */
     private fun changeClass(value: BigDecimal?): String {
         return when {
             value == null -> ""
@@ -483,10 +558,25 @@ internal object StockDetailHtmlRenderer {
         }
     }
 
+    /**
+     * 格式化Yi，用于界面展示。
+     * @param value 待解析、格式化或写入的原始值。
+     * @return 处理后的结果或当前状态。
+     */
     private fun formatYi(value: BigDecimal?): String = value?.toPlainString()?.let { "${it}亿" } ?: "--"
 
+    /**
+     * 格式化WanGu，用于界面展示。
+     * @param value 待解析、格式化或写入的原始值。
+     * @return 处理后的结果或当前状态。
+     */
     private fun formatWanGu(value: BigDecimal?): String = formatTenThousand(value).takeIf { it != "--" }?.let { "${it}股" } ?: "--"
 
+    /**
+     * 格式化YuanToYi，用于界面展示。
+     * @param value 待解析、格式化或写入的原始值。
+     * @return 处理后的结果或当前状态。
+     */
     private fun formatYuanToYi(value: BigDecimal?): String {
         return value
             ?.divide(BigDecimal("100000000"), 2, java.math.RoundingMode.HALF_UP)

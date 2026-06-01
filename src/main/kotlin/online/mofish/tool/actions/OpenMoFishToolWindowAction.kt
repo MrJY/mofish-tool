@@ -9,6 +9,10 @@ import online.mofish.tool.services.MoFishProjectService
 import online.mofish.tool.ui.toolwindow.MoFishToolWindowFactory
 
 class OpenMoFishToolWindowAction : AnAction(), DumbAware {
+    /**
+     * 处理用户触发的 IDE 动作。
+     * @param event IntelliJ 平台传入的动作事件上下文。
+     */
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
         project.service<MoFishProjectService>().markToolWindowOpened(project.name)

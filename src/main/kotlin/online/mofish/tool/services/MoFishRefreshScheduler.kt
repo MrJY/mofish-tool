@@ -37,6 +37,11 @@ class MoFishRefreshScheduler(
 
     val states: StateFlow<MoFishRefreshSchedulerState> = stateFlow.asStateFlow()
 
+    /**
+     * 注册项目刷新回调，使调度器可以按配置触发项目刷新。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @param refreshAction 刷新动作。
+     */
     @Synchronized
     fun registerProject(
         projectName: String,
@@ -47,6 +52,10 @@ class MoFishRefreshScheduler(
         publishStateLocked()
     }
 
+    /**
+     * 注销项目刷新回调，并停止该项目的自动刷新任务。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     */
     @Synchronized
     fun unregisterProject(projectName: String) {
         registrations.remove(projectName)
@@ -56,6 +65,10 @@ class MoFishRefreshScheduler(
         publishStateLocked()
     }
 
+    /**
+     * 更新刷新调度配置，并按新配置重新协调后台任务。
+     * @param newConfig new配置。
+     */
     @Synchronized
     fun updateConfig(newConfig: MoFishRefreshSchedulerConfig) {
         config = newConfig.copy(
@@ -67,6 +80,12 @@ class MoFishRefreshScheduler(
         publishStateLocked()
     }
 
+    /**
+     * 立即触发指定项目的刷新回调，可用于手动刷新或强制刷新。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @param force 是否跳过缓存并强制重新读取数据。
+     * @return 处理后的结果或当前状态。
+     */
     fun triggerNow(
         projectName: String,
         force: Boolean = false,
@@ -79,9 +98,16 @@ class MoFishRefreshScheduler(
         }
     }
 
+    /**
+     * 返回当前服务或调度器的状态快照。
+     * @return 处理后的结果或当前状态。
+     */
     @Synchronized
     fun snapshot(): MoFishRefreshSchedulerState = stateFlow.value
 
+    /**
+     * 关闭调度器并取消所有仍在运行的刷新任务。
+     */
     @Synchronized
     override fun close() {
         jobs.values.forEach(Job::cancel)
@@ -92,6 +118,9 @@ class MoFishRefreshScheduler(
         publishStateLocked()
     }
 
+    /**
+     * 处理 reconcileAllLocked 相关逻辑，并返回调用方需要的结果。
+     */
     @Synchronized
     private fun reconcileAllLocked() {
         val projectNames = registrations.keys.toList()
@@ -101,6 +130,10 @@ class MoFishRefreshScheduler(
         projectNames.forEach(::reconcileProjectLocked)
     }
 
+    /**
+     * 处理 reconcileProjectLocked 相关逻辑，并返回调用方需要的结果。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     */
     @Synchronized
     private fun reconcileProjectLocked(projectName: String) {
         jobs.remove(projectName)?.cancel()
@@ -132,6 +165,11 @@ class MoFishRefreshScheduler(
         }
     }
 
+    /**
+     * 处理 shouldRunAutoRefresh 相关逻辑，并返回调用方需要的结果。
+     * @param at at。
+     * @return 处理后的结果或当前状态。
+     */
     private fun shouldRunAutoRefresh(at: Instant): Boolean {
         val currentConfig = synchronized(this) { config }
         val localTime = at.atZone(clock.zone).toLocalTime()
@@ -143,6 +181,12 @@ class MoFishRefreshScheduler(
         )
     }
 
+    /**
+     * 处理 invokeRefresh 相关逻辑，并返回调用方需要的结果。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @param force 是否跳过缓存并强制重新读取数据。
+     * @param refreshAction 刷新动作。
+     */
     private suspend fun invokeRefresh(
         projectName: String,
         force: Boolean,
@@ -176,11 +220,18 @@ class MoFishRefreshScheduler(
         }
     }
 
+    /**
+     * 处理 publishStateLocked 相关逻辑，并返回调用方需要的结果。
+     */
     @Synchronized
     private fun publishStateLocked() {
         stateFlow.value = snapshotLocked()
     }
 
+    /**
+     * 处理 snapshotLocked 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     @Synchronized
     private fun snapshotLocked(): MoFishRefreshSchedulerState {
         return MoFishRefreshSchedulerState(
@@ -198,6 +249,13 @@ class MoFishRefreshScheduler(
     }
 }
 
+/**
+ * 判断是否满足WithinAuto刷新Window条件。
+ * @param currentMinuteOfDay 当前MinuteOfDay。
+ * @param startMinuteOfDay startMinuteOfDay。
+ * @param endMinuteOfDay endMinuteOfDay。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun isWithinAutoRefreshWindow(
     currentMinuteOfDay: Int,
     startMinuteOfDay: Int,

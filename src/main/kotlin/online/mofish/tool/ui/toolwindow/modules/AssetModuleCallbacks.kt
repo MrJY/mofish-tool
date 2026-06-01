@@ -11,6 +11,10 @@ internal interface AssetModuleCallbacks {
     val watchlistService: MoFishWatchlistService
     val eventStatus: JBLabel
     val instantFormatter: DateTimeFormatter
+    /**
+     * 展示股票搜索弹窗。
+     * @return 处理后的结果或当前状态。
+     */
     fun showStockSearchDialog(): SearchableChoice?
     fun showFundSearchDialog(): SearchableChoice?
     fun showCryptoSearchDialog(): SearchableChoice?

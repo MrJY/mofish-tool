@@ -16,6 +16,10 @@ class BocForexRateProvider(
 ) : ForexRateProvider {
     override val providerName: String = "boc-forex-rates"
 
+    /**
+     * 获取外汇牌价列表。
+     * @return 处理后的结果或当前状态。
+     */
     override fun fetchRates(): List<ForexRate> {
         val document = httpClient.getHtml(
             ratesUrlProvider(),
@@ -25,11 +29,21 @@ class BocForexRateProvider(
     }
 }
 
+/**
+ * 解析Boc外汇Document数据，并转换为项目内部可用的结构。
+ * @param document document。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun parseBocForexDocument(document: Document): List<ForexRate> {
     return document.select("#priceTable tr")
         .mapNotNull(::toForexRate)
 }
 
+/**
+ * 转换为外汇汇率表示。
+ * @param row 待添加、转换或展示的行数据。
+ * @return 处理后的结果或当前状态。
+ */
 private fun toForexRate(row: Element): ForexRate? {
     val cells = row.select("td")
     if (cells.size < 8) {
@@ -58,11 +72,21 @@ private fun toForexRate(row: Element): ForexRate? {
     )
 }
 
+/**
+ * 构建外汇币种Pair代码，供后续界面展示或数据处理使用。
+ * @param rawCurrency 用户输入或接口返回的原始币种文本。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun buildForexCurrencyPairCode(rawCurrency: String): String {
     val baseCurrency = normalizeForexBaseCurrency(rawCurrency) ?: rawCurrency.trim().ifBlank { "UNKNOWN" }
     return "$baseCurrency/CNY"
 }
 
+/**
+ * 规范化外汇Base币种，统一后续处理使用的表示形式。
+ * @param rawCurrency 用户输入或接口返回的原始币种文本。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun normalizeForexBaseCurrency(rawCurrency: String): String? {
     val normalized = rawCurrency.trim()
     if (normalized.isBlank()) {
@@ -96,6 +120,12 @@ private fun Element.normalizedCellText(): String {
         .trim()
 }
 
+/**
+ * 解析BocPublishedAt数据，并转换为项目内部可用的结构。
+ * @param dateText 日期文本。
+ * @param timeText 时间文本。
+ * @return 处理后的结果或当前状态。
+ */
 private fun parseBocPublishedAt(
     dateText: String,
     timeText: String,
@@ -130,6 +160,11 @@ private fun parseBocPublishedAt(
     return date.atTime(time)
 }
 
+/**
+ * 解析Boc日期数据，并转换为项目内部可用的结构。
+ * @param rawDate 接口返回的原始日期文本。
+ * @return 处理后的结果或当前状态。
+ */
 private fun parseBocDate(rawDate: String): LocalDate? {
     BOC_DATE_FORMATTERS.forEach { formatter ->
         runCatching { LocalDate.parse(rawDate, formatter) }.getOrNull()?.let { return it }
@@ -137,6 +172,11 @@ private fun parseBocDate(rawDate: String): LocalDate? {
     return null
 }
 
+/**
+ * 解析Boc时间数据，并转换为项目内部可用的结构。
+ * @param rawTime 接口返回的原始时间文本。
+ * @return 处理后的结果或当前状态。
+ */
 private fun parseBocTime(rawTime: String): LocalTime? {
     BOC_TIME_FORMATTERS.forEach { formatter ->
         runCatching { LocalTime.parse(rawTime, formatter) }.getOrNull()?.let { return it }
@@ -144,6 +184,10 @@ private fun parseBocTime(rawTime: String): LocalTime? {
     return null
 }
 
+/**
+ * 处理 defaultBocForexRatesUrl 相关逻辑，并返回调用方需要的结果。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun defaultBocForexRatesUrl(): String = "https://www.boc.cn/sourcedb/whpj/index.html"
 
 private val ISO_CURRENCY_CODE_PATTERN = Regex("""[A-Z]{3}""")

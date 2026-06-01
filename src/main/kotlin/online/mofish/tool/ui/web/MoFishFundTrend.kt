@@ -3,6 +3,11 @@ package online.mofish.tool.ui.web
 import online.mofish.tool.domain.FundQuote
 
 object MoFishFundTrend {
+    /**
+     * 处理 requestFor 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     fun requestFor(quote: FundQuote): MoFishWebRequest {
         return MoFishWebRequest.Html(
             title = "摸鱼基金走势 - ${quote.name}",
@@ -13,6 +18,12 @@ object MoFishFundTrend {
         )
     }
 
+    /**
+     * 处理 chartHtml 相关逻辑，并返回调用方需要的结果。
+     * @param code 资产代码或业务标识。
+     * @param name 名称。
+     * @return 处理后的结果或当前状态。
+     */
     private fun chartHtml(code: String, name: String): String {
         val dataUrl = "https://fund.eastmoney.com/pingzhongdata/$code.js"
         val externalUrl = "https://fund.eastmoney.com/$code.html"
@@ -823,6 +834,11 @@ object MoFishFundTrend {
         """.trimIndent()
     }
 
+    /**
+     * 处理 escapeHtml 相关逻辑，并返回调用方需要的结果。
+     * @param value 待解析、格式化或写入的原始值。
+     * @return 处理后的结果或当前状态。
+     */
     private fun escapeHtml(value: String): String {
         return value
             .replace("&", "&amp;")

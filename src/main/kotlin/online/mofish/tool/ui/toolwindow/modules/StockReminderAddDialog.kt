@@ -56,8 +56,16 @@ internal class StockReminderAddDialog(
         updateThresholdHint()
     }
 
+    /**
+     * 获取PreferredFocused组件。
+     * @return 处理后的结果或当前状态。
+     */
     override fun getPreferredFocusedComponent(): JComponent = thresholdField
 
+    /**
+     * 创建对话框或配置页的主体内容面板。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createCenterPanel(): JComponent {
         val panel = JPanel(BorderLayout())
         panel.preferredSize = JBUI.size(420, 285)
@@ -67,6 +75,9 @@ internal class StockReminderAddDialog(
         return panel
     }
 
+    /**
+     * 在用户确认对话框时校验并提交当前编辑内容。
+     */
     override fun doOKAction() {
         val metric = selectedMetric()
         val threshold = parseThreshold(thresholdField.text, metric) ?: return
@@ -83,6 +94,10 @@ internal class StockReminderAddDialog(
         super.doOKAction()
     }
 
+    /**
+     * 创建Form面板实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createFormPanel(): JPanel {
         val panel = JPanel(GridBagLayout())
         panel.isOpaque = false
@@ -95,6 +110,13 @@ internal class StockReminderAddDialog(
         return panel
     }
 
+    /**
+     * 向表格模型追加一行数据并通知界面刷新。
+     * @param panel 面板。
+     * @param row 待添加、转换或展示的行数据。
+     * @param labelText label文本。
+     * @param valueComponent 值组件。
+     */
     private fun addRow(panel: JPanel, row: Int, labelText: String, valueComponent: JComponent) {
         val label = JBLabel(labelText).apply {
             font = thresholdField.font
@@ -122,6 +144,11 @@ internal class StockReminderAddDialog(
         )
     }
 
+    /**
+     * 处理 fixedValue 相关逻辑，并返回调用方需要的结果。
+     * @param label label。
+     * @return 处理后的结果或当前状态。
+     */
     private fun fixedValue(label: JBLabel): JComponent {
         return JPanel().apply {
             isOpaque = false
@@ -135,6 +162,9 @@ internal class StockReminderAddDialog(
         }
     }
 
+    /**
+     * 更新ThresholdHint。
+     */
     private fun updateThresholdHint() {
         val metricText = when (selectedMetric()) {
             ReminderMetric.PRICE -> "价格数值，例如 8.88"
@@ -143,6 +173,10 @@ internal class StockReminderAddDialog(
         thresholdHintLabel.text = "${selectedDirection()} $metricText 时触发"
     }
 
+    /**
+     * 创建描述Label实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createDescriptionLabel(): JBLabel {
         return JBLabel(
             """
@@ -158,6 +192,12 @@ internal class StockReminderAddDialog(
         }
     }
 
+    /**
+     * 解析Threshold数据，并转换为项目内部可用的结构。
+     * @param raw 用户输入或接口返回的原始文本。
+     * @param metric metric。
+     * @return 处理后的结果或当前状态。
+     */
     private fun parseThreshold(raw: String, metric: ReminderMetric): BigDecimal? {
         val value = raw.trim()
         val decimal = value.toBigDecimalOrNull()
@@ -176,14 +216,27 @@ internal class StockReminderAddDialog(
         return decimal
     }
 
+    /**
+     * 选择edMetric并同步相关界面状态。
+     * @return 处理后的结果或当前状态。
+     */
     private fun selectedMetric(): ReminderMetric {
         return metricComboBox.selectedItem as? ReminderMetric ?: ReminderMetric.PRICE
     }
 
+    /**
+     * 选择edDirection并同步相关界面状态。
+     * @return 处理后的结果或当前状态。
+     */
     private fun selectedDirection(): ReminderDirection {
         return directionComboBox.selectedItem as? ReminderDirection ?: ReminderDirection.ABOVE
     }
 
+    /**
+     * 处理 defaultThreshold 相关逻辑，并返回调用方需要的结果。
+     * @param metric metric。
+     * @return 处理后的结果或当前状态。
+     */
     private fun defaultThreshold(metric: ReminderMetric): BigDecimal {
         return when (metric) {
             ReminderMetric.PRICE -> quote.currentPrice ?: quote.afterHoursPrice ?: BigDecimal.ZERO

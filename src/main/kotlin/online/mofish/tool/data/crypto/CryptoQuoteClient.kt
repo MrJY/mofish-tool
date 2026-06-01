@@ -31,6 +31,11 @@ class CryptoQuoteClient(
         ),
     )
 
+    /**
+     * 从远程或本地数据源获取行情数据。
+     * @param code 资产代码或业务标识。
+     * @return 处理后的结果或当前状态。
+     */
     fun fetchQuote(code: String): CryptoQuote {
         val normalizedCode = normalizeCryptoCode(code)
         require(normalizedCode.isNotEmpty()) { "虚拟币 ID 不能为空。" }
@@ -39,6 +44,11 @@ class CryptoQuoteClient(
             ?: throw IllegalArgumentException("无法获取虚拟币数据：$normalizedCode")
     }
 
+    /**
+     * 批量获取请求资产的最新行情。
+     * @param codes codes。
+     * @return 处理后的结果或当前状态。
+     */
     fun fetchQuotes(codes: List<String>): List<CryptoQuote> {
         val normalizedCodes = codes
             .map(::normalizeCryptoCode)
@@ -58,6 +68,11 @@ class CryptoQuoteClient(
         return emptyList()
     }
 
+    /**
+     * 根据用户输入搜索可添加的候选资产。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
     fun searchSuggestions(keyword: String): List<CryptoSearchSuggestion> {
         val normalizedKeyword = keyword.trim()
         require(normalizedKeyword.isNotEmpty()) { "搜索关键词不能为空。" }
@@ -75,6 +90,10 @@ class CryptoQuoteClient(
             .toList()
     }
 
+    /**
+     * 加载搜索Index数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun loadSearchIndex(): List<CryptoSearchSuggestion> {
         val merged = linkedMapOf<String, CryptoSearchSuggestion>()
         searchIndexProviders.forEach { provider ->
@@ -86,6 +105,12 @@ class CryptoQuoteClient(
         return merged.values.toList()
     }
 
+    /**
+     * 处理 cryptoSearchRank 相关逻辑，并返回调用方需要的结果。
+     * @param suggestion 建议。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
     private fun cryptoSearchRank(
         suggestion: CryptoSearchSuggestion,
         keyword: String,

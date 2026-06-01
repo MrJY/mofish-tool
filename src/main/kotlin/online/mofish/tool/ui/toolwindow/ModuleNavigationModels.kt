@@ -7,6 +7,10 @@ internal data class ModuleNavItem(
     val viewId: String,
     val displayName: String,
 ) {
+    /**
+     * 转换为String表示。
+     * @return 处理后的结果或当前状态。
+     */
     override fun toString(): String = displayName
 }
 

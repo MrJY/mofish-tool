@@ -81,6 +81,9 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 处理 activate 相关逻辑，并返回调用方需要的结果。
+     */
     fun activate() {
         if (activated) {
             return
@@ -92,6 +95,9 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 处理 deactivate 相关逻辑，并返回调用方需要的结果。
+     */
     fun deactivate() {
         if (!activated) {
             return
@@ -100,27 +106,52 @@ class MoFishWatchlistService(
         refreshSchedulerService.unregisterProject(project.name)
     }
 
+    /**
+     * 释放服务持有的后台任务和运行资源。
+     */
     fun dispose() {
         deactivate()
         scope.cancel()
     }
 
+    /**
+     * 处理 refresh 相关逻辑，并返回调用方需要的结果。
+     * @param force 是否跳过缓存并强制重新读取数据。
+     * @return 处理后的结果或当前状态。
+     */
     fun refresh(force: Boolean = false) {
         scope.launch(Dispatchers.IO) {
             projectService.refreshState(project.name, force = force)
         }
     }
 
+    /**
+     * 处理 refreshModule 相关逻辑，并返回调用方需要的结果。
+     * @param module 模块。
+     * @param force 是否跳过缓存并强制重新读取数据。
+     * @return 处理后的结果或当前状态。
+     */
     fun refreshModule(module: MoFishRefreshModule, force: Boolean = true) {
         refreshModules(setOf(module), force)
     }
 
+    /**
+     * 刷新指定的一组业务模块，并保留其他模块已有数据。
+     * @param modules 需要刷新或处理的业务模块集合。
+     * @param force 是否跳过缓存并强制重新读取数据。
+     * @return 处理后的结果或当前状态。
+     */
     fun refreshModules(modules: Set<MoFishRefreshModule>, force: Boolean = true) {
         scope.launch(Dispatchers.IO) {
             projectService.refreshModules(project.name, modules, force = force)
         }
     }
 
+    /**
+     * 处理 refreshConfiguredModules 相关逻辑，并返回调用方需要的结果。
+     * @param force 是否跳过缓存并强制重新读取数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun refreshConfiguredModules(force: Boolean = true) {
         val modules = settingsService.snapshot().refresh.autoRefreshModules
         if (modules.isEmpty()) {
@@ -129,14 +160,26 @@ class MoFishWatchlistService(
         projectService.refreshModules(project.name, modules, force = force)
     }
 
+    /**
+     * 切换工具窗口当前选中的模块视图。
+     * @param viewId 视图Id。
+     */
     fun selectView(viewId: String) {
         projectService.selectView(viewId)
     }
 
+    /**
+     * 切换当前选中的资产代码，并发布选择变更事件。
+     * @param assetCode 资产代码。
+     */
     fun selectAsset(assetCode: String?) {
         projectService.selectAsset(assetCode)
     }
 
+    /**
+     * 添加基金代码。
+     * @param code 资产代码或业务标识。
+     */
     fun addFundCode(code: String) {
         val normalizedCode = normalizeFundCode(code)
         if (normalizedCode.isEmpty()) {
@@ -149,6 +192,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 删除基金代码。
+     * @param code 资产代码或业务标识。
+     */
     fun removeFundCode(code: String) {
         val normalizedCode = normalizeFundCode(code)
         if (normalizedCode.isEmpty()) {
@@ -161,6 +208,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 添加股票代码。
+     * @param code 资产代码或业务标识。
+     */
     fun addStockCode(code: String) {
         val normalizedCode = normalizeStockCode(code)
         if (normalizedCode.isEmpty()) {
@@ -173,6 +224,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 添加股票Group。
+     * @param groupName group名称。
+     */
     fun addStockGroup(groupName: String) {
         val normalizedGroup = normalizeStockGroupName(groupName)
         if (normalizedGroup.isEmpty()) {
@@ -185,6 +240,11 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 处理 assignStockToGroup 相关逻辑，并返回调用方需要的结果。
+     * @param code 资产代码或业务标识。
+     * @param groupName group名称。
+     */
     fun assignStockToGroup(
         code: String,
         groupName: String,
@@ -208,6 +268,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 删除股票Group。
+     * @param groupName group名称。
+     */
     fun removeStockGroup(groupName: String) {
         val normalizedGroup = normalizeStockGroupName(groupName)
         if (normalizedGroup.isEmpty()) {
@@ -223,6 +287,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 处理 replaceStockGroups 相关逻辑，并返回调用方需要的结果。
+     * @param groups groups。
+     */
     fun replaceStockGroups(groups: List<String>) {
         val normalizedGroups = groups
             .map(::normalizeStockGroupName)
@@ -242,6 +310,11 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 处理 moveStockGroup 相关逻辑，并返回调用方需要的结果。
+     * @param groupName group名称。
+     * @param direction direction。
+     */
     fun moveStockGroup(groupName: String, direction: Int) {
         val normalizedGroup = normalizeStockGroupName(groupName)
         if (normalizedGroup.isEmpty() || direction == 0) {
@@ -263,6 +336,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 添加虚拟币代码。
+     * @param code 资产代码或业务标识。
+     */
     fun addCryptoCode(code: String) {
         val normalizedCode = normalizeCryptoCode(code)
         if (normalizedCode.isEmpty()) {
@@ -275,6 +352,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 删除股票代码。
+     * @param code 资产代码或业务标识。
+     */
     fun removeStockCode(code: String) {
         val normalizedCode = normalizeStockCode(code)
         if (normalizedCode.isEmpty()) {
@@ -289,6 +370,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 删除虚拟币代码。
+     * @param code 资产代码或业务标识。
+     */
     fun removeCryptoCode(code: String) {
         val normalizedCode = normalizeCryptoCode(code)
         if (normalizedCode.isEmpty()) {
@@ -301,6 +386,11 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 处理 searchStockSuggestions 相关逻辑，并返回调用方需要的结果。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
     fun searchStockSuggestions(keyword: String): List<StockSearchSuggestion> {
         val normalizedKeyword = keyword.trim()
         if (normalizedKeyword.isEmpty()) {
@@ -309,6 +399,11 @@ class MoFishWatchlistService(
         return stockQuoteClient.searchSuggestions(normalizedKeyword)
     }
 
+    /**
+     * 处理 searchCryptoSuggestions 相关逻辑，并返回调用方需要的结果。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
     fun searchCryptoSuggestions(keyword: String): List<CryptoSearchSuggestion> {
         val normalizedKeyword = keyword.trim()
         if (normalizedKeyword.isEmpty()) {
@@ -317,6 +412,11 @@ class MoFishWatchlistService(
         return cryptoQuoteClient.searchSuggestions(normalizedKeyword)
     }
 
+    /**
+     * 处理 searchFundSuggestions 相关逻辑，并返回调用方需要的结果。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
     fun searchFundSuggestions(keyword: String): List<FundSearchSuggestion> {
         val normalizedKeyword = keyword.trim()
         if (normalizedKeyword.isEmpty()) {
@@ -325,6 +425,9 @@ class MoFishWatchlistService(
         return fundQuoteClient.searchSuggestions(normalizedKeyword)
     }
 
+    /**
+     * 处理 cycleQuoteSortField 相关逻辑，并返回调用方需要的结果。
+     */
     fun cycleQuoteSortField() {
         val currentField = settingsService.snapshot().sortSettings.quoteField
         val fields = MoFishQuoteSortField.entries
@@ -336,6 +439,9 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 转换为ggle行情SortDirection表示。
+     */
     fun toggleQuoteSortDirection() {
         updateSettings { state ->
             val nextDirection = when (state.sortSettings.quoteDirection) {
@@ -348,8 +454,17 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 返回当前服务或调度器的状态快照。
+     * @return 处理后的结果或当前状态。
+     */
     fun snapshot(): MoFishWatchlistState? = stateFlow.value
 
+    /**
+     * 处理 replaceStockHoldings 相关逻辑，并返回调用方需要的结果。
+     * @param code 资产代码或业务标识。
+     * @param holdings 一组资产持仓配置。
+     */
     fun replaceStockHoldings(
         code: String,
         holdings: List<HoldingConfig>,
@@ -367,6 +482,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 添加持仓。
+     * @param holdings 一组资产持仓配置。
+     */
     fun addHoldings(holdings: List<HoldingConfig>) {
         val normalizedHoldings = holdings.filter { it.code.isNotBlank() }
         if (normalizedHoldings.isEmpty()) {
@@ -379,6 +498,11 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 处理 replaceStockReminders 相关逻辑，并返回调用方需要的结果。
+     * @param code 资产代码或业务标识。
+     * @param reminders 提醒。
+     */
     fun replaceStockReminders(
         code: String,
         reminders: List<ReminderRule>,
@@ -396,6 +520,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 添加提醒。
+     * @param reminders 提醒。
+     */
     fun addReminders(reminders: List<ReminderRule>) {
         val normalizedReminders = reminders.filter { it.code.isNotBlank() }
         if (normalizedReminders.isEmpty()) {
@@ -408,6 +536,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 更新Watchlist。
+     * @param transform transform。
+     */
     private fun updateWatchlist(transform: (MoFishWatchlistSettings) -> MoFishWatchlistSettings) {
         updateSettings { currentSettings ->
             currentSettings.copy(
@@ -416,6 +548,10 @@ class MoFishWatchlistService(
         }
     }
 
+    /**
+     * 更新设置。
+     * @param transform transform。
+     */
     private fun updateSettings(transform: (MoFishSettingsState) -> MoFishSettingsState) {
         val currentSettings = settingsService.snapshot()
         val nextSettings = transform(currentSettings)
@@ -427,6 +563,12 @@ class MoFishWatchlistService(
     }
 }
 
+/**
+ * 处理 mergeHoldings 相关逻辑，并返回调用方需要的结果。
+ * @param currentHoldings 当前持仓。
+ * @param addedHoldings added持仓。
+ * @return 处理后的结果或当前状态。
+ */
 private fun mergeHoldings(
     currentHoldings: List<HoldingConfig>,
     addedHoldings: List<HoldingConfig>,
@@ -448,6 +590,12 @@ private fun mergeHoldings(
     }
 }
 
+/**
+ * 处理 mergeHolding 相关逻辑，并返回调用方需要的结果。
+ * @param current 当前。
+ * @param added added。
+ * @return 处理后的结果或当前状态。
+ */
 private fun mergeHolding(
     current: HoldingConfig,
     added: HoldingConfig,
@@ -483,14 +631,40 @@ private fun mergeHolding(
     )
 }
 
+/**
+ * 规范化基金代码，统一后续处理使用的表示形式。
+ * @param rawCode 用户输入或接口返回的原始资产代码。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun normalizeFundCode(rawCode: String): String = rawCode.trim()
 
+/**
+ * 规范化股票代码，统一后续处理使用的表示形式。
+ * @param rawCode 用户输入或接口返回的原始资产代码。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun normalizeStockCode(rawCode: String): String = rawCode.trim().lowercase()
 
+/**
+ * 规范化虚拟币代码，统一后续处理使用的表示形式。
+ * @param rawCode 用户输入或接口返回的原始资产代码。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun normalizeCryptoCode(rawCode: String): String = rawCode.trim().lowercase()
 
+/**
+ * 规范化股票Group名称，统一后续处理使用的表示形式。
+ * @param rawGroupName rawGroup名称。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun normalizeStockGroupName(rawGroupName: String): String = normalizeStockGroupValue(rawGroupName)
 
+/**
+ * 处理 upsertStockGroup 相关逻辑，并返回调用方需要的结果。
+ * @param currentGroups 当前Groups。
+ * @param newGroup newGroup。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun upsertStockGroup(
     currentGroups: List<String>,
     newGroup: String,
@@ -505,6 +679,12 @@ internal fun upsertStockGroup(
         .distinctBy { it.lowercase() }
 }
 
+/**
+ * 处理 upsertWatchlistCode 相关逻辑，并返回调用方需要的结果。
+ * @param currentCodes 当前Codes。
+ * @param newCode new代码。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun upsertWatchlistCode(
     currentCodes: List<String>,
     newCode: String,
@@ -516,6 +696,12 @@ internal fun upsertWatchlistCode(
     return (currentCodes + normalizedCode).distinctBy { it.lowercase() }
 }
 
+/**
+ * 删除Watchlist代码。
+ * @param currentCodes 当前Codes。
+ * @param targetCode target代码。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun removeWatchlistCode(
     currentCodes: List<String>,
     targetCode: String,

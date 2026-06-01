@@ -47,16 +47,38 @@ internal class FundModulePanel(
     }
     private var fundGroupFilter = FundGroupFilter.ALL
 
+    /**
+     * 处理 moduleViewId 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     override fun moduleViewId(): String = "funds"
 
+    /**
+     * 处理 hasDetailPage 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     override fun hasDetailPage(): Boolean = true
 
+    /**
+     * 创建详情组件实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createDetailComponent() = createDetailPage("摸鱼基金详情", detailPane)
 
+    /**
+     * 更新详情。
+     * @param snapshot 当前状态或数据快照。
+     * @param row 待添加、转换或展示的行数据。
+     */
     override fun updateDetail(snapshot: MoFishWatchlistState, row: FundListItem?) {
         detailPane.text = buildDetailHtml(snapshot, row)
     }
 
+    /**
+     * 构建Rows，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     override fun buildRows(snapshot: MoFishWatchlistState): List<FundListItem> {
         val holdingsByCode = snapshot.settingsState.holdings
             .filter { it.code.isNotBlank() }
@@ -92,12 +114,26 @@ internal class FundModulePanel(
         }
     }
 
+    /**
+     * 构建汇总文本，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @param rows 当前表格或列表使用的数据行集合。
+     * @return 处理后的结果或当前状态。
+     */
     override fun buildSummaryText(snapshot: MoFishWatchlistState, rows: List<FundListItem>): String {
         return buildDataUpdateSummary(snapshot, MoFishRefreshModule.FUNDS)
     }
 
+    /**
+     * 创建列表CellRenderer实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createListCellRenderer(): ListCellRenderer<in FundListItem> = FundListRenderer()
 
+    /**
+     * 处理 configureTable 相关逻辑，并返回调用方需要的结果。
+     * @param table 表格。
+     */
     override fun configureTable(table: JBTable) {
         table.setDefaultRenderer(Any::class.java, FundTableCellRenderer())
         table.columnModel.getColumn(0).preferredWidth = JBUI.scale(96)
@@ -106,6 +142,10 @@ internal class FundModulePanel(
         table.columnModel.getColumn(3).preferredWidth = JBUI.scale(92)
     }
 
+    /**
+     * 创建ToolbarActions实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createToolbarActions(): List<AnAction> {
         return listOf(
             RefreshFundAction(),
@@ -119,6 +159,10 @@ internal class FundModulePanel(
         )
     }
 
+    /**
+     * 创建PopupActions实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createPopupActions(): List<AnAction> {
         return listOf(
             FocusSelectedFundAction(),
@@ -131,10 +175,19 @@ internal class FundModulePanel(
         )
     }
 
+    /**
+     * 处理 onOpenDetail 相关逻辑，并返回调用方需要的结果。
+     */
     override fun onOpenDetail() {
         openSelectedFundDetail()
     }
 
+    /**
+     * 构建详情HTML，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @param row 待添加、转换或展示的行数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun buildDetailHtml(snapshot: MoFishWatchlistState, row: FundListItem?): String {
         if (row == null) {
             return """
@@ -178,6 +231,11 @@ internal class FundModulePanel(
         """.trimIndent()
     }
 
+    /**
+     * 构建提醒规则HTML，供后续界面展示或数据处理使用。
+     * @param reminderRules 当前资产关联的提醒规则列表。
+     * @return 处理后的结果或当前状态。
+     */
     private fun buildReminderRulesHtml(reminderRules: List<online.mofish.tool.domain.ReminderRule>): String {
         if (reminderRules.isEmpty()) {
             return "<p>当前资产暂无提醒规则。</p>"
@@ -188,6 +246,11 @@ internal class FundModulePanel(
         return "<ul>$content</ul>"
     }
 
+    /**
+     * 处理 holdingProfitLine 相关逻辑，并返回调用方需要的结果。
+     * @param profit 收益。
+     * @return 处理后的结果或当前状态。
+     */
     private fun holdingProfitLine(profit: online.mofish.tool.domain.PositionProfitSnapshot?): String {
         if (callbacks.watchlistService.snapshot()?.settingsState?.showHoldingProfit != true) {
             return ""
@@ -195,6 +258,9 @@ internal class FundModulePanel(
         return "<br/>总收益：${formatDecimal(profit?.totalProfit)}"
     }
 
+    /**
+     * 打开选中项基金详情相关界面或详情。
+     */
     private fun openSelectedFundDetail() {
         val selected = selectedRow() ?: return
         setDetailVisible(true)
@@ -203,6 +269,9 @@ internal class FundModulePanel(
         callbacks.eventStatus.text = "已打开摸鱼基金 ${selected.quote.name} 的详情。"
     }
 
+    /**
+     * 打开选中项基金Trend相关界面或详情。
+     */
     private fun openSelectedFundTrend() {
         val selected = selectedRow() ?: return
         MoFishWebEditorService.open(callbacks.project, MoFishFundTrend.requestFor(selected.quote))
@@ -210,6 +279,15 @@ internal class FundModulePanel(
     }
 
     private inner class FundListRenderer : DefaultListCellRenderer() {
+        /**
+         * 获取列表CellRenderer组件。
+         * @param list 列表。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param index index。
+         * @param isSelected is选中项。
+         * @param cellHasFocus cellHasFocus。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getListCellRendererComponent(
             list: JList<*>?,
             value: Any?,
@@ -239,8 +317,17 @@ internal class FundModulePanel(
     }
 
     private inner class FundTableModel : AssetTableModel<FundListItem>() {
+        /**
+         * 返回表格模型当前列数。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnCount(): Int = 4
 
+        /**
+         * 返回表格指定列的标题。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnName(column: Int): String {
             return when (column) {
                 0 -> "代码"
@@ -250,6 +337,12 @@ internal class FundModulePanel(
             }
         }
 
+        /**
+         * 读取表格指定行列的展示值。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
             val row = rowAt(rowIndex)
             return when (columnIndex) {
@@ -260,10 +353,26 @@ internal class FundModulePanel(
             }
         }
 
+        /**
+         * 判断表格指定单元格是否允许编辑。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = false
     }
 
     private inner class FundTableCellRenderer : DefaultTableCellRenderer() {
+        /**
+         * 获取表格CellRenderer组件。
+         * @param table 表格。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param isSelected is选中项。
+         * @param hasFocus hasFocus。
+         * @param row 待添加、转换或展示的行数据。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getTableCellRendererComponent(
             table: JTable?,
             value: Any?,
@@ -291,6 +400,10 @@ internal class FundModulePanel(
         "刷新摸鱼基金列表最新数据",
         AllIcons.Actions.Refresh,
     ) {
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.refreshModule(MoFishRefreshModule.FUNDS)
@@ -298,16 +411,28 @@ internal class FundModulePanel(
     }
 
     private inner class OpenFundTrendAction : DumbAwareAction("查看走势", "在编辑器标签页中查看当前摸鱼基金走势", AllIcons.Actions.Preview) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             openSelectedFundTrend()
         }
     }
 
     private inner class AddFundAction : DumbAwareAction("添加摸鱼基金", "按摸鱼基金代码添加摸鱼基金", AllIcons.General.Add) {
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val fundCode = callbacks.showFundSearchDialog()?.code ?: return
             callbacks.watchlistService.addFundCode(fundCode)
@@ -318,20 +443,36 @@ internal class FundModulePanel(
     }
 
     private inner class FocusSelectedFundAction : DumbAwareAction("查看详情", "查看当前摸鱼基金的详情", AllIcons.General.ZoomIn) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             openSelectedFundDetail()
         }
     }
 
     private inner class RemoveSelectedFundAction : DumbAwareAction("删除摸鱼基金", "删除当前选中的摸鱼基金", AllIcons.General.Remove) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val confirm = Messages.showYesNoDialog(
@@ -353,10 +494,18 @@ internal class FundModulePanel(
         "为当前摸鱼基金追加持仓",
         AllIcons.Nodes.DataTables,
     ) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val costPrice = selected.quote.estimatedNetValue ?: selected.quote.previousNetValue ?: BigDecimal.ZERO
@@ -389,10 +538,18 @@ internal class FundModulePanel(
         "为当前摸鱼基金添加提醒规则",
         AllIcons.General.Balloon,
     ) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val threshold = selected.quote.estimatedNetValue ?: selected.quote.previousNetValue ?: BigDecimal.ZERO
@@ -422,12 +579,20 @@ internal class FundModulePanel(
     }
 
     private inner class CycleFundGroupFilterAction : DumbAwareAction("切换分组", "在全部、持仓中、仅关注之间切换", AllIcons.Actions.GroupBy) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.icon = AllIcons.Actions.GroupBy
             event.presentation.text = fundGroupFilter.next().displayName
             event.presentation.description = "切换摸鱼基金分组为${fundGroupFilter.next().displayName}"
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             fundGroupFilter = fundGroupFilter.next()
             render(callbacks.watchlistService.snapshot() ?: return)
@@ -435,6 +600,10 @@ internal class FundModulePanel(
     }
 
     private inner class ToggleFundListViewAction : DumbAwareAction("切换视图", "切换摸鱼基金列表展示方式", AllIcons.Nodes.DataTables) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.text = nextViewMode().displayName
             event.presentation.icon = when (nextViewMode()) {
@@ -444,6 +613,10 @@ internal class FundModulePanel(
             event.presentation.description = "切换为摸鱼基金${nextViewMode().displayName}"
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val nextModeName = nextViewMode().displayName
             toggleViewMode()

@@ -1,4 +1,12 @@
 {
+  ".gitignore": {
+    "zh": "Git 忽略规则，排除构建产物、IDE 本地状态和运行缓存",
+    "en": "Git ignore rules excluding build outputs, local IDE state, and runtime caches"
+  },
+  ".java-version": {
+    "zh": "项目使用的本地 Java 版本声明",
+    "en": "Local Java version declaration used by the project"
+  },
   ".run": {
     "zh": "IntelliJ IDEA 预置运行、测试和插件验证配置目录",
     "en": "Predefined IntelliJ IDEA run, test, and plugin verification configurations"
@@ -15,85 +23,41 @@
     "zh": "验证插件与目标 IDE 兼容性的配置，对应 Gradle verifyPlugin 任务",
     "en": "Run configuration for plugin compatibility verification, mapped to the Gradle verifyPlugin task"
   },
-  "src/main/kotlin/online/mofish/tool/actions": {
-    "zh": "IDE Action 入口，目前用于打开摸鱼工具窗口",
-    "en": "IDE action entry points, currently used to open the MoFish tool window"
+  "CHANGELOG.md": {
+    "zh": "版本变更记录文件",
+    "en": "Version changelog file"
   },
-  "src/main/kotlin/online/mofish/tool/data": {
-    "zh": "行情数据层，包含远程数据源、静态回退数据源、HTTP 客户端和各市场 provider",
-    "en": "Quote data layer with remote data sources, static fallbacks, HTTP client, and market providers"
+  "EULA.md": {
+    "zh": "最终用户许可协议文件",
+    "en": "End-user license agreement file"
   },
-  "src/main/kotlin/online/mofish/tool/data/http/MoFishHttpClient.kt": {
-    "zh": "统一 HTTP 客户端，封装 OkHttp、JSON 解析和 HTML 解析",
-    "en": "Shared HTTP client wrapping OkHttp, JSON parsing, and HTML parsing"
+  "LICENSE": {
+    "zh": "项目开源许可证文件",
+    "en": "Project open-source license file"
   },
-  "src/main/kotlin/online/mofish/tool/data/fund": {
-    "zh": "摸鱼基金底层行情与搜索建议实现，当前接入东方财富数据",
-    "en": "Underlying quote and search implementation for MoFish Fund, currently backed by EastMoney"
+  "PRIVACY.md": {
+    "zh": "隐私政策文件，说明插件数据使用与隐私边界",
+    "en": "Privacy policy describing plugin data usage and privacy boundaries"
   },
-  "src/main/kotlin/online/mofish/tool/data/stock": {
-    "zh": "摸鱼股票与摸鱼指数底层行情、搜索和代码规范化实现，当前接入腾讯与新浪数据",
-    "en": "Underlying quote, search, and symbol normalization implementation for MoFish Stock and MoFish Index, currently backed by Tencent and Sina"
-  },
-  "src/main/kotlin/online/mofish/tool/data/crypto": {
-    "zh": "摸鱼虚拟币底层行情与搜索建议实现，当前接入 CoinGecko 数据",
-    "en": "Underlying quote and search implementation for MoFish Crypto, currently backed by CoinGecko"
-  },
-  "src/main/kotlin/online/mofish/tool/data/forex": {
-    "zh": "摸鱼外汇底层牌价抓取实现，当前接入中国银行页面",
-    "en": "Underlying forex rate fetching implementation for MoFish Forex, currently backed by Bank of China pages"
-  },
-  "src/main/kotlin/online/mofish/tool/domain": {
-    "zh": "领域模型目录，定义行情、持仓、提醒规则、收益快照、工作区等数据结构",
-    "en": "Domain model directory for quotes, holdings, reminder rules, profit snapshots, workspaces, and related structures"
-  },
-  "src/main/kotlin/online/mofish/tool/services": {
-    "zh": "核心服务目录，负责项目状态、缓存、刷新调度、提醒通知、收益计算和状态聚合",
-    "en": "Core services for project state, caching, refresh scheduling, notifications, profit calculation, and state aggregation"
-  },
-  "src/main/kotlin/online/mofish/tool/settings": {
-    "zh": "设置相关代码，包含设置持久化、配置页、持仓编辑弹窗和提醒编辑弹窗",
-    "en": "Settings code including persistent state, configurable UI, holdings editor, and reminders editor"
-  },
-  "src/main/kotlin/online/mofish/tool/state": {
-    "zh": "状态模型目录，定义 UI 聚合状态、项目事件、缓存状态和刷新调度状态",
-    "en": "State models for UI aggregation, project events, cache state, and refresh scheduler state"
-  },
-  "src/main/kotlin/online/mofish/tool/ui/toolwindow/MoFishToolWindowFactory.kt": {
-    "zh": "摸鱼工具窗口工厂，向 IntelliJ Platform 注册并创建工具窗口内容",
-    "en": "MoFish tool window factory that registers and creates tool window content for the IntelliJ Platform"
-  },
-  "src/main/kotlin/online/mofish/tool/ui/toolwindow/MoFishToolWindowPanel.kt": {
-    "zh": "摸鱼工具主界面，基于 Swing/JB UI 展示摸鱼股票、摸鱼指数、摸鱼基金、摸鱼虚拟币、摸鱼外汇、快讯和设置入口",
-    "en": "Main MoFish UI built with Swing/JB UI, showing MoFish Stock, Index, Fund, Crypto, Forex, flash news, and settings entry points"
-  },
-  "src/main/kotlin/online/mofish/tool/ui/statusbar": {
-    "zh": "状态栏收益组件，展示摸鱼工具今日收益摘要",
-    "en": "Status bar profit widget showing the MoFish daily profit summary"
-  },
-  "src/main/kotlin/online/mofish/tool/ui/dialogs": {
-    "zh": "通用搜索选择弹窗，用于添加摸鱼股票、摸鱼基金和摸鱼虚拟币",
-    "en": "Shared searchable choice dialog used to add MoFish Stock, Fund, and Crypto items"
-  },
-  "src/main/resources/META-INF/plugin.xml": {
-    "zh": "插件声明文件，定义插件 ID、名称、服务、设置页、工具窗口、通知组、状态栏组件和菜单 Action",
-    "en": "Plugin descriptor declaring plugin ID, name, services, configurable, tool window, notification group, status bar widget, and menu action"
-  },
-  "src/main/resources/META-INF/pluginIcon.svg": {
-    "zh": "插件图标，用于 JetBrains Marketplace 和 IDE 插件管理器",
-    "en": "Plugin icon used in JetBrains Marketplace and the IDE plugin manager"
-  },
-  "src/main/resources/icons/mofishToolWindow.svg": {
-    "zh": "摸鱼工具窗口图标",
-    "en": "MoFish tool window icon"
+  "README.md": {
+    "zh": "项目说明文档，介绍摸鱼工具插件、模块划分、构建命令和目录结构",
+    "en": "Project README describing the MoFish plugin, module structure, build commands, and directory layout"
   },
   "build.gradle.kts": {
     "zh": "Gradle 构建脚本，配置 Kotlin、IntelliJ Platform、OkHttp、Jsoup、kotlinx-serialization-json 和测试依赖",
     "en": "Gradle build script configuring Kotlin, IntelliJ Platform, OkHttp, Jsoup, kotlinx-serialization-json, and test dependencies"
   },
-  "settings.gradle.kts": {
-    "zh": "Gradle 项目设置，配置项目名称、插件版本、IntelliJ Platform 仓库和 Maven Central 仓库",
-    "en": "Gradle settings configuring project name, plugin versions, IntelliJ Platform repositories, and Maven Central"
+  "docs": {
+    "zh": "项目维护文档目录",
+    "en": "Project maintenance documentation directory"
+  },
+  "docs/tree_file.json": {
+    "zh": "仓库文件与目录用途索引，按路径维护中英文说明",
+    "en": "Repository file and directory purpose index with bilingual descriptions by path"
+  },
+  "gradle": {
+    "zh": "Gradle 辅助配置目录，包含版本目录和 Wrapper 文件",
+    "en": "Gradle support configuration directory containing the version catalog and wrapper files"
   },
   "gradle.properties": {
     "zh": "项目属性文件，定义 group、version，并启用 Gradle Configuration Cache 和 Build Cache",
@@ -103,12 +67,504 @@
     "zh": "Gradle 版本目录，目前集中管理 JUnit 版本",
     "en": "Gradle version catalog, currently centralizing the JUnit version"
   },
-  "README.md": {
-    "zh": "项目说明文档，介绍摸鱼工具插件、模块划分、构建命令和目录结构",
-    "en": "Project README describing the MoFish plugin, module structure, build commands, and directory layout"
+  "gradle/wrapper": {
+    "zh": "Gradle Wrapper 二进制与下载配置目录",
+    "en": "Gradle Wrapper binary and distribution configuration directory"
   },
-  "CHANGELOG.md": {
-    "zh": "版本变更记录文件",
-    "en": "Version changelog file"
+  "gradle/wrapper/gradle-wrapper.jar": {
+    "zh": "Gradle Wrapper 启动 JAR，用于免安装运行指定 Gradle 版本",
+    "en": "Gradle Wrapper bootstrap JAR used to run the configured Gradle version without a local install"
+  },
+  "gradle/wrapper/gradle-wrapper.properties": {
+    "zh": "Gradle Wrapper 配置，声明 Gradle 发行版下载地址和校验信息",
+    "en": "Gradle Wrapper configuration declaring the Gradle distribution URL and validation metadata"
+  },
+  "gradlew": {
+    "zh": "Unix/macOS Gradle Wrapper 启动脚本",
+    "en": "Unix/macOS Gradle Wrapper launch script"
+  },
+  "gradlew.bat": {
+    "zh": "Windows Gradle Wrapper 启动脚本",
+    "en": "Windows Gradle Wrapper launch script"
+  },
+  "settings.gradle.kts": {
+    "zh": "Gradle 项目设置，配置项目名称、插件版本、IntelliJ Platform 仓库和 Maven Central 仓库",
+    "en": "Gradle settings configuring project name, plugin versions, IntelliJ Platform repositories, and Maven Central"
+  },
+  "src": {
+    "zh": "插件源码与资源根目录",
+    "en": "Plugin source and resource root directory"
+  },
+  "src/main": {
+    "zh": "主源码集目录",
+    "en": "Main source set directory"
+  },
+  "src/main/kotlin": {
+    "zh": "Kotlin 源码根目录",
+    "en": "Kotlin source root directory"
+  },
+  "src/main/kotlin/online": {
+    "zh": "online 顶级包目录",
+    "en": "Top-level online package directory"
+  },
+  "src/main/kotlin/online/mofish": {
+    "zh": "mofish 包目录",
+    "en": "mofish package directory"
+  },
+  "src/main/kotlin/online/mofish/tool": {
+    "zh": "摸鱼工具插件主包，包含 actions、data、domain、services、settings、state 和 UI 模块",
+    "en": "Main MoFish Tool plugin package containing actions, data, domain, services, settings, state, and UI modules"
+  },
+  "src/main/kotlin/online/mofish/tool/actions": {
+    "zh": "IDE Action 入口，目前用于打开摸鱼工具窗口",
+    "en": "IDE action entry points, currently used to open the MoFish tool window"
+  },
+  "src/main/kotlin/online/mofish/tool/actions/OpenMoFishToolWindowAction.kt": {
+    "zh": "Tools 菜单中的打开摸鱼工具动作，激活并展示插件工具窗口",
+    "en": "Tools menu action that activates and shows the MoFish tool window"
+  },
+  "src/main/kotlin/online/mofish/tool/data": {
+    "zh": "行情数据层，包含远程数据源、静态回退数据源、HTTP 客户端和各市场 provider",
+    "en": "Quote data layer with remote data sources, static fallbacks, HTTP client, and market providers"
+  },
+  "src/main/kotlin/online/mofish/tool/data/MoFishDataSource.kt": {
+    "zh": "统一行情数据源接口，定义股票、指数、基金、虚拟币、外汇和快讯读取能力",
+    "en": "Unified quote data source interface for stocks, indexes, funds, crypto, forex, and flash news"
+  },
+  "src/main/kotlin/online/mofish/tool/data/RemoteMoFishDataSource.kt": {
+    "zh": "远程行情数据源实现，聚合各市场客户端和 provider 获取实时数据",
+    "en": "Remote quote data source implementation aggregating market clients and providers for live data"
+  },
+  "src/main/kotlin/online/mofish/tool/data/StaticMoFishDataSource.kt": {
+    "zh": "静态回退数据源，在远程数据不可用时提供默认行情与示例数据",
+    "en": "Static fallback data source providing default quotes and sample data when remote data is unavailable"
+  },
+  "src/main/kotlin/online/mofish/tool/data/crypto": {
+    "zh": "摸鱼虚拟币底层行情与搜索建议实现，当前接入 CoinGecko 数据",
+    "en": "Underlying quote and search implementation for MoFish Crypto, currently backed by CoinGecko"
+  },
+  "src/main/kotlin/online/mofish/tool/data/crypto/CryptoDataContracts.kt": {
+    "zh": "虚拟币接口返回结构和序列化 DTO 定义",
+    "en": "Crypto API response structures and serialization DTO definitions"
+  },
+  "src/main/kotlin/online/mofish/tool/data/crypto/CryptoDataProviders.kt": {
+    "zh": "虚拟币行情 provider，封装搜索建议和批量报价获取逻辑",
+    "en": "Crypto quote provider wrapping search suggestions and batch quote retrieval"
+  },
+  "src/main/kotlin/online/mofish/tool/data/crypto/CryptoQuoteClient.kt": {
+    "zh": "CoinGecko 虚拟币客户端，负责 HTTP 请求、解析和领域模型转换",
+    "en": "CoinGecko crypto client responsible for HTTP requests, parsing, and domain model conversion"
+  },
+  "src/main/kotlin/online/mofish/tool/data/forex": {
+    "zh": "摸鱼外汇底层牌价抓取实现，当前接入中国银行页面",
+    "en": "Underlying forex rate fetching implementation for MoFish Forex, currently backed by Bank of China pages"
+  },
+  "src/main/kotlin/online/mofish/tool/data/forex/BocForexClient.kt": {
+    "zh": "中国银行外汇牌价客户端，抓取并解析网页表格数据",
+    "en": "Bank of China forex client that fetches and parses web table rates"
+  },
+  "src/main/kotlin/online/mofish/tool/data/forex/ForexDataContracts.kt": {
+    "zh": "外汇数据抓取与解析相关契约定义",
+    "en": "Contracts for forex data fetching and parsing"
+  },
+  "src/main/kotlin/online/mofish/tool/data/forex/ForexDataProviders.kt": {
+    "zh": "外汇行情 provider，组织支持的币种与牌价读取逻辑",
+    "en": "Forex provider organizing supported currencies and rate retrieval logic"
+  },
+  "src/main/kotlin/online/mofish/tool/data/fund": {
+    "zh": "摸鱼基金底层行情与搜索建议实现，当前接入东方财富数据",
+    "en": "Underlying quote and search implementation for MoFish Fund, currently backed by EastMoney"
+  },
+  "src/main/kotlin/online/mofish/tool/data/fund/FundDataContracts.kt": {
+    "zh": "基金接口返回结构和序列化 DTO 定义",
+    "en": "Fund API response structures and serialization DTO definitions"
+  },
+  "src/main/kotlin/online/mofish/tool/data/fund/FundDataProviders.kt": {
+    "zh": "基金行情 provider，封装基金搜索和净值读取逻辑",
+    "en": "Fund quote provider wrapping fund search and NAV retrieval logic"
+  },
+  "src/main/kotlin/online/mofish/tool/data/fund/FundQuoteClient.kt": {
+    "zh": "东方财富基金客户端，负责基金搜索、净值请求和响应解析",
+    "en": "EastMoney fund client for fund search, NAV requests, and response parsing"
+  },
+  "src/main/kotlin/online/mofish/tool/data/http": {
+    "zh": "HTTP 基础设施目录",
+    "en": "HTTP infrastructure directory"
+  },
+  "src/main/kotlin/online/mofish/tool/data/http/MoFishHttpClient.kt": {
+    "zh": "统一 HTTP 客户端，封装 OkHttp、JSON 解析和 HTML 解析",
+    "en": "Shared HTTP client wrapping OkHttp, JSON parsing, and HTML parsing"
+  },
+  "src/main/kotlin/online/mofish/tool/data/index": {
+    "zh": "市场指数目录，维护常用指数目录和默认指数集合",
+    "en": "Market index directory maintaining common index catalog and defaults"
+  },
+  "src/main/kotlin/online/mofish/tool/data/index/MarketIndexCatalog.kt": {
+    "zh": "市场指数目录，提供指数代码、名称、市场和默认关注列表",
+    "en": "Market index catalog providing index symbols, names, markets, and default watchlist entries"
+  },
+  "src/main/kotlin/online/mofish/tool/data/stock": {
+    "zh": "摸鱼股票与摸鱼指数底层行情、搜索和代码规范化实现，当前接入腾讯与新浪数据",
+    "en": "Underlying quote, search, and symbol normalization implementation for MoFish Stock and MoFish Index, currently backed by Tencent and Sina"
+  },
+  "src/main/kotlin/online/mofish/tool/data/stock/StockDataContracts.kt": {
+    "zh": "股票行情、搜索和接口响应相关契约定义",
+    "en": "Contracts for stock quotes, search, and API responses"
+  },
+  "src/main/kotlin/online/mofish/tool/data/stock/StockDataProviders.kt": {
+    "zh": "股票行情 provider，封装股票和指数搜索、代码规范化与批量行情获取",
+    "en": "Stock quote provider wrapping stock/index search, symbol normalization, and batch quote retrieval"
+  },
+  "src/main/kotlin/online/mofish/tool/data/stock/StockDetailClient.kt": {
+    "zh": "股票详情客户端，获取分时、K 线或详情快照所需远程数据",
+    "en": "Stock detail client fetching remote data for intraday, K-line, or detail snapshots"
+  },
+  "src/main/kotlin/online/mofish/tool/data/stock/StockDetailProviders.kt": {
+    "zh": "股票详情 provider，组织详情数据读取与领域模型转换",
+    "en": "Stock detail provider organizing detail data retrieval and domain model conversion"
+  },
+  "src/main/kotlin/online/mofish/tool/data/stock/StockQuoteClient.kt": {
+    "zh": "股票行情客户端，负责腾讯/新浪行情请求、搜索和解析",
+    "en": "Stock quote client responsible for Tencent/Sina quote requests, search, and parsing"
+  },
+  "src/main/kotlin/online/mofish/tool/domain": {
+    "zh": "领域模型目录，定义行情、持仓、提醒规则、收益快照、工作区等数据结构",
+    "en": "Domain model directory for quotes, holdings, reminder rules, profit snapshots, workspaces, and related structures"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/AiConfig.kt": {
+    "zh": "AI 相关配置模型，保存模型服务与调用参数设置",
+    "en": "AI configuration model storing model service and invocation parameter settings"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/CryptoQuote.kt": {
+    "zh": "虚拟币行情领域模型",
+    "en": "Crypto quote domain model"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/CryptoSearchSuggestion.kt": {
+    "zh": "虚拟币搜索建议领域模型",
+    "en": "Crypto search suggestion domain model"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/DomainEnums.kt": {
+    "zh": "领域枚举集合，定义市场、资产类别、趋势和视图等共享枚举",
+    "en": "Domain enum collection for shared market, asset category, trend, and view values"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/FlashNewsItem.kt": {
+    "zh": "快讯条目领域模型",
+    "en": "Flash news item domain model"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/ForexRate.kt": {
+    "zh": "外汇牌价领域模型",
+    "en": "Forex rate domain model"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/FundQuote.kt": {
+    "zh": "基金行情与净值领域模型",
+    "en": "Fund quote and NAV domain model"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/FundSearchSuggestion.kt": {
+    "zh": "基金搜索建议领域模型",
+    "en": "Fund search suggestion domain model"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/HoldingConfig.kt": {
+    "zh": "持仓配置模型，记录数量、成本价和关联资产信息",
+    "en": "Holding configuration model recording quantity, cost price, and linked asset information"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/MoFishRefreshModule.kt": {
+    "zh": "刷新模块定义，表示可独立调度刷新的业务模块",
+    "en": "Refresh module definition representing business modules that can be refreshed independently"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/MoFishWorkspace.kt": {
+    "zh": "工作区领域模型，组织关注列表、持仓、提醒和模块配置",
+    "en": "Workspace domain model organizing watchlists, holdings, reminders, and module configuration"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/ReminderRule.kt": {
+    "zh": "提醒规则领域模型，描述价格或涨跌幅触发条件",
+    "en": "Reminder rule domain model describing price or percentage-change trigger conditions"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/ReminderTrigger.kt": {
+    "zh": "提醒触发结果模型，记录命中的规则和触发上下文",
+    "en": "Reminder trigger result model recording matched rules and trigger context"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/StockDetailSnapshot.kt": {
+    "zh": "股票详情快照模型，用于图表和详情页展示",
+    "en": "Stock detail snapshot model used for chart and detail page rendering"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/StockQuote.kt": {
+    "zh": "股票和指数行情领域模型",
+    "en": "Stock and index quote domain model"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/StockSearchSuggestion.kt": {
+    "zh": "股票搜索建议领域模型",
+    "en": "Stock search suggestion domain model"
+  },
+  "src/main/kotlin/online/mofish/tool/domain/WorkspaceProfitSnapshot.kt": {
+    "zh": "工作区收益快照模型，汇总持仓盈亏与当日收益",
+    "en": "Workspace profit snapshot model summarizing holding profit and daily gains"
+  },
+  "src/main/kotlin/online/mofish/tool/services": {
+    "zh": "核心服务目录，负责项目状态、缓存、刷新调度、提醒通知、收益计算和状态聚合",
+    "en": "Core services for project state, caching, refresh scheduling, notifications, profit calculation, and state aggregation"
+  },
+  "src/main/kotlin/online/mofish/tool/services/MoFishAppService.kt": {
+    "zh": "应用级服务，提供全局数据源和应用生命周期共享能力",
+    "en": "Application-level service providing shared data sources and lifecycle capabilities"
+  },
+  "src/main/kotlin/online/mofish/tool/services/MoFishMemoryCacheService.kt": {
+    "zh": "应用级内存缓存服务，缓存行情、搜索建议和详情数据",
+    "en": "Application-level in-memory cache service for quotes, search suggestions, and detail data"
+  },
+  "src/main/kotlin/online/mofish/tool/services/MoFishNotificationService.kt": {
+    "zh": "通知服务，向 IDE 通知系统发送摸鱼工具提醒",
+    "en": "Notification service sending MoFish alerts through the IDE notification system"
+  },
+  "src/main/kotlin/online/mofish/tool/services/MoFishProfitCalculator.kt": {
+    "zh": "收益计算器，根据行情和持仓配置计算盈亏快照",
+    "en": "Profit calculator deriving profit snapshots from quotes and holding configuration"
+  },
+  "src/main/kotlin/online/mofish/tool/services/MoFishProjectService.kt": {
+    "zh": "项目级聚合服务，驱动工具窗口状态、刷新流程和模块切换",
+    "en": "Project-level orchestration service driving tool window state, refresh flows, and module navigation"
+  },
+  "src/main/kotlin/online/mofish/tool/services/MoFishRefreshScheduler.kt": {
+    "zh": "刷新调度器，按模块刷新间隔触发后台更新",
+    "en": "Refresh scheduler triggering background updates according to per-module intervals"
+  },
+  "src/main/kotlin/online/mofish/tool/services/MoFishRefreshSchedulerService.kt": {
+    "zh": "应用级刷新调度服务，管理调度器实例和刷新状态",
+    "en": "Application-level refresh scheduler service managing scheduler instances and refresh state"
+  },
+  "src/main/kotlin/online/mofish/tool/services/MoFishReminderEngine.kt": {
+    "zh": "提醒规则引擎，判断行情是否满足价格或涨跌幅提醒条件",
+    "en": "Reminder rule engine evaluating whether quotes satisfy price or percentage-change alert conditions"
+  },
+  "src/main/kotlin/online/mofish/tool/services/MoFishReminderService.kt": {
+    "zh": "项目级提醒服务，检查提醒规则并派发通知",
+    "en": "Project-level reminder service checking alert rules and dispatching notifications"
+  },
+  "src/main/kotlin/online/mofish/tool/services/MoFishWatchlistService.kt": {
+    "zh": "项目级关注列表服务，管理股票、指数、基金、虚拟币和外汇关注项",
+    "en": "Project-level watchlist service managing stock, index, fund, crypto, and forex watch entries"
+  },
+  "src/main/kotlin/online/mofish/tool/settings": {
+    "zh": "设置相关代码，包含设置持久化、配置页、持仓编辑弹窗和提醒编辑弹窗",
+    "en": "Settings code including persistent state, configurable UI, holdings editor, and reminders editor"
+  },
+  "src/main/kotlin/online/mofish/tool/settings/MoFishHoldingsDialog.kt": {
+    "zh": "持仓编辑弹窗，用于配置资产数量、成本价和持仓信息",
+    "en": "Holdings editor dialog for configuring asset quantity, cost price, and holding details"
+  },
+  "src/main/kotlin/online/mofish/tool/settings/MoFishRemindersDialog.kt": {
+    "zh": "提醒规则编辑弹窗，用于新增、修改和删除价格提醒",
+    "en": "Reminder rule editor dialog for adding, changing, and deleting price alerts"
+  },
+  "src/main/kotlin/online/mofish/tool/settings/MoFishSettingsConfigurable.kt": {
+    "zh": "IDE 设置页实现，展示并保存摸鱼工具配置",
+    "en": "IDE settings page implementation for displaying and saving MoFish configuration"
+  },
+  "src/main/kotlin/online/mofish/tool/settings/MoFishSettingsService.kt": {
+    "zh": "应用级设置持久化服务，读写摸鱼工具配置状态",
+    "en": "Application-level settings persistence service reading and writing MoFish configuration state"
+  },
+  "src/main/kotlin/online/mofish/tool/settings/MoFishSettingsState.kt": {
+    "zh": "设置状态模型，保存刷新间隔、默认关注项、持仓、提醒和 AI 配置",
+    "en": "Settings state model storing refresh intervals, default watch entries, holdings, reminders, and AI configuration"
+  },
+  "src/main/kotlin/online/mofish/tool/state": {
+    "zh": "状态模型目录，定义 UI 聚合状态、项目事件、缓存状态和刷新调度状态",
+    "en": "State models for UI aggregation, project events, cache state, and refresh scheduler state"
+  },
+  "src/main/kotlin/online/mofish/tool/state/MoFishAppState.kt": {
+    "zh": "应用级状态模型，描述全局加载、错误和缓存相关状态",
+    "en": "Application-level state model describing global loading, error, and cache state"
+  },
+  "src/main/kotlin/online/mofish/tool/state/MoFishMemoryCacheState.kt": {
+    "zh": "内存缓存状态模型，记录缓存内容和更新时间",
+    "en": "Memory cache state model recording cached content and update timestamps"
+  },
+  "src/main/kotlin/online/mofish/tool/state/MoFishProjectEvent.kt": {
+    "zh": "项目事件模型，表示刷新、选择、提醒等 UI 可观察事件",
+    "en": "Project event model representing UI-observable refresh, selection, and reminder events"
+  },
+  "src/main/kotlin/online/mofish/tool/state/MoFishProjectState.kt": {
+    "zh": "项目级 UI 聚合状态，驱动工具窗口各模块展示",
+    "en": "Project-level aggregated UI state driving each tool window module"
+  },
+  "src/main/kotlin/online/mofish/tool/state/MoFishRefreshSchedulerState.kt": {
+    "zh": "刷新调度状态模型，记录各模块调度启停和最近刷新时间",
+    "en": "Refresh scheduler state model recording per-module scheduling status and latest refresh times"
+  },
+  "src/main/kotlin/online/mofish/tool/state/MoFishWatchlistState.kt": {
+    "zh": "关注列表状态模型，保存各资产模块的关注项",
+    "en": "Watchlist state model storing watch entries for each asset module"
+  },
+  "src/main/kotlin/online/mofish/tool/ui": {
+    "zh": "用户界面代码目录，包含工具窗口、状态栏、弹窗和内嵌网页编辑器",
+    "en": "User interface code directory containing tool windows, status bar, dialogs, and embedded web editors"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/dialogs": {
+    "zh": "通用搜索选择弹窗，用于添加摸鱼股票、摸鱼基金和摸鱼虚拟币",
+    "en": "Shared searchable choice dialog used to add MoFish Stock, Fund, and Crypto items"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/dialogs/MoFishSearchableChoiceDialog.kt": {
+    "zh": "可搜索选择弹窗组件，支持远程搜索、列表选择和确认回调",
+    "en": "Searchable choice dialog component supporting remote search, list selection, and confirmation callbacks"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/statusbar": {
+    "zh": "状态栏收益组件，展示摸鱼工具今日收益摘要",
+    "en": "Status bar profit widget showing the MoFish daily profit summary"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/statusbar/MoFishStatusBarWidget.kt": {
+    "zh": "状态栏小组件实现，渲染收益摘要并响应点击打开工具窗口",
+    "en": "Status bar widget implementation rendering profit summaries and opening the tool window on click"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/statusbar/MoFishStatusBarWidgetFactory.kt": {
+    "zh": "状态栏组件工厂，向 IntelliJ Platform 注册摸鱼收益组件",
+    "en": "Status bar widget factory registering the MoFish profit widget with the IntelliJ Platform"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow": {
+    "zh": "工具窗口 UI 目录，包含主面板、工厂和模块导航模型",
+    "en": "Tool window UI directory containing the main panel, factory, and module navigation models"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/MoFishToolWindowFactory.kt": {
+    "zh": "摸鱼工具窗口工厂，向 IntelliJ Platform 注册并创建工具窗口内容",
+    "en": "MoFish tool window factory that registers and creates tool window content for the IntelliJ Platform"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/MoFishToolWindowPanel.kt": {
+    "zh": "摸鱼工具主界面，基于 Swing/JB UI 展示股票、指数、基金、虚拟币、外汇、快讯和设置入口",
+    "en": "Main MoFish UI built with Swing/JB UI, showing stocks, indexes, funds, crypto, forex, flash news, and settings entry points"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/ModuleNavigationModels.kt": {
+    "zh": "工具窗口模块导航模型，定义模块项、分组和导航状态",
+    "en": "Tool window module navigation models defining module items, groups, and navigation state"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules": {
+    "zh": "工具窗口业务模块面板目录，包含资产总览、股票、指数、基金、虚拟币和外汇 UI",
+    "en": "Tool window business module panel directory containing asset overview, stock, index, fund, crypto, and forex UI"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/AssetModuleCallbacks.kt": {
+    "zh": "资产模块回调集合，连接 UI 操作与项目服务动作",
+    "en": "Asset module callback collection connecting UI actions to project service operations"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/AssetModuleModels.kt": {
+    "zh": "资产模块 UI 模型，定义卡片、行、汇总和展示数据",
+    "en": "Asset module UI models defining cards, rows, summaries, and display data"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/AssetModulePanel.kt": {
+    "zh": "资产总览模块面板，展示组合收益、持仓汇总和资产分布",
+    "en": "Asset overview module panel showing portfolio profit, holding summaries, and asset allocation"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/CryptoModulePanel.kt": {
+    "zh": "虚拟币模块面板，展示虚拟币关注列表、行情和操作入口",
+    "en": "Crypto module panel showing crypto watchlists, quotes, and action entry points"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/ForexModulePanel.kt": {
+    "zh": "外汇模块面板，展示外汇牌价列表和刷新状态",
+    "en": "Forex module panel showing forex rate lists and refresh status"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/FundModulePanel.kt": {
+    "zh": "基金模块面板，展示基金关注列表、净值和收益信息",
+    "en": "Fund module panel showing fund watchlists, NAV, and profit information"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/IndexModulePanel.kt": {
+    "zh": "指数模块面板，展示市场指数行情和趋势信息",
+    "en": "Index module panel showing market index quotes and trend information"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/MoFishUiStyle.kt": {
+    "zh": "摸鱼工具 UI 样式常量与通用颜色、间距、字体定义",
+    "en": "MoFish UI style constants and shared color, spacing, and font definitions"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/StockDetailHtmlRenderer.kt": {
+    "zh": "股票详情 HTML 渲染器，生成详情页和走势图所需 HTML 内容",
+    "en": "Stock detail HTML renderer generating detail page and trend chart HTML content"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/StockGroupManagementDialog.kt": {
+    "zh": "股票分组管理弹窗，用于维护股票关注列表分组",
+    "en": "Stock group management dialog for maintaining stock watchlist groups"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/StockHoldingAddDialog.kt": {
+    "zh": "股票持仓添加弹窗，用于录入股票数量和成本价",
+    "en": "Stock holding add dialog for entering stock quantity and cost price"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/StockModulePanel.kt": {
+    "zh": "股票模块面板，展示股票关注列表、行情、详情入口和分组操作",
+    "en": "Stock module panel showing stock watchlists, quotes, detail entry points, and group actions"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/StockReminderAddDialog.kt": {
+    "zh": "股票提醒添加弹窗，用于创建价格或涨跌幅提醒规则",
+    "en": "Stock reminder add dialog for creating price or percentage-change alert rules"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/toolwindow/modules/UiHelpers.kt": {
+    "zh": "Swing/JB UI 辅助函数，封装常用组件、布局和格式化逻辑",
+    "en": "Swing/JB UI helper functions wrapping common components, layouts, and formatting logic"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/web": {
+    "zh": "内嵌网页编辑器目录，用于股票和基金趋势图等 HTML 内容展示",
+    "en": "Embedded web editor directory used to display HTML content such as stock and fund trend charts"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/web/MoFishFundTrend.kt": {
+    "zh": "基金趋势图请求与页面模型",
+    "en": "Fund trend chart request and page model"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/web/MoFishStockTrend.kt": {
+    "zh": "股票趋势图请求与页面模型",
+    "en": "Stock trend chart request and page model"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/web/MoFishWebEditor.kt": {
+    "zh": "摸鱼网页编辑器实现，承载 JCEF/HTML 内容展示",
+    "en": "MoFish web editor implementation hosting JCEF/HTML content"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/web/MoFishWebEditorProvider.kt": {
+    "zh": "网页编辑器 provider，识别摸鱼虚拟文件并创建对应编辑器",
+    "en": "Web editor provider that recognizes MoFish virtual files and creates matching editors"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/web/MoFishWebEditorService.kt": {
+    "zh": "网页编辑器服务，负责打开股票或基金趋势图虚拟文件",
+    "en": "Web editor service responsible for opening stock or fund trend chart virtual files"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/web/MoFishWebFileType.kt": {
+    "zh": "摸鱼网页虚拟文件类型定义",
+    "en": "MoFish web virtual file type definition"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/web/MoFishWebRequest.kt": {
+    "zh": "网页展示请求模型，描述要渲染的 HTML 页面类型和参数",
+    "en": "Web display request model describing the HTML page type and render parameters"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/web/MoFishWebVirtualFile.kt": {
+    "zh": "摸鱼网页虚拟文件实现，承载动态 HTML 内容标识",
+    "en": "MoFish web virtual file implementation carrying dynamic HTML content identity"
+  },
+  "src/main/kotlin/online/mofish/tool/ui/web/MoFishWebVirtualFileSystem.kt": {
+    "zh": "摸鱼网页虚拟文件系统，管理内存中的网页虚拟文件",
+    "en": "MoFish web virtual file system managing in-memory web virtual files"
+  },
+  "src/main/resources": {
+    "zh": "插件资源目录，包含 plugin.xml、图标和其他运行时资源",
+    "en": "Plugin resources directory containing plugin.xml, icons, and other runtime resources"
+  },
+  "src/main/resources/META-INF": {
+    "zh": "IntelliJ 插件元信息目录",
+    "en": "IntelliJ plugin metadata directory"
+  },
+  "src/main/resources/META-INF/plugin.xml": {
+    "zh": "插件声明文件，定义插件 ID、名称、服务、设置页、工具窗口、通知组、状态栏组件、文件编辑器和菜单 Action",
+    "en": "Plugin descriptor declaring plugin ID, name, services, configurable, tool window, notification group, status bar widget, file editor provider, and menu action"
+  },
+  "src/main/resources/META-INF/pluginIcon.svg": {
+    "zh": "亮色主题插件图标，用于 JetBrains Marketplace 和 IDE 插件管理器",
+    "en": "Light-theme plugin icon used in JetBrains Marketplace and the IDE plugin manager"
+  },
+  "src/main/resources/META-INF/pluginIcon_dark.svg": {
+    "zh": "深色主题插件图标，用于 JetBrains Marketplace 和 IDE 插件管理器",
+    "en": "Dark-theme plugin icon used in JetBrains Marketplace and the IDE plugin manager"
+  },
+  "src/main/resources/icons": {
+    "zh": "插件 UI 图标资源目录",
+    "en": "Plugin UI icon resource directory"
+  },
+  "src/main/resources/icons/mofishToolWindow.svg": {
+    "zh": "摸鱼工具窗口图标",
+    "en": "MoFish tool window icon"
+  },
+  "src/main/resources/messages": {
+    "zh": "资源消息目录，预留给国际化或本地化文案资源",
+    "en": "Resource message directory reserved for internationalization or localized text resources"
   }
 }

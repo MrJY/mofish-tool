@@ -44,16 +44,38 @@ internal class CryptoModulePanel(
         putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true)
     }
 
+    /**
+     * 处理 moduleViewId 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     override fun moduleViewId(): String = "crypto"
 
+    /**
+     * 处理 hasDetailPage 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     override fun hasDetailPage(): Boolean = true
 
+    /**
+     * 创建详情组件实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createDetailComponent() = createDetailPage("摸鱼虚拟币详情", detailPane)
 
+    /**
+     * 更新详情。
+     * @param snapshot 当前状态或数据快照。
+     * @param row 待添加、转换或展示的行数据。
+     */
     override fun updateDetail(snapshot: MoFishWatchlistState, row: CryptoListItem?) {
         detailPane.text = buildDetailHtml(snapshot, row)
     }
 
+    /**
+     * 构建Rows，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     override fun buildRows(snapshot: MoFishWatchlistState): List<CryptoListItem> {
         val holdingsByCode = snapshot.settingsState.holdings
             .filter { it.code.isNotBlank() }
@@ -83,12 +105,26 @@ internal class CryptoModulePanel(
         }
     }
 
+    /**
+     * 构建汇总文本，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @param rows 当前表格或列表使用的数据行集合。
+     * @return 处理后的结果或当前状态。
+     */
     override fun buildSummaryText(snapshot: MoFishWatchlistState, rows: List<CryptoListItem>): String {
         return buildDataUpdateSummary(snapshot, MoFishRefreshModule.CRYPTO)
     }
 
+    /**
+     * 创建列表CellRenderer实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createListCellRenderer(): ListCellRenderer<in CryptoListItem> = CryptoListRenderer()
 
+    /**
+     * 处理 configureTable 相关逻辑，并返回调用方需要的结果。
+     * @param table 表格。
+     */
     override fun configureTable(table: JBTable) {
         table.setDefaultRenderer(Any::class.java, CryptoTableCellRenderer())
         table.columnModel.getColumn(0).preferredWidth = JBUI.scale(132)
@@ -97,6 +133,10 @@ internal class CryptoModulePanel(
         table.columnModel.getColumn(3).preferredWidth = JBUI.scale(108)
     }
 
+    /**
+     * 创建ToolbarActions实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createToolbarActions(): List<AnAction> {
         return listOf(
             RefreshCryptoAction(),
@@ -108,6 +148,10 @@ internal class CryptoModulePanel(
         )
     }
 
+    /**
+     * 创建PopupActions实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createPopupActions(): List<AnAction> {
         return listOf(
             FocusSelectedCryptoAction(),
@@ -118,10 +162,19 @@ internal class CryptoModulePanel(
         )
     }
 
+    /**
+     * 处理 onOpenDetail 相关逻辑，并返回调用方需要的结果。
+     */
     override fun onOpenDetail() {
         openSelectedCryptoDetail()
     }
 
+    /**
+     * 构建详情HTML，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @param row 待添加、转换或展示的行数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun buildDetailHtml(snapshot: MoFishWatchlistState, row: CryptoListItem?): String {
         if (row == null) {
             return """
@@ -167,6 +220,11 @@ internal class CryptoModulePanel(
         """.trimIndent()
     }
 
+    /**
+     * 构建提醒规则HTML，供后续界面展示或数据处理使用。
+     * @param reminderRules 当前资产关联的提醒规则列表。
+     * @return 处理后的结果或当前状态。
+     */
     private fun buildReminderRulesHtml(reminderRules: List<online.mofish.tool.domain.ReminderRule>): String {
         if (reminderRules.isEmpty()) {
             return "<p>暂无提醒规则。</p>"
@@ -176,6 +234,11 @@ internal class CryptoModulePanel(
         }
     }
 
+    /**
+     * 处理 holdingProfitLine 相关逻辑，并返回调用方需要的结果。
+     * @param profit 收益。
+     * @return 处理后的结果或当前状态。
+     */
     private fun holdingProfitLine(profit: online.mofish.tool.domain.PositionProfitSnapshot?): String {
         if (callbacks.watchlistService.snapshot()?.settingsState?.showHoldingProfit != true) {
             return ""
@@ -183,6 +246,9 @@ internal class CryptoModulePanel(
         return "<br/>总收益：${formatDecimal(profit?.totalProfit)}"
     }
 
+    /**
+     * 打开选中项虚拟币详情相关界面或详情。
+     */
     private fun openSelectedCryptoDetail() {
         val selected = selectedRow() ?: return
         setDetailVisible(true)
@@ -192,6 +258,15 @@ internal class CryptoModulePanel(
     }
 
     private inner class CryptoListRenderer : DefaultListCellRenderer() {
+        /**
+         * 获取列表CellRenderer组件。
+         * @param list 列表。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param index index。
+         * @param isSelected is选中项。
+         * @param cellHasFocus cellHasFocus。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getListCellRendererComponent(
             list: JList<*>?,
             value: Any?,
@@ -221,8 +296,17 @@ internal class CryptoModulePanel(
     }
 
     private inner class CryptoTableModel : AssetTableModel<CryptoListItem>() {
+        /**
+         * 返回表格模型当前列数。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnCount(): Int = 4
 
+        /**
+         * 返回表格指定列的标题。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnName(column: Int): String {
             return when (column) {
                 0 -> "ID"
@@ -232,6 +316,12 @@ internal class CryptoModulePanel(
             }
         }
 
+        /**
+         * 读取表格指定行列的展示值。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
             val row = rowAt(rowIndex)
             return when (columnIndex) {
@@ -242,10 +332,26 @@ internal class CryptoModulePanel(
             }
         }
 
+        /**
+         * 判断表格指定单元格是否允许编辑。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = false
     }
 
     private inner class CryptoTableCellRenderer : DefaultTableCellRenderer() {
+        /**
+         * 获取表格CellRenderer组件。
+         * @param table 表格。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param isSelected is选中项。
+         * @param hasFocus hasFocus。
+         * @param row 待添加、转换或展示的行数据。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getTableCellRendererComponent(
             table: JTable?,
             value: Any?,
@@ -273,6 +379,10 @@ internal class CryptoModulePanel(
         "刷新摸鱼虚拟币列表最新数据",
         AllIcons.Actions.Refresh,
     ) {
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.refreshModule(MoFishRefreshModule.CRYPTO)
@@ -280,6 +390,10 @@ internal class CryptoModulePanel(
     }
 
     private inner class AddCryptoAction : DumbAwareAction("添加摸鱼虚拟币", "按 ID、名称或符号添加摸鱼虚拟币", AllIcons.General.Add) {
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selectedCode = callbacks.showCryptoSearchDialog()?.code ?: return
             callbacks.watchlistService.addCryptoCode(selectedCode)
@@ -290,20 +404,36 @@ internal class CryptoModulePanel(
     }
 
     private inner class FocusSelectedCryptoAction : DumbAwareAction("查看详情", "查看当前摸鱼虚拟币的详情", AllIcons.General.ZoomIn) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             openSelectedCryptoDetail()
         }
     }
 
     private inner class RemoveSelectedCryptoAction : DumbAwareAction("删除摸鱼虚拟币", "删除当前选中的摸鱼虚拟币", AllIcons.General.Remove) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val confirm = Messages.showYesNoDialog(
@@ -325,10 +455,18 @@ internal class CryptoModulePanel(
         "为当前摸鱼虚拟币追加持仓",
         AllIcons.Nodes.DataTables,
     ) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val template = HoldingConfig(
@@ -360,10 +498,18 @@ internal class CryptoModulePanel(
         "为当前摸鱼虚拟币添加提醒规则",
         AllIcons.General.Balloon,
     ) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val template = ReminderRule(
@@ -392,6 +538,10 @@ internal class CryptoModulePanel(
     }
 
     private inner class ToggleCryptoListViewAction : DumbAwareAction("切换视图", "切换摸鱼虚拟币列表展示方式", AllIcons.Nodes.DataTables) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.text = nextViewMode().displayName
             event.presentation.icon = when (nextViewMode()) {
@@ -401,6 +551,10 @@ internal class CryptoModulePanel(
             event.presentation.description = "切换为摸鱼虚拟币${nextViewMode().displayName}"
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val nextModeName = nextViewMode().displayName
             toggleViewMode()

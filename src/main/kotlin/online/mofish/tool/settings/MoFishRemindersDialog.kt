@@ -44,6 +44,10 @@ class MoFishRemindersDialog(
         table.columnModel.getColumn(4).cellEditor = DefaultCellEditor(JComboBox(ReminderDirection.entries.toTypedArray()))
     }
 
+    /**
+     * 创建对话框或配置页的主体内容面板。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createCenterPanel(): JComponent {
         val panel = JPanel(BorderLayout())
         panel.preferredSize = JBUI.size(900, 300)
@@ -75,6 +79,9 @@ class MoFishRemindersDialog(
         return panel
     }
 
+    /**
+     * 在用户确认对话框时校验并提交当前编辑内容。
+     */
     override fun doOKAction() {
         stopEditing()
 
@@ -93,6 +100,9 @@ class MoFishRemindersDialog(
         super.doOKAction()
     }
 
+    /**
+     * 处理 stopEditing 相关逻辑，并返回调用方需要的结果。
+     */
     private fun stopEditing() {
         if (table.isEditing) {
             val editor = table.cellEditor ?: return
@@ -102,6 +112,10 @@ class MoFishRemindersDialog(
         }
     }
 
+    /**
+     * 处理 newEditableReminderRow 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     private fun newEditableReminderRow(): EditableReminderRow {
         return newRowTemplate
             ?.let(EditableReminderRow::from)
@@ -129,14 +143,38 @@ class MoFishRemindersDialog(
             "启用",
         )
 
+        /**
+         * 返回表格模型当前行数。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getRowCount(): Int = rows.size
 
+        /**
+         * 返回表格模型当前列数。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnCount(): Int = columns.size
 
+        /**
+         * 返回表格指定列的标题。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnName(column: Int): String = columns[column]
 
+        /**
+         * 判断表格指定单元格是否允许编辑。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = true
 
+        /**
+         * 返回表格指定列使用的数据类型。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnClass(columnIndex: Int): Class<*> {
             return when (columnIndex) {
                 0 -> AssetType::class.java
@@ -147,6 +185,12 @@ class MoFishRemindersDialog(
             }
         }
 
+        /**
+         * 读取表格指定行列的展示值。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
             val row = rows[rowIndex]
             return when (columnIndex) {
@@ -161,6 +205,12 @@ class MoFishRemindersDialog(
             }
         }
 
+        /**
+         * 写入表格指定行列的编辑值。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         */
         override fun setValueAt(value: Any?, rowIndex: Int, columnIndex: Int) {
             if (rowIndex !in rows.indices) {
                 return
@@ -179,12 +229,20 @@ class MoFishRemindersDialog(
             fireTableCellUpdated(rowIndex, columnIndex)
         }
 
+        /**
+         * 向表格模型追加一行数据并通知界面刷新。
+         * @param row 待添加、转换或展示的行数据。
+         */
         fun addRow(row: EditableReminderRow) {
             val index = rows.size
             rows.add(row)
             fireTableRowsInserted(index, index)
         }
 
+        /**
+         * 从表格模型删除指定行并通知界面刷新。
+         * @param index index。
+         */
         fun removeRow(index: Int) {
             if (index !in rows.indices) {
                 return
@@ -204,6 +262,11 @@ class MoFishRemindersDialog(
         val enabled: Boolean,
         val originalId: String? = null,
     ) {
+        /**
+         * 转换为提醒规则OrError表示。
+         * @param rowNumber 用于错误提示的用户可见行号。
+         * @return 处理后的结果或当前状态。
+         */
         fun toReminderRuleOrError(rowNumber: Int): Result<ReminderRule> {
             return runCatching {
                 val normalizedCode = code.trim()
@@ -226,6 +289,11 @@ class MoFishRemindersDialog(
         }
 
         companion object {
+            /**
+             * 处理 from 相关逻辑，并返回调用方需要的结果。
+             * @param value 待解析、格式化或写入的原始值。
+             * @return 处理后的结果或当前状态。
+             */
             fun from(value: ReminderRule): EditableReminderRow {
                 return EditableReminderRow(
                     assetType = value.assetType,
@@ -239,6 +307,12 @@ class MoFishRemindersDialog(
                 )
             }
 
+            /**
+             * 解析Decimal数据，并转换为项目内部可用的结构。
+             * @param raw 用户输入或接口返回的原始文本。
+             * @param rowNumber 用于错误提示的用户可见行号。
+             * @return 处理后的结果或当前状态。
+             */
             private fun parseDecimal(raw: String, rowNumber: Int): BigDecimal {
                 return raw.toBigDecimalOrNull()
                     ?: throw IllegalArgumentException("第 $rowNumber 行的阈值格式无效：$raw")

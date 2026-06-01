@@ -18,6 +18,10 @@ class BocForexClient(
         )
     )
 
+    /**
+     * 获取外汇牌价列表。
+     * @return 处理后的结果或当前状态。
+     */
     fun fetchRates(): List<ForexRate> {
         providers.forEach { provider ->
             val rates = runCatching { provider.fetchRates() }.getOrDefault(emptyList())

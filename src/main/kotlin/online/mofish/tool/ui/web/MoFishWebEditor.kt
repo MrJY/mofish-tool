@@ -40,37 +40,105 @@ class MoFishWebEditor(
         }
     }
 
+    /**
+     * 获取组件。
+     * @return 处理后的结果或当前状态。
+     */
     override fun getComponent(): JComponent = component
 
+    /**
+     * 获取PreferredFocused组件。
+     * @return 处理后的结果或当前状态。
+     */
     override fun getPreferredFocusedComponent(): JComponent = browser?.component ?: component
 
+    /**
+     * 返回组件、列或文件类型的展示名称。
+     * @return 处理后的结果或当前状态。
+     */
     override fun getName(): String = file.request.title
 
+    /**
+     * 设置状态。
+     * @param state 状态。
+     * @return 处理后的结果或当前状态。
+     */
     override fun setState(state: FileEditorState) = Unit
 
+    /**
+     * 获取指定项目的当前状态，必要时触发一次完整刷新。
+     * @param level level。
+     * @return 处理后的结果或当前状态。
+     */
     override fun getState(level: FileEditorStateLevel): FileEditorState = FileEditorState.INSTANCE
 
+    /**
+     * 判断当前配置页内容是否相对持久化状态发生变化。
+     * @return 处理后的结果或当前状态。
+     */
     override fun isModified(): Boolean = false
 
+    /**
+     * 判断是否满足Valid条件。
+     * @return 处理后的结果或当前状态。
+     */
     override fun isValid(): Boolean = file.isValid
 
+    /**
+     * 添加PropertyChangeListener。
+     * @param listener listener。
+     * @return 处理后的结果或当前状态。
+     */
     override fun addPropertyChangeListener(listener: PropertyChangeListener) = Unit
 
+    /**
+     * 删除PropertyChangeListener。
+     * @param listener listener。
+     * @return 处理后的结果或当前状态。
+     */
     override fun removePropertyChangeListener(listener: PropertyChangeListener) = Unit
 
+    /**
+     * 获取当前Location。
+     * @return 处理后的结果或当前状态。
+     */
     override fun getCurrentLocation(): FileEditorLocation? = null
 
+    /**
+     * 获取文件。
+     * @return 处理后的结果或当前状态。
+     */
     override fun getFile(): VirtualFile = file
 
+    /**
+     * 释放服务持有的后台任务和运行资源。
+     */
     override fun dispose() {
         browser?.dispose()
         file.invalidate()
     }
 
+    /**
+     * 获取User数据。
+     * @param key key。
+     * @return 处理后的结果或当前状态。
+     */
     override fun <T : Any?> getUserData(key: Key<T>): T? = super.getUserData(key)
 
+    /**
+     * 处理 putUserData 相关逻辑，并返回调用方需要的结果。
+     * @param key key。
+     * @param value 待解析、格式化或写入的原始值。
+     * @return 处理后的结果或当前状态。
+     */
     override fun <T : Any?> putUserData(key: Key<T>, value: T?) = super.putUserData(key, value)
 
+    /**
+     * 创建Unsupported面板实例或展示内容。
+     * @param project 当前 IntelliJ 项目实例。
+     * @param request 当前数据请求或页面请求对象。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createUnsupportedPanel(project: Project, request: MoFishWebRequest): JComponent {
         val panel = JPanel(BorderLayout())
         panel.border = JBUI.Borders.empty(16)

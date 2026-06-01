@@ -9,6 +9,13 @@ import online.mofish.tool.domain.ReminderTrigger
 import java.math.BigDecimal
 
 class MoFishReminderEngine {
+    /**
+     * 评估一组提醒规则，返回当前行情命中的触发结果。
+     * @param previousWorkspace previous工作区。
+     * @param currentWorkspace 刷新前已有的工作区数据，用于保留未刷新模块的内容。
+     * @param rules 需要评估或展示的一组提醒规则。
+     * @return 处理后的结果或当前状态。
+     */
     fun evaluate(
         previousWorkspace: MoFishWorkspace,
         currentWorkspace: MoFishWorkspace,
@@ -28,6 +35,12 @@ class MoFishReminderEngine {
             .toList()
     }
 
+    /**
+     * 解析并确定值。
+     * @param workspace 包含关注列表、行情、持仓和提醒的工作区数据。
+     * @param rule 需要评估或展示的提醒规则。
+     * @return 处理后的结果或当前状态。
+     */
     private fun resolveValue(
         workspace: MoFishWorkspace,
         rule: ReminderRule,
@@ -73,6 +86,14 @@ class MoFishReminderEngine {
         }
     }
 
+    /**
+     * 处理 crossedThreshold 相关逻辑，并返回调用方需要的结果。
+     * @param previousValue previous值。
+     * @param currentValue 当前值。
+     * @param threshold threshold。
+     * @param direction direction。
+     * @return 处理后的结果或当前状态。
+     */
     private fun crossedThreshold(
         previousValue: BigDecimal,
         currentValue: BigDecimal,
@@ -87,6 +108,13 @@ class MoFishReminderEngine {
         }
     }
 
+    /**
+     * 构建触发结果，供后续界面展示或数据处理使用。
+     * @param rule 需要评估或展示的提醒规则。
+     * @param previousValue previous值。
+     * @param currentValue 当前值。
+     * @return 处理后的结果或当前状态。
+     */
     private fun buildTrigger(
         rule: ReminderRule,
         previousValue: BigDecimal,

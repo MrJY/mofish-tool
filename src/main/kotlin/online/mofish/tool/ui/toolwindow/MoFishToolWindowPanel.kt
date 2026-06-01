@@ -49,8 +49,20 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         override val watchlistService: MoFishWatchlistService = this@MoFishToolWindowPanel.watchlistService
         override val eventStatus: JBLabel = this@MoFishToolWindowPanel.eventStatus
         override val instantFormatter: DateTimeFormatter = this@MoFishToolWindowPanel.instantFormatter
+        /**
+         * 展示股票搜索弹窗。
+         * @return 处理后的结果或当前状态。
+         */
         override fun showStockSearchDialog(): SearchableChoice? = this@MoFishToolWindowPanel.showStockSearchDialog()
+        /**
+         * 展示基金搜索弹窗。
+         * @return 处理后的结果或当前状态。
+         */
         override fun showFundSearchDialog(): SearchableChoice? = this@MoFishToolWindowPanel.showFundSearchDialog()
+        /**
+         * 展示虚拟币搜索弹窗。
+         * @return 处理后的结果或当前状态。
+         */
         override fun showCryptoSearchDialog(): SearchableChoice? = this@MoFishToolWindowPanel.showCryptoSearchDialog()
     }
     private val stockModule = StockModulePanel(moduleCallbacks)
@@ -89,6 +101,9 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         watchlistService.refresh(force = true)
     }
 
+    /**
+     * 释放服务持有的后台任务和运行资源。
+     */
     override fun dispose() {
         disposed = true
         stockModule.dispose()
@@ -96,6 +111,9 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         scope.cancel()
     }
 
+    /**
+     * 处理 configureModuleNavigation 相关逻辑，并返回调用方需要的结果。
+     */
     private fun configureModuleNavigation() {
         DEFAULT_MODULES.forEach(moduleListModel::addElement)
         moduleList.selectionMode = ListSelectionModel.SINGLE_SELECTION
@@ -115,6 +133,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         moduleList.selectedIndex = 0
     }
 
+    /**
+     * 创建模块Shell实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createModuleShell(): JComponent {
         moduleNavPanel.border = JBUI.Borders.compound(
             JBUI.Borders.customLine(JBColor.border(), 0, 0, 0, 1),
@@ -139,6 +161,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         return moduleShell
     }
 
+    /**
+     * 创建Expanded模块NavHeader实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createExpandedModuleNavHeader(): JComponent {
         val header = JPanel(BorderLayout())
         header.isOpaque = false
@@ -151,6 +177,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             toolTipText = "收起分类"
             addMouseListener(
                 object : MouseAdapter() {
+                    /**
+                     * 处理 mouseClicked 相关逻辑，并返回调用方需要的结果。
+                     * @param event IntelliJ 平台传入的动作事件上下文。
+                     */
                     override fun mouseClicked(event: MouseEvent) {
                         toggleModuleNav()
                     }
@@ -161,6 +191,9 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         return header
     }
 
+    /**
+     * 处理 configureCollapsedModuleNav 相关逻辑，并返回调用方需要的结果。
+     */
     private fun configureCollapsedModuleNav() {
         collapsedModuleNav.background = MoFishUiStyle.navSurface
         collapsedModuleNav.border = JBUI.Borders.compound(
@@ -171,6 +204,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         collapsedModuleNav.toolTipText = "展开分类"
         collapsedModuleNav.addMouseListener(
             object : MouseAdapter() {
+                /**
+                 * 处理 mouseClicked 相关逻辑，并返回调用方需要的结果。
+                 * @param event IntelliJ 平台传入的动作事件上下文。
+                 */
                 override fun mouseClicked(event: MouseEvent) {
                     toggleModuleNav()
                 }
@@ -188,6 +225,9 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         collapsedModuleNav.add(collapsedLabelHolder, BorderLayout.CENTER)
     }
 
+    /**
+     * 转换为ggle模块Nav表示。
+     */
     private fun toggleModuleNav() {
         moduleNavCollapsed = !moduleNavCollapsed
         moduleShell.remove(moduleNavPanel)
@@ -203,6 +243,11 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         moduleShell.repaint()
     }
 
+    /**
+     * 处理 wrapPlaceholderPanel 相关逻辑，并返回调用方需要的结果。
+     * @param detailPane 详情Pane。
+     * @return 处理后的结果或当前状态。
+     */
     private fun wrapPlaceholderPanel(detailPane: JEditorPane): JComponent {
         val panel = JPanel(BorderLayout())
         panel.border = JBUI.Borders.empty(8, 8, 8, 8)
@@ -210,6 +255,11 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         return panel
     }
 
+    /**
+     * 创建PlaceholderPane实例或展示内容。
+     * @param message 需要展示给用户的消息内容。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createPlaceholderPane(message: String): JEditorPane {
         val pane = createHtmlPane()
         pane.text =
@@ -223,8 +273,16 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         return pane
     }
 
+    /**
+     * 创建HTMLPane实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createHtmlPane(): JEditorPane {
         return object : JEditorPane() {
+            /**
+             * 获取ScrollableTracksViewportWidth。
+             * @return 处理后的结果或当前状态。
+             */
             override fun getScrollableTracksViewportWidth(): Boolean = true
         }.apply {
             contentType = "text/html"
@@ -237,6 +295,9 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         }
     }
 
+    /**
+     * 处理 observeState 相关逻辑，并返回调用方需要的结果。
+     */
     private fun observeState() {
         scope.launch {
             watchlistService.states.filterNotNull().collect { snapshot ->
@@ -247,6 +308,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         }
     }
 
+    /**
+     * 根据输入状态渲染 HTML 或界面内容。
+     * @param snapshot 当前状态或数据快照。
+     */
     private fun render(snapshot: MoFishWatchlistState) {
         syncEnabledModules(snapshot)
         val selectedViewId = enabledViewId(snapshot.projectState.selectedViewId, snapshot.enabledModuleItems())
@@ -261,6 +326,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         forexModule.render(snapshot)
     }
 
+    /**
+     * 处理 syncEnabledModules 相关逻辑，并返回调用方需要的结果。
+     * @param snapshot 当前状态或数据快照。
+     */
     private fun syncEnabledModules(snapshot: MoFishWatchlistState) {
         val enabledItems = snapshot.enabledModuleItems()
         val currentViewIds = (0 until moduleListModel.size()).map { moduleListModel.getElementAt(it).viewId }
@@ -280,6 +349,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         }
     }
 
+    /**
+     * 处理 syncModuleView 相关逻辑，并返回调用方需要的结果。
+     * @param viewId 视图Id。
+     */
     private fun syncModuleView(viewId: String) {
         val targetViewId = normalizeViewId(viewId)
         moduleContentLayout.show(moduleContent, targetViewId)
@@ -296,6 +369,11 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         }
     }
 
+    /**
+     * 规范化视图Id，统一后续处理使用的表示形式。
+     * @param viewId 视图Id。
+     * @return 处理后的结果或当前状态。
+     */
     private fun normalizeViewId(viewId: String): String {
         return if (moduleIndexOf(viewId) >= 0) {
             viewId
@@ -306,6 +384,11 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         }
     }
 
+    /**
+     * 处理 moduleIndexOf 相关逻辑，并返回调用方需要的结果。
+     * @param viewId 视图Id。
+     * @return 处理后的结果或当前状态。
+     */
     private fun moduleIndexOf(viewId: String): Int {
         for (index in 0 until moduleListModel.size()) {
             if (moduleListModel.getElementAt(index).viewId == viewId) {
@@ -324,12 +407,22 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         }
     }
 
+    /**
+     * 处理 enabledViewId 相关逻辑，并返回调用方需要的结果。
+     * @param viewId 视图Id。
+     * @param enabledItems enabledItems。
+     * @return 处理后的结果或当前状态。
+     */
     private fun enabledViewId(viewId: String, enabledItems: List<ModuleNavItem>): String {
         return enabledItems.firstOrNull { it.viewId == viewId }?.viewId
             ?: enabledItems.firstOrNull()?.viewId
             ?: "stocks"
     }
 
+    /**
+     * 处理 onUiThread 相关逻辑，并返回调用方需要的结果。
+     * @param block block。
+     */
     private fun onUiThread(block: () -> Unit) {
         ApplicationManager.getApplication().invokeLater(
             {
@@ -341,20 +434,39 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         )
     }
 
+    /**
+     * 处理 maybeResolveStockCode 相关逻辑，并返回调用方需要的结果。
+     * @param rawInput 用户输入的原始文本。
+     * @return 处理后的结果或当前状态。
+     */
     private fun maybeResolveStockCode(rawInput: String): String? {
         return canonicalizeStockInputCode(rawInput)
     }
 
+    /**
+     * 处理 maybeResolveFundCode 相关逻辑，并返回调用方需要的结果。
+     * @param rawInput 用户输入的原始文本。
+     * @return 处理后的结果或当前状态。
+     */
     private fun maybeResolveFundCode(rawInput: String): String? {
         val normalized = rawInput.trim()
         return normalized.takeIf { it.matches(Regex("""\d{6}""")) }
     }
 
+    /**
+     * 处理 maybeResolveCryptoCode 相关逻辑，并返回调用方需要的结果。
+     * @param rawInput 用户输入的原始文本。
+     * @return 处理后的结果或当前状态。
+     */
     private fun maybeResolveCryptoCode(rawInput: String): String? {
         val normalized = rawInput.trim().lowercase()
         return normalized.takeIf { it.matches(Regex("""[a-z0-9-]+""")) }
     }
 
+    /**
+     * 展示股票搜索弹窗。
+     * @return 处理后的结果或当前状态。
+     */
     private fun showStockSearchDialog(): SearchableChoice? {
         val dialog = MoFishSearchableChoiceDialog(
             dialogTitle = "添加摸鱼股票",
@@ -365,6 +477,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         return if (dialog.showAndGet()) dialog.selectedChoice else null
     }
 
+    /**
+     * 展示基金搜索弹窗。
+     * @return 处理后的结果或当前状态。
+     */
     private fun showFundSearchDialog(): SearchableChoice? {
         val dialog = MoFishSearchableChoiceDialog(
             dialogTitle = "添加摸鱼基金",
@@ -375,6 +491,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         return if (dialog.showAndGet()) dialog.selectedChoice else null
     }
 
+    /**
+     * 展示虚拟币搜索弹窗。
+     * @return 处理后的结果或当前状态。
+     */
     private fun showCryptoSearchDialog(): SearchableChoice? {
         val dialog = MoFishSearchableChoiceDialog(
             dialogTitle = "添加摸鱼虚拟币",
@@ -385,6 +505,11 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         return if (dialog.showAndGet()) dialog.selectedChoice else null
     }
 
+    /**
+     * 处理 searchStockChoices 相关逻辑，并返回调用方需要的结果。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
     private fun searchStockChoices(keyword: String): List<SearchableChoice> {
         val suggestions = watchlistService.searchStockSuggestions(keyword)
         if (suggestions.isNotEmpty()) {
@@ -407,6 +532,11 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         )
     }
 
+    /**
+     * 处理 searchFundChoices 相关逻辑，并返回调用方需要的结果。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
     private fun searchFundChoices(keyword: String): List<SearchableChoice> {
         val suggestions = watchlistService.searchFundSuggestions(keyword)
         if (suggestions.isNotEmpty()) {
@@ -429,6 +559,11 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         )
     }
 
+    /**
+     * 处理 searchCryptoChoices 相关逻辑，并返回调用方需要的结果。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
     private fun searchCryptoChoices(keyword: String): List<SearchableChoice> {
         val suggestions = watchlistService.searchCryptoSuggestions(keyword)
         if (suggestions.isNotEmpty()) {
@@ -452,6 +587,15 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     private inner class ModuleNavRenderer : DefaultListCellRenderer() {
+        /**
+         * 获取列表CellRenderer组件。
+         * @param list 列表。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param index index。
+         * @param isSelected is选中项。
+         * @param cellHasFocus cellHasFocus。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getListCellRendererComponent(
             list: JList<*>,
             value: Any?,
@@ -467,17 +611,37 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     private inner class ModuleNavTransferHandler : TransferHandler() {
+        /**
+         * 获取数据源Actions。
+         * @param component 组件。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getSourceActions(component: JComponent): Int = MOVE
 
+        /**
+         * 创建Transferable实例或展示内容。
+         * @param component 组件。
+         * @return 处理后的结果或当前状态。
+         */
         override fun createTransferable(component: JComponent): Transferable {
             val selectedIndex = moduleList.selectedIndex
             return StringSelection(selectedIndex.toString())
         }
 
+        /**
+         * 判断当前上下文是否允许Import。
+         * @param support support。
+         * @return 处理后的结果或当前状态。
+         */
         override fun canImport(support: TransferSupport): Boolean {
             return support.component == moduleList && support.isDataFlavorSupported(DataFlavor.stringFlavor)
         }
 
+        /**
+         * 处理 importData 相关逻辑，并返回调用方需要的结果。
+         * @param support support。
+         * @return 处理后的结果或当前状态。
+         */
         override fun importData(support: TransferSupport): Boolean {
             if (!canImport(support)) {
                 return false

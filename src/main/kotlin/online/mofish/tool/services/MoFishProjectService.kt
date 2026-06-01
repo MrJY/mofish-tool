@@ -27,6 +27,11 @@ class MoFishProjectService(
     val settingStates: StateFlow<MoFishSettingsState>
         get() = service<MoFishSettingsService>().states
 
+    /**
+     * 确保指定项目已经拥有可用状态，没有状态时创建占位状态。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @return 处理后的结果或当前状态。
+     */
     @Synchronized
     fun ensureState(projectName: String): MoFishProjectState {
         val current = stateFlow.value
@@ -50,6 +55,11 @@ class MoFishProjectService(
         return placeholderState
     }
 
+    /**
+     * 获取指定项目的当前状态，必要时触发一次完整刷新。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @return 处理后的结果或当前状态。
+     */
     @Synchronized
     fun getState(projectName: String): MoFishProjectState {
         val current = stateFlow.value
@@ -60,6 +70,12 @@ class MoFishProjectService(
         }
     }
 
+    /**
+     * 刷新指定项目的完整工作区状态，并同步缓存与刷新事件。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @param force 是否跳过缓存并强制重新读取数据。
+     * @return 处理后的结果或当前状态。
+     */
     @Synchronized
     fun refreshState(projectName: String, force: Boolean = false): MoFishProjectState {
         val now = Instant.now()
@@ -112,6 +128,13 @@ class MoFishProjectService(
         return newState
     }
 
+    /**
+     * 刷新指定的一组业务模块，并保留其他模块已有数据。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @param modules 需要刷新或处理的业务模块集合。
+     * @param force 是否跳过缓存并强制重新读取数据。
+     * @return 处理后的结果或当前状态。
+     */
     @Synchronized
     fun refreshModules(
         projectName: String,
@@ -153,10 +176,18 @@ class MoFishProjectService(
         return newState
     }
 
+    /**
+     * 记录工具窗口已经被打开，用于维护应用级使用状态。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     */
     fun markToolWindowOpened(projectName: String) {
         service<MoFishAppService>().markToolWindowOpened(projectName)
     }
 
+    /**
+     * 切换工具窗口当前选中的模块视图。
+     * @param viewId 视图Id。
+     */
     @Synchronized
     fun selectView(viewId: String) {
         val current = stateFlow.value ?: return
@@ -168,6 +199,10 @@ class MoFishProjectService(
         publishSelectionChanged(next)
     }
 
+    /**
+     * 切换当前选中的资产代码，并发布选择变更事件。
+     * @param assetCode 资产代码。
+     */
     @Synchronized
     fun selectAsset(assetCode: String?) {
         val current = stateFlow.value ?: return
@@ -179,10 +214,23 @@ class MoFishProjectService(
         publishSelectionChanged(next)
     }
 
+    /**
+     * 获取App状态。
+     * @return 处理后的结果或当前状态。
+     */
     fun getAppState(): MoFishAppState = service<MoFishAppService>().snapshot()
 
+    /**
+     * 获取MemoryCache状态。
+     * @return 处理后的结果或当前状态。
+     */
     fun getMemoryCacheState(): MoFishMemoryCacheState = service<MoFishMemoryCacheService>().snapshot()
 
+    /**
+     * 根据项目名称和当前设置加载完整工作区数据。
+     * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
+     * @return 处理后的结果或当前状态。
+     */
     fun loadWorkspace(projectName: String) = getState(projectName).workspace
 
     private fun MoFishWorkspace.matches(settingsState: MoFishSettingsState): Boolean {
@@ -194,6 +242,10 @@ class MoFishProjectService(
                 aiConfig == settingsState.aiConfig
     }
 
+    /**
+     * 处理 publishSelectionChanged 相关逻辑，并返回调用方需要的结果。
+     * @param state 状态。
+     */
     private fun publishSelectionChanged(state: MoFishProjectState) {
         eventFlow.tryEmit(
             MoFishSelectionChangedEvent(

@@ -19,6 +19,13 @@ class MoFishReminderService(
     private val notificationService = project.service<MoFishNotificationService>()
     private val triggeredAtByRule = mutableMapOf<String, Instant>()
 
+    /**
+     * 根据行情和提醒规则判断是否需要发送通知。
+     * @param previousState previous状态。
+     * @param currentState 当前状态。
+     * @param occurredAt occurredAt。
+     * @return 处理后的结果或当前状态。
+     */
     fun notifyIfNeeded(
         previousState: MoFishWatchlistState?,
         currentState: MoFishWatchlistState,
@@ -58,6 +65,12 @@ class MoFishReminderService(
             }
     }
 
+    /**
+     * 判断当前上下文是否允许Notify。
+     * @param ruleId 提醒规则的唯一标识。
+     * @param occurredAt occurredAt。
+     * @return 处理后的结果或当前状态。
+     */
     private fun canNotify(
         ruleId: String,
         occurredAt: Instant,

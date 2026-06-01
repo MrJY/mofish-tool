@@ -90,6 +90,10 @@ internal class StockModulePanel(
             }
         }
         addComponentListener(object : java.awt.event.ComponentAdapter() {
+            /**
+             * 处理 componentResized 相关逻辑，并返回调用方需要的结果。
+             * @param e e。
+             */
             override fun componentResized(e: java.awt.event.ComponentEvent?) {
                 val wide = this@apply.width >= 550
                 if (detailState.isWide != wide) {
@@ -113,10 +117,22 @@ internal class StockModulePanel(
     }
     private var stockGroupFilter: String? = null
 
+    /**
+     * 处理 moduleViewId 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     override fun moduleViewId(): String = "stocks"
 
+    /**
+     * 处理 hasDetailPage 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     override fun hasDetailPage(): Boolean = true
 
+    /**
+     * 创建Toolbar面板实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createToolbarPanel(): JComponent {
         val panel = JPanel(BorderLayout())
         panel.add(super.createToolbarPanel(), BorderLayout.NORTH)
@@ -145,8 +161,17 @@ internal class StockModulePanel(
         return panel
     }
 
+    /**
+     * 创建详情组件实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createDetailComponent(): JComponent = createDetailPage("摸鱼股票详情", detailPane)
 
+    /**
+     * 更新详情。
+     * @param snapshot 当前状态或数据快照。
+     * @param row 待添加、转换或展示的行数据。
+     */
     override fun updateDetail(snapshot: MoFishWatchlistState, row: StockListItem?) {
         val reminderRules = stockReminderRules(snapshot, row)
         val nextCode = row?.quote?.code
@@ -163,6 +188,11 @@ internal class StockModulePanel(
         detailPane.caretPosition = 0
     }
 
+    /**
+     * 构建Rows，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     override fun buildRows(snapshot: MoFishWatchlistState): List<StockListItem> {
         normalizeStockGroupFilter(snapshot)
         configureVisibleTableColumns(snapshot)
@@ -187,17 +217,35 @@ internal class StockModulePanel(
         return rows.sortedWith(stockComparator(snapshot))
     }
 
+    /**
+     * 构建汇总文本，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @param rows 当前表格或列表使用的数据行集合。
+     * @return 处理后的结果或当前状态。
+     */
     override fun buildSummaryText(snapshot: MoFishWatchlistState, rows: List<StockListItem>): String {
         return buildDataUpdateSummary(snapshot, MoFishRefreshModule.STOCKS)
     }
 
+    /**
+     * 创建列表CellRenderer实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createListCellRenderer(): ListCellRenderer<in StockListItem> = StockListRenderer()
 
+    /**
+     * 处理 configureTable 相关逻辑，并返回调用方需要的结果。
+     * @param table 表格。
+     */
     override fun configureTable(table: JBTable) {
         table.setDefaultRenderer(Any::class.java, StockTableCellRenderer())
         applyStockTableColumnWidths()
     }
 
+    /**
+     * 创建ToolbarActions实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createToolbarActions(): List<AnAction> {
         return listOf(
             RefreshStockAction(),
@@ -210,6 +258,10 @@ internal class StockModulePanel(
         )
     }
 
+    /**
+     * 创建PopupActions实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createPopupActions(): List<AnAction> {
         return listOf(
             FocusSelectedStockAction(),
@@ -226,14 +278,24 @@ internal class StockModulePanel(
         )
     }
 
+    /**
+     * 处理 onOpenDetail 相关逻辑，并返回调用方需要的结果。
+     */
     override fun onOpenDetail() {
         openSelectedStockDetail()
     }
 
+    /**
+     * 释放服务持有的后台任务和运行资源。
+     */
     fun dispose() {
         detailScope.cancel()
     }
 
+    /**
+     * 处理 renderStockGroupBar 相关逻辑，并返回调用方需要的结果。
+     * @param snapshot 当前状态或数据快照。
+     */
     private fun renderStockGroupBar(snapshot: MoFishWatchlistState) {
         val groups = availableStockGroups(snapshot)
         val counts = stockGroupCounts(snapshot)
@@ -259,6 +321,10 @@ internal class StockModulePanel(
         stockGroupButtonRow.repaint()
     }
 
+    /**
+     * 处理 maxVisibleStockGroups 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     private fun maxVisibleStockGroups(): Int {
         val width = SwingUtilities.getWindowAncestor(this)?.width ?: width
         return when {
@@ -269,6 +335,11 @@ internal class StockModulePanel(
         }
     }
 
+    /**
+     * 处理 stockComparator 相关逻辑，并返回调用方需要的结果。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     private fun stockComparator(snapshot: MoFishWatchlistState): Comparator<StockListItem> {
         val sortSettings = snapshot.settingsState.sortSettings
         val quoteComparator = when (sortSettings.quoteField) {
@@ -288,6 +359,12 @@ internal class StockModulePanel(
         }
     }
 
+    /**
+     * 处理 stockGroupPriority 相关逻辑，并返回调用方需要的结果。
+     * @param snapshot 当前状态或数据快照。
+     * @param groupName group名称。
+     * @return 处理后的结果或当前状态。
+     */
     private fun stockGroupPriority(snapshot: MoFishWatchlistState, groupName: String?): Int {
         val groups = snapshot.settingsState.watchlist.normalizedStockGroups()
         if (groupName.isNullOrBlank()) {
@@ -297,6 +374,11 @@ internal class StockModulePanel(
         return if (index >= 0) index else Int.MAX_VALUE
     }
 
+    /**
+     * 处理 currentStockGroupFilterLabel 相关逻辑，并返回调用方需要的结果。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     private fun currentStockGroupFilterLabel(snapshot: MoFishWatchlistState): String {
         val filter = stockGroupFilter
         val groups = snapshot.settingsState.watchlist.normalizedStockGroups()
@@ -306,6 +388,11 @@ internal class StockModulePanel(
         return groups.firstOrNull { it.equals(filter, ignoreCase = true) } ?: filter
     }
 
+    /**
+     * 处理 availableStockGroups 相关逻辑，并返回调用方需要的结果。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     private fun availableStockGroups(snapshot: MoFishWatchlistState): List<String> {
         return snapshot.settingsState.watchlist.normalizedStockGroups()
             .map(::normalizeStockGroupValue)
@@ -313,6 +400,11 @@ internal class StockModulePanel(
             .distinctBy { it.lowercase() }
     }
 
+    /**
+     * 处理 stockGroupCounts 相关逻辑，并返回调用方需要的结果。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     private fun stockGroupCounts(snapshot: MoFishWatchlistState): Map<String, Int> {
         return snapshot.projectState.workspace.stockQuotes
             .mapNotNull { quote -> snapshot.settingsState.watchlist.groupForStock(quote.code) }
@@ -320,17 +412,31 @@ internal class StockModulePanel(
             .eachCount()
     }
 
+    /**
+     * 规范化股票GroupFilter，统一后续处理使用的表示形式。
+     * @param snapshot 当前状态或数据快照。
+     */
     private fun normalizeStockGroupFilter(snapshot: MoFishWatchlistState) {
         val filter = stockGroupFilter ?: return
         val matchedGroup = availableStockGroups(snapshot).firstOrNull { it.equals(filter, ignoreCase = true) }
         stockGroupFilter = matchedGroup
     }
 
+    /**
+     * 处理 stockGroupLabel 相关逻辑，并返回调用方需要的结果。
+     * @param groupName group名称。
+     * @param count count。
+     * @return 处理后的结果或当前状态。
+     */
     private fun stockGroupLabel(groupName: String?, count: Int? = null): String {
         val displayName = groupName?.takeIf { it.isNotBlank() } ?: ALL_STOCK_GROUP
         return if (count == null) displayName else "$displayName（$count）"
     }
 
+    /**
+     * 处理 configureVisibleTableColumns 相关逻辑，并返回调用方需要的结果。
+     * @param snapshot 当前状态或数据快照。
+     */
     private fun configureVisibleTableColumns(snapshot: MoFishWatchlistState) {
         val columns = snapshot.settingsState.ui.stockTableColumns
             .ifEmpty { MoFishStockTableColumn.defaultColumns }
@@ -345,6 +451,9 @@ internal class StockModulePanel(
         applyStockTableColumnWidths()
     }
 
+    /**
+     * 处理 applyStockTableColumnWidths 相关逻辑，并返回调用方需要的结果。
+     */
     private fun applyStockTableColumnWidths() {
         if (table.columnModel.columnCount != visibleTableColumns.size) {
             return
@@ -354,6 +463,11 @@ internal class StockModulePanel(
         }
     }
 
+    /**
+     * 处理 stockTableColumnWidth 相关逻辑，并返回调用方需要的结果。
+     * @param column 目标列索引。
+     * @return 处理后的结果或当前状态。
+     */
     private fun stockTableColumnWidth(column: MoFishStockTableColumn): Int {
         return when (column) {
             MoFishStockTableColumn.CODE -> 116
@@ -368,6 +482,11 @@ internal class StockModulePanel(
         }
     }
 
+    /**
+     * 创建股票GroupFilterPopup实例或展示内容。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createStockGroupFilterPopup(snapshot: MoFishWatchlistState): JPopupMenu {
         val popup = JPopupMenu()
         val groups = availableStockGroups(snapshot)
@@ -399,12 +518,19 @@ internal class StockModulePanel(
         return popup
     }
 
+    /**
+     * 展示股票GroupFilterPopup。
+     * @param anchor anchor。
+     */
     private fun showStockGroupFilterPopup(anchor: Component) {
         val snapshot = callbacks.watchlistService.snapshot() ?: return
         val source = stockPopupAnchor(anchor)
         createStockGroupFilterPopup(snapshot).show(source, 0, source.height.coerceAtLeast(1))
     }
 
+    /**
+     * 打开股票GroupManagement弹窗相关界面或详情。
+     */
     private fun openStockGroupManagementDialog() {
         val snapshot = callbacks.watchlistService.snapshot() ?: return
         val dialog = StockGroupManagementDialog(availableStockGroups(snapshot))
@@ -419,11 +545,21 @@ internal class StockModulePanel(
         callbacks.watchlistService.snapshot()?.let(::render)
     }
 
+    /**
+     * 处理 stockReminderRules 相关逻辑，并返回调用方需要的结果。
+     * @param snapshot 当前状态或数据快照。
+     * @param row 待添加、转换或展示的行数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun stockReminderRules(snapshot: MoFishWatchlistState, row: StockListItem?): List<online.mofish.tool.domain.ReminderRule> {
         val code = row?.quote?.code ?: return emptyList()
         return snapshot.settingsState.reminders.filter { it.code.equals(code, ignoreCase = true) }
     }
 
+    /**
+     * 加载股票详情数据。
+     * @param quote 当前资产行情数据。
+     */
     private fun loadStockDetail(quote: StockQuote) {
         val code = quote.code
         detailScope.launch(Dispatchers.IO) {
@@ -456,10 +592,20 @@ internal class StockModulePanel(
         }
     }
 
+    /**
+     * 处理 stockChangePercent 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun stockChangePercent(quote: StockQuote): BigDecimal? {
         return quote.changePercent ?: quote.afterHoursChangePercent
     }
 
+    /**
+     * 处理 holdingProfitLine 相关逻辑，并返回调用方需要的结果。
+     * @param profit 收益。
+     * @return 处理后的结果或当前状态。
+     */
     private fun holdingProfitLine(profit: PositionProfitSnapshot?): String {
         if (callbacks.watchlistService.snapshot()?.settingsState?.showHoldingProfit != true) {
             return ""
@@ -467,6 +613,9 @@ internal class StockModulePanel(
         return "<br/>总收益：${formatDecimal(profit?.totalProfit)}"
     }
 
+    /**
+     * 打开选中项股票详情相关界面或详情。
+     */
     private fun openSelectedStockDetail() {
         val selected = selectedRow() ?: return
         setDetailVisible(true)
@@ -475,6 +624,9 @@ internal class StockModulePanel(
         callbacks.eventStatus.text = "已打开摸鱼股票 ${selected.quote.name} 的详情。"
     }
 
+    /**
+     * 打开选中项股票Trend相关界面或详情。
+     */
     private fun openSelectedStockTrend() {
         val selected = selectedRow() ?: return
         MoFishWebEditorService.open(callbacks.project, MoFishStockTrend.requestFor(selected.quote))
@@ -482,6 +634,15 @@ internal class StockModulePanel(
     }
 
     private inner class StockListRenderer : DefaultListCellRenderer() {
+        /**
+         * 获取列表CellRenderer组件。
+         * @param list 列表。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param index index。
+         * @param isSelected is选中项。
+         * @param cellHasFocus cellHasFocus。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getListCellRendererComponent(
             list: JList<*>?,
             value: Any?,
@@ -518,12 +679,27 @@ internal class StockModulePanel(
     }
 
     private inner class StockTableModel : AssetTableModel<StockListItem>() {
+        /**
+         * 返回表格模型当前列数。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnCount(): Int = visibleTableColumns.size
 
+        /**
+         * 返回表格指定列的标题。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnName(column: Int): String {
             return visibleTableColumns.getOrNull(column)?.toString().orEmpty()
         }
 
+        /**
+         * 读取表格指定行列的展示值。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
             val row = rowAt(rowIndex)
             return when (visibleTableColumns.getOrNull(columnIndex)) {
@@ -540,10 +716,26 @@ internal class StockModulePanel(
             }
         }
 
+        /**
+         * 判断表格指定单元格是否允许编辑。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = false
     }
 
     private inner class StockTableCellRenderer : DefaultTableCellRenderer() {
+        /**
+         * 获取表格CellRenderer组件。
+         * @param table 表格。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param isSelected is选中项。
+         * @param hasFocus hasFocus。
+         * @param row 待添加、转换或展示的行数据。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getTableCellRendererComponent(
             table: JTable?,
             value: Any?,
@@ -572,6 +764,10 @@ internal class StockModulePanel(
         "刷新摸鱼股票列表最新数据",
         AllIcons.Actions.Refresh,
     ) {
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.refreshModule(MoFishRefreshModule.STOCKS)
@@ -579,6 +775,10 @@ internal class StockModulePanel(
     }
 
     private inner class AddStockAction : DumbAwareAction("添加摸鱼股票", "按代码或关键词添加摸鱼股票", AllIcons.General.Add) {
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selectedCode = callbacks.showStockSearchDialog()?.code ?: return
             callbacks.watchlistService.addStockCode(selectedCode)
@@ -589,20 +789,36 @@ internal class StockModulePanel(
     }
 
     private inner class FocusSelectedStockAction : DumbAwareAction("查看详情", "查看当前摸鱼股票的详情", AllIcons.General.ZoomIn) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             openSelectedStockDetail()
         }
     }
 
     private inner class OpenStockTrendAction : DumbAwareAction("查看走势", "在编辑器标签页中查看当前摸鱼股票走势", AllIcons.Actions.Preview) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             openSelectedStockTrend()
         }
@@ -613,16 +829,29 @@ internal class StockModulePanel(
         "将当前选中的摸鱼股票移动到指定分组",
         AllIcons.Actions.GroupBy,
     ) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             showStockAssignmentPopup(selected, stockPopupAnchor(event.inputEvent?.component))
         }
     }
 
+    /**
+     * 创建股票AssignmentPopup实例或展示内容。
+     * @param selected 选中项。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createStockAssignmentPopup(selected: StockListItem): JPopupMenu {
         val snapshot = callbacks.watchlistService.snapshot()
         val groups = snapshot?.let(::availableStockGroups).orEmpty()
@@ -645,6 +874,14 @@ internal class StockModulePanel(
         return popup
     }
 
+    /**
+     * 展示股票AssignmentPopup。
+     * @param selected 选中项。
+     * @param anchor anchor。
+     * @param x x。
+     * @param y y。
+     * @return 处理后的结果或当前状态。
+     */
     private fun showStockAssignmentPopup(
         selected: StockListItem,
         anchor: Component,
@@ -657,6 +894,11 @@ internal class StockModulePanel(
         createStockAssignmentPopup(selected).show(source, popupX, popupY)
     }
 
+    /**
+     * 处理 stockPopupAnchor 相关逻辑，并返回调用方需要的结果。
+     * @param preferredComponent preferred组件。
+     * @return 处理后的结果或当前状态。
+     */
     private fun stockPopupAnchor(preferredComponent: Component?): Component {
         return listOfNotNull(
             preferredComponent,
@@ -665,6 +907,11 @@ internal class StockModulePanel(
         ).firstOrNull { it.isShowing } ?: this
     }
 
+    /**
+     * 处理 moveSelectedStockToGroup 相关逻辑，并返回调用方需要的结果。
+     * @param selected 选中项。
+     * @param groupName group名称。
+     */
     private fun moveSelectedStockToGroup(selected: StockListItem, groupName: String) {
         callbacks.watchlistService.assignStockToGroup(selected.quote.code, groupName)
         stockGroupFilter = normalizeStockGroupValue(groupName).takeIf { it.isNotEmpty() }
@@ -682,10 +929,18 @@ internal class StockModulePanel(
         "为当前摸鱼股票追加持仓",
         AllIcons.Nodes.DataTables,
     ) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val dialog = StockHoldingAddDialog(selected.quote)
@@ -705,10 +960,18 @@ internal class StockModulePanel(
         "为当前摸鱼股票添加提醒规则",
         AllIcons.General.Balloon,
     ) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val dialog = StockReminderAddDialog(selected.quote)
@@ -724,10 +987,18 @@ internal class StockModulePanel(
     }
 
     private inner class RemoveSelectedStockAction : DumbAwareAction("删除摸鱼股票", "删除当前选中的摸鱼股票", AllIcons.General.Remove) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val confirm = Messages.showYesNoDialog(
@@ -745,6 +1016,10 @@ internal class StockModulePanel(
     }
 
     private inner class ToggleStockListViewAction : DumbAwareAction("切换视图", "切换摸鱼股票列表展示方式", AllIcons.Nodes.DataTables) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.text = nextViewMode().displayName
             event.presentation.icon = when (nextViewMode()) {
@@ -754,6 +1029,10 @@ internal class StockModulePanel(
             event.presentation.description = "切换为摸鱼股票${nextViewMode().displayName}"
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val nextModeName = nextViewMode().displayName
             toggleViewMode()
@@ -762,6 +1041,10 @@ internal class StockModulePanel(
     }
 
     private inner class CycleQuoteSortFieldAction : DumbAwareAction("排序字段", "在名称、日涨跌幅、更新时间之间切换", PlatformIcons.PROPERTY_ICON) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             val sortField = callbacks.watchlistService.snapshot()?.settingsState?.sortSettings?.quoteField
             event.presentation.text = sortField?.toString() ?: "排序字段"
@@ -769,17 +1052,29 @@ internal class StockModulePanel(
             event.presentation.description = "切换行情排序字段"
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.cycleQuoteSortField()
         }
     }
 
     private inner class ToggleQuoteSortDirectionAction : DumbAwareAction("排序方向", "切换列表升序或降序", AllIcons.Actions.MoveDown) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             val direction = callbacks.watchlistService.snapshot()?.settingsState?.sortSettings?.quoteDirection
             event.presentation.icon = if (direction?.name == "ASC") AllIcons.Actions.MoveDown else AllIcons.Actions.MoveUp
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.toggleQuoteSortDirection()
         }

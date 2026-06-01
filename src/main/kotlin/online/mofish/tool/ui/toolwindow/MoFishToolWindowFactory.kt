@@ -7,6 +7,11 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
 
 class MoFishToolWindowFactory : ToolWindowFactory, DumbAware {
+    /**
+     * 创建并注册摸鱼工具窗口的内容组件。
+     * @param project 当前 IntelliJ 项目实例。
+     * @param toolWindow toolWindow。
+     */
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val panel = MoFishToolWindowPanel(project)
         val content = ContentFactory.getInstance().createContent(

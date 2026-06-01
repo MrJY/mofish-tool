@@ -20,6 +20,11 @@ internal class TencentStockMetricsProvider(
     private val httpClient: MoFishHttpClient = MoFishHttpClient(),
     private val quoteUrlProvider: (List<String>) -> String = ::defaultTencentAShareQuoteUrl,
 ) {
+    /**
+     * 从远程或本地数据源获取Metrics数据。
+     * @param requested 已经规范化后的资产请求对象。
+     * @return 处理后的结果或当前状态。
+     */
     fun fetchMetrics(requested: RequestedStock): StockValuationMetrics? {
         val response = httpClient.get(
             url = quoteUrlProvider(listOf(requested.vendorCode)),
@@ -44,6 +49,11 @@ internal class TencentStockMetricsProvider(
 internal class EastmoneyStockProfileProvider(
     private val httpClient: MoFishHttpClient = MoFishHttpClient(),
 ) {
+    /**
+     * 从远程或本地数据源获取Profile数据。
+     * @param requested 已经规范化后的资产请求对象。
+     * @return 处理后的结果或当前状态。
+     */
     fun fetchProfile(requested: RequestedStock): StockCompanyProfile? {
         val data = httpClient.getJson(defaultEastmoneyStockProfileUrl(requested)).jsonObject["data"]?.jsonObject
             ?: return null
@@ -61,6 +71,12 @@ internal class EastmoneyStockProfileProvider(
 internal class EastmoneyStockReportProvider(
     private val httpClient: MoFishHttpClient = MoFishHttpClient(),
 ) {
+    /**
+     * 从远程或本地数据源获取Reports数据。
+     * @param code 资产代码或业务标识。
+     * @param maxItems maxItems。
+     * @return 处理后的结果或当前状态。
+     */
     fun fetchReports(code: String, maxItems: Int): List<StockResearchReportItem> {
         val payload = httpClient.getJson(defaultEastmoneyReportUrl(code)).jsonObject
         val rows = payload["data"]?.jsonArray ?: return emptyList()
@@ -71,6 +87,12 @@ internal class EastmoneyStockReportProvider(
 internal class EastmoneyStockNewsProvider(
     private val httpClient: MoFishHttpClient = MoFishHttpClient(),
 ) {
+    /**
+     * 从远程或本地数据源获取News数据。
+     * @param code 资产代码或业务标识。
+     * @param maxItems maxItems。
+     * @return 处理后的结果或当前状态。
+     */
     fun fetchNews(code: String, maxItems: Int): List<StockNewsItem> {
         val response = httpClient.get(
             url = defaultEastmoneyNewsUrl(code, maxItems),
@@ -92,6 +114,11 @@ internal class EastmoneyStockNewsProvider(
     }
 }
 
+/**
+ * 转换为ReportItem表示。
+ * @param item item。
+ * @return 处理后的结果或当前状态。
+ */
 private fun toReportItem(item: JsonElement): StockResearchReportItem? {
     val obj = item.jsonObject
     val title = obj.stringValue("title") ?: return null
@@ -108,6 +135,11 @@ private fun toReportItem(item: JsonElement): StockResearchReportItem? {
     )
 }
 
+/**
+ * 转换为NewsItem表示。
+ * @param item item。
+ * @return 处理后的结果或当前状态。
+ */
 private fun toNewsItem(item: JsonElement): StockNewsItem? {
     val obj = item.jsonObject
     val title = obj.stringValue("title")?.stripHtml() ?: return null
@@ -120,6 +152,11 @@ private fun toNewsItem(item: JsonElement): StockNewsItem? {
     )
 }
 
+/**
+ * 处理 defaultEastmoneyStockProfileUrl 相关逻辑，并返回调用方需要的结果。
+ * @param requested 已经规范化后的资产请求对象。
+ * @return 处理后的结果或当前状态。
+ */
 private fun defaultEastmoneyStockProfileUrl(requested: RequestedStock): String {
     val marketCode = when (requested.exchange) {
         online.mofish.tool.domain.StockExchange.SSE -> "1"
@@ -129,6 +166,11 @@ private fun defaultEastmoneyStockProfileUrl(requested: RequestedStock): String {
         "&fields=f57,f58,f84,f85,f127,f116,f117,f189,f43&secid=$marketCode.${requested.displaySymbol}"
 }
 
+/**
+ * 处理 defaultEastmoneyReportUrl 相关逻辑，并返回调用方需要的结果。
+ * @param code 资产代码或业务标识。
+ * @return 处理后的结果或当前状态。
+ */
 private fun defaultEastmoneyReportUrl(code: String): String {
     val encodedCode = URLEncoder.encode(code, StandardCharsets.UTF_8)
     return "https://reportapi.eastmoney.com/report/list?industryCode=*&pageSize=20&industry=*" +
@@ -136,6 +178,12 @@ private fun defaultEastmoneyReportUrl(code: String): String {
         "&fields=&qType=0&orgCode=&code=$encodedCode&rcode=&p=1&pageNum=1&pageNumber=1"
 }
 
+/**
+ * 处理 defaultEastmoneyNewsUrl 相关逻辑，并返回调用方需要的结果。
+ * @param code 资产代码或业务标识。
+ * @param pageSize pageSize。
+ * @return 处理后的结果或当前状态。
+ */
 private fun defaultEastmoneyNewsUrl(code: String, pageSize: Int): String {
     val param = """{"uid":"","keyword":"$code","type":["cmsArticleWebOld"],"client":"web","clientType":"web","clientVersion":"curr","param":{"cmsArticleWebOld":{"searchScope":"default","sort":"default","pageIndex":1,"pageSize":$pageSize,"preTag":"","postTag":""}}}"""
     return "https://search-api-web.eastmoney.com/search/jsonp?cb=jQuery_mofish&param=" +
@@ -156,6 +204,11 @@ private fun String.stripHtml(): String {
     return replace(Regex("<[^>]+>"), "").trim()
 }
 
+/**
+ * 格式化列表日期，用于界面展示。
+ * @param value 待解析、格式化或写入的原始值。
+ * @return 处理后的结果或当前状态。
+ */
 private fun formatListDate(value: String?): String? {
     val normalized = value?.trim()?.takeIf { it.length == 8 && it.all(Char::isDigit) } ?: return value
     return "${normalized.substring(0, 4)}-${normalized.substring(4, 6)}-${normalized.substring(6, 8)}"

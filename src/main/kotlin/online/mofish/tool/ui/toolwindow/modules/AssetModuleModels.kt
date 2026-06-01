@@ -21,6 +21,10 @@ internal enum class AssetListViewMode(val displayName: String, val cardId: Strin
     TABLE("表格视图", TABLE_LIST_CARD),
     ;
 
+    /**
+     * 处理 next 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     fun next(): AssetListViewMode {
         val values = entries
         return values[(values.indexOf(this) + 1) % values.size]
@@ -33,6 +37,10 @@ internal enum class FundGroupFilter(val displayName: String) {
     WATCHLIST_ONLY("仅关注"),
     ;
 
+    /**
+     * 处理 next 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     fun next(): FundGroupFilter {
         val values = entries
         return values[(values.indexOf(this) + 1) % values.size]
@@ -51,6 +59,10 @@ internal data class StockListItem(
 internal data class StockGroupTableValue(
     val groupName: String?,
 ) {
+    /**
+     * 转换为String表示。
+     * @return 处理后的结果或当前状态。
+     */
     override fun toString(): String = groupName?.takeIf { it.isNotBlank() } ?: "无分组"
 }
 

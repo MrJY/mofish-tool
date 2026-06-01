@@ -15,6 +15,11 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 
 class MoFishProfitCalculator {
+    /**
+     * 根据工作区中的持仓、行情和汇率计算收益快照。
+     * @param workspace 包含关注列表、行情、持仓和提醒的工作区数据。
+     * @return 处理后的结果或当前状态。
+     */
     fun calculate(workspace: MoFishWorkspace): WorkspaceProfitSnapshot {
         val fundQuotesByCode = workspace.fundQuotes.associateBy { it.code }
         val stockQuotesByCode = workspace.stockQuotes.associateBy { it.code }
@@ -28,6 +33,13 @@ class MoFishProfitCalculator {
         )
     }
 
+    /**
+     * 计算基金汇总。
+     * @param holdings 一组资产持仓配置。
+     * @param quotesByCode 行情By代码。
+     * @param forexContext 外汇Context。
+     * @return 处理后的结果或当前状态。
+     */
     private fun calculateFundSummary(
         holdings: List<HoldingConfig>,
         quotesByCode: Map<String, FundQuote>,
@@ -42,6 +54,13 @@ class MoFishProfitCalculator {
         return summarize(AssetType.FUND, items)
     }
 
+    /**
+     * 计算股票汇总。
+     * @param holdings 一组资产持仓配置。
+     * @param quotesByCode 行情By代码。
+     * @param forexContext 外汇Context。
+     * @return 处理后的结果或当前状态。
+     */
     private fun calculateStockSummary(
         holdings: List<HoldingConfig>,
         quotesByCode: Map<String, StockQuote>,
@@ -56,6 +75,13 @@ class MoFishProfitCalculator {
         return summarize(AssetType.STOCK, items)
     }
 
+    /**
+     * 计算虚拟币汇总。
+     * @param holdings 一组资产持仓配置。
+     * @param quotesByCode 行情By代码。
+     * @param forexContext 外汇Context。
+     * @return 处理后的结果或当前状态。
+     */
     private fun calculateCryptoSummary(
         holdings: List<HoldingConfig>,
         quotesByCode: Map<String, CryptoQuote>,
@@ -70,6 +96,13 @@ class MoFishProfitCalculator {
         return summarize(AssetType.CRYPTO, items)
     }
 
+    /**
+     * 计算基金Position。
+     * @param holding 当前资产的持仓配置。
+     * @param quote 当前资产行情数据。
+     * @param forexContext 外汇Context。
+     * @return 处理后的结果或当前状态。
+     */
     private fun calculateFundPosition(
         holding: HoldingConfig,
         quote: FundQuote?,
@@ -101,6 +134,13 @@ class MoFishProfitCalculator {
         )
     }
 
+    /**
+     * 计算股票Position。
+     * @param holding 当前资产的持仓配置。
+     * @param quote 当前资产行情数据。
+     * @param forexContext 外汇Context。
+     * @return 处理后的结果或当前状态。
+     */
     private fun calculateStockPosition(
         holding: HoldingConfig,
         quote: StockQuote?,
@@ -135,6 +175,13 @@ class MoFishProfitCalculator {
         )
     }
 
+    /**
+     * 计算虚拟币Position。
+     * @param holding 当前资产的持仓配置。
+     * @param quote 当前资产行情数据。
+     * @param forexContext 外汇Context。
+     * @return 处理后的结果或当前状态。
+     */
     private fun calculateCryptoPosition(
         holding: HoldingConfig,
         quote: CryptoQuote?,
@@ -180,6 +227,12 @@ class MoFishProfitCalculator {
         )
     }
 
+    /**
+     * 处理 summarize 相关逻辑，并返回调用方需要的结果。
+     * @param assetType 资产Type。
+     * @param items items。
+     * @return 处理后的结果或当前状态。
+     */
     private fun summarize(
         assetType: AssetType,
         items: List<PositionProfitSnapshot>,
@@ -203,10 +256,22 @@ class MoFishProfitCalculator {
         )
     }
 
+    /**
+     * 解析并确定Cost金额。
+     * @param holding 当前资产的持仓配置。
+     * @return 处理后的结果或当前状态。
+     */
     private fun resolveCostAmount(holding: HoldingConfig): BigDecimal? {
         return holding.investedAmount ?: multiplyOrNull(holding.quantity, holding.costPrice)
     }
 
+    /**
+     * 处理 convertAmountToCny 相关逻辑，并返回调用方需要的结果。
+     * @param amount 金额。
+     * @param currency 币种。
+     * @param forexContext 外汇Context。
+     * @return 处理后的结果或当前状态。
+     */
     private fun convertAmountToCny(
         amount: BigDecimal?,
         currency: String?,
@@ -224,6 +289,12 @@ class MoFishProfitCalculator {
         return amount.multiply(ratePerUnit).stripTrailingZeros()
     }
 
+    /**
+     * 处理 multiplyOrNull 相关逻辑，并返回调用方需要的结果。
+     * @param left left。
+     * @param right 参与比较或计算的右侧数值。
+     * @return 处理后的结果或当前状态。
+     */
     private fun multiplyOrNull(
         left: BigDecimal?,
         right: BigDecimal?,
@@ -234,6 +305,12 @@ class MoFishProfitCalculator {
         return left.multiply(right)
     }
 
+    /**
+     * 处理 subtractOrNull 相关逻辑，并返回调用方需要的结果。
+     * @param left left。
+     * @param right 参与比较或计算的右侧数值。
+     * @return 处理后的结果或当前状态。
+     */
     private fun subtractOrNull(
         left: BigDecimal?,
         right: BigDecimal?,
@@ -244,6 +321,12 @@ class MoFishProfitCalculator {
         return left.subtract(right)
     }
 
+    /**
+     * 处理 ratio 相关逻辑，并返回调用方需要的结果。
+     * @param numerator numerator。
+     * @param denominator denominator。
+     * @return 处理后的结果或当前状态。
+     */
     private fun ratio(
         numerator: BigDecimal?,
         denominator: BigDecimal?,
@@ -257,6 +340,11 @@ class MoFishProfitCalculator {
             .stripTrailingZeros()
     }
 
+    /**
+     * 处理 deriveCryptoPreviousPrice 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun deriveCryptoPreviousPrice(quote: CryptoQuote?): BigDecimal? {
         if (quote?.currentPrice == null || quote.priceChangePercentage24h == null) {
             return null
@@ -279,6 +367,11 @@ class MoFishProfitCalculator {
         }
     }
 
+    /**
+     * 构建外汇Context，供后续界面展示或数据处理使用。
+     * @param forexRates 外汇汇率。
+     * @return 处理后的结果或当前状态。
+     */
     private fun buildForexContext(forexRates: List<ForexRate>): ForexConversionContext {
         val aliasMap = linkedMapOf<String, String>()
         aliasMap.putAll(DEFAULT_FOREX_CURRENCY_ALIASES)
@@ -303,6 +396,11 @@ class MoFishProfitCalculator {
         )
     }
 
+    /**
+     * 处理 extractForexBaseCurrency 相关逻辑，并返回调用方需要的结果。
+     * @param currencyPair 币种Pair。
+     * @return 处理后的结果或当前状态。
+     */
     private fun extractForexBaseCurrency(currencyPair: String?): String? {
         if (currencyPair.isNullOrBlank()) {
             return null
@@ -310,6 +408,13 @@ class MoFishProfitCalculator {
         return currencyPair.substringBefore("/").trim().uppercase().takeIf { it.isNotEmpty() }
     }
 
+    /**
+     * 解析并确定股票行情币种。
+     * @param holding 当前资产的持仓配置。
+     * @param quote 当前资产行情数据。
+     * @param forexContext 外汇Context。
+     * @return 处理后的结果或当前状态。
+     */
     private fun resolveStockQuoteCurrency(
         holding: HoldingConfig,
         quote: StockQuote?,
@@ -331,6 +436,12 @@ class MoFishProfitCalculator {
         }
     }
 
+    /**
+     * 规范化币种，统一后续处理使用的表示形式。
+     * @param rawCurrency 用户输入或接口返回的原始币种文本。
+     * @param forexContext 外汇Context。
+     * @return 处理后的结果或当前状态。
+     */
     private fun normalizeCurrency(
         rawCurrency: String?,
         forexContext: ForexConversionContext,
@@ -347,6 +458,11 @@ class MoFishProfitCalculator {
             ?: upper.takeIf { it.matches(ISO_CURRENCY_PATTERN) }
     }
 
+    /**
+     * 规范化默认币种Alias，统一后续处理使用的表示形式。
+     * @param rawCurrency 用户输入或接口返回的原始币种文本。
+     * @return 处理后的结果或当前状态。
+     */
     private fun normalizeDefaultCurrencyAlias(rawCurrency: String): String? {
         val normalized = rawCurrency.trim()
         if (normalized.isEmpty()) {

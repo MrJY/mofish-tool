@@ -39,8 +39,17 @@ internal class IndexModulePanel(
 ) {
     override val tableModel: AssetTableModel<IndexListItem> = IndexTableModel()
 
+    /**
+     * 处理 moduleViewId 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     override fun moduleViewId(): String = "indices"
 
+    /**
+     * 构建Rows，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     override fun buildRows(snapshot: MoFishWatchlistState): List<IndexListItem> {
         val rows = snapshot.projectState.workspace.indexQuotes.map { quote ->
             IndexListItem(
@@ -66,12 +75,26 @@ internal class IndexModulePanel(
         }
     }
 
+    /**
+     * 构建汇总文本，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @param rows 当前表格或列表使用的数据行集合。
+     * @return 处理后的结果或当前状态。
+     */
     override fun buildSummaryText(snapshot: MoFishWatchlistState, rows: List<IndexListItem>): String {
         return buildDataUpdateSummary(snapshot, MoFishRefreshModule.INDICES)
     }
 
+    /**
+     * 创建列表CellRenderer实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createListCellRenderer(): ListCellRenderer<in IndexListItem> = IndexListRenderer()
 
+    /**
+     * 处理 configureTable 相关逻辑，并返回调用方需要的结果。
+     * @param table 表格。
+     */
     override fun configureTable(table: JBTable) {
         table.setDefaultRenderer(Any::class.java, IndexTableCellRenderer())
         table.columnModel.getColumn(0).preferredWidth = JBUI.scale(72)
@@ -82,6 +105,10 @@ internal class IndexModulePanel(
         table.columnModel.getColumn(5).preferredWidth = JBUI.scale(156)
     }
 
+    /**
+     * 创建ToolbarActions实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createToolbarActions(): List<AnAction> {
         return listOf(
             RefreshIndexAction(),
@@ -91,6 +118,10 @@ internal class IndexModulePanel(
         )
     }
 
+    /**
+     * 创建PopupActions实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createPopupActions(): List<AnAction> {
         return listOf(
             RefreshIndexAction(),
@@ -102,6 +133,15 @@ internal class IndexModulePanel(
     }
 
     private inner class IndexListRenderer : DefaultListCellRenderer() {
+        /**
+         * 获取列表CellRenderer组件。
+         * @param list 列表。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param index index。
+         * @param isSelected is选中项。
+         * @param cellHasFocus cellHasFocus。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getListCellRendererComponent(
             list: JList<*>?,
             value: Any?,
@@ -131,8 +171,17 @@ internal class IndexModulePanel(
     }
 
     private inner class IndexTableModel : AssetTableModel<IndexListItem>() {
+        /**
+         * 返回表格模型当前列数。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnCount(): Int = 6
 
+        /**
+         * 返回表格指定列的标题。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnName(column: Int): String {
             return when (column) {
                 0 -> "市场"
@@ -144,6 +193,12 @@ internal class IndexModulePanel(
             }
         }
 
+        /**
+         * 读取表格指定行列的展示值。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
             val row = rowAt(rowIndex)
             return when (columnIndex) {
@@ -156,10 +211,26 @@ internal class IndexModulePanel(
             }
         }
 
+        /**
+         * 判断表格指定单元格是否允许编辑。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = false
     }
 
     private inner class IndexTableCellRenderer : DefaultTableCellRenderer() {
+        /**
+         * 获取表格CellRenderer组件。
+         * @param table 表格。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param isSelected is选中项。
+         * @param hasFocus hasFocus。
+         * @param row 待添加、转换或展示的行数据。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getTableCellRendererComponent(
             table: JTable?,
             value: Any?,
@@ -187,6 +258,10 @@ internal class IndexModulePanel(
         "刷新摸鱼指数列表最新数据",
         AllIcons.Actions.Refresh,
     ) {
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.refreshModule(MoFishRefreshModule.INDICES)
@@ -198,10 +273,18 @@ internal class IndexModulePanel(
         "为当前摸鱼指数添加提醒规则",
         AllIcons.General.Balloon,
     ) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val template = ReminderRule(
@@ -230,6 +313,10 @@ internal class IndexModulePanel(
     }
 
     private inner class ToggleIndexListViewAction : DumbAwareAction("切换视图", "切换摸鱼指数列表展示方式", AllIcons.Nodes.DataTables) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.text = nextViewMode().displayName
             event.presentation.icon = when (nextViewMode()) {
@@ -239,6 +326,10 @@ internal class IndexModulePanel(
             event.presentation.description = "切换为摸鱼指数${nextViewMode().displayName}"
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             toggleViewMode()
             callbacks.eventStatus.text = "摸鱼指数列表已切换为${nextViewMode().displayName}。"
@@ -246,6 +337,10 @@ internal class IndexModulePanel(
     }
 
     private inner class CycleQuoteSortFieldAction : DumbAwareAction("排序字段", "在名称、日涨跌幅、更新时间之间切换", PlatformIcons.PROPERTY_ICON) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             val sortField = callbacks.watchlistService.snapshot()?.settingsState?.sortSettings?.quoteField
             event.presentation.text = sortField?.toString() ?: "排序字段"
@@ -253,26 +348,48 @@ internal class IndexModulePanel(
             event.presentation.description = "切换行情排序字段"
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.cycleQuoteSortField()
         }
     }
 
     private inner class ToggleQuoteSortDirectionAction : DumbAwareAction("排序方向", "切换列表升序或降序", AllIcons.Actions.MoveDown) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             val direction = callbacks.watchlistService.snapshot()?.settingsState?.sortSettings?.quoteDirection
             event.presentation.icon = if (direction?.name == "ASC") AllIcons.Actions.MoveDown else AllIcons.Actions.MoveUp
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.toggleQuoteSortDirection()
         }
     }
 
+    /**
+     * 处理 stockChangePercent 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun stockChangePercent(quote: StockQuote): BigDecimal? {
         return quote.changePercent ?: quote.afterHoursChangePercent
     }
 
+    /**
+     * 处理 indexMarketLabel 相关逻辑，并返回调用方需要的结果。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun indexMarketLabel(quote: StockQuote): String {
         return marketIndexDefinitionFor(quote.code)?.marketLabel ?: when (quote.exchange) {
             StockExchange.SSE,
@@ -288,10 +405,20 @@ internal class IndexModulePanel(
         }
     }
 
+    /**
+     * 处理 indexPriority 相关逻辑，并返回调用方需要的结果。
+     * @param code 资产代码或业务标识。
+     * @return 处理后的结果或当前状态。
+     */
     private fun indexPriority(code: String): Int {
         val index = INDEX_PRIORITY_CODES.indexOf(code.lowercase())
         return if (index >= 0) index else Int.MAX_VALUE
     }
 
+    /**
+     * 格式化代码，用于界面展示。
+     * @param value 待解析、格式化或写入的原始值。
+     * @return 处理后的结果或当前状态。
+     */
     private fun formatCode(value: String): String = value.uppercase()
 }

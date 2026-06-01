@@ -14,6 +14,13 @@ class MoFishHttpClient(
     private val okHttpClient: OkHttpClient = defaultOkHttpClient(),
     private val json: Json = defaultJson(),
 ) {
+    /**
+     * 处理 get 相关逻辑，并返回调用方需要的结果。
+     * @param url URL。
+     * @param headers headers。
+     * @param responseCharset 响应Charset。
+     * @return 处理后的结果或当前状态。
+     */
     fun get(
         url: String,
         headers: Map<String, String> = emptyMap(),
@@ -51,18 +58,41 @@ class MoFishHttpClient(
         }
     }
 
+    /**
+     * 获取Json。
+     * @param url URL。
+     * @param headers headers。
+     * @return 处理后的结果或当前状态。
+     */
     fun getJson(
         url: String,
         headers: Map<String, String> = emptyMap(),
     ): JsonElement = parseJson(get(url, headers).body)
 
+    /**
+     * 获取HTML。
+     * @param url URL。
+     * @param headers headers。
+     * @return 处理后的结果或当前状态。
+     */
     fun getHtml(
         url: String,
         headers: Map<String, String> = emptyMap(),
     ): Document = parseHtml(get(url, headers).body, url)
 
+    /**
+     * 解析Json数据，并转换为项目内部可用的结构。
+     * @param content 需要渲染或包装的内容。
+     * @return 处理后的结果或当前状态。
+     */
     fun parseJson(content: String): JsonElement = json.parseToJsonElement(content)
 
+    /**
+     * 解析HTML数据，并转换为项目内部可用的结构。
+     * @param content 需要渲染或包装的内容。
+     * @param baseUrl baseURL。
+     * @return 处理后的结果或当前状态。
+     */
     fun parseHtml(
         content: String,
         baseUrl: String = "",
@@ -71,6 +101,10 @@ class MoFishHttpClient(
     companion object {
         private const val DEFAULT_USER_AGENT = "MoFish IntelliJ Plugin/0.1"
 
+        /**
+         * 处理 defaultJson 相关逻辑，并返回调用方需要的结果。
+         * @return 处理后的结果或当前状态。
+         */
         fun defaultJson(): Json {
             return Json {
                 ignoreUnknownKeys = true
@@ -79,6 +113,10 @@ class MoFishHttpClient(
             }
         }
 
+        /**
+         * 处理 defaultOkHttpClient 相关逻辑，并返回调用方需要的结果。
+         * @return 处理后的结果或当前状态。
+         */
         fun defaultOkHttpClient(): OkHttpClient {
             return OkHttpClient.Builder()
                 .callTimeout(Duration.ofSeconds(15))

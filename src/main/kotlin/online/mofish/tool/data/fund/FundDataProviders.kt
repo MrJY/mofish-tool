@@ -20,6 +20,11 @@ class EastMoneyFundQuoteProvider(
 ) : FundQuoteProvider {
     override val providerName: String = "eastmoney-fund-quote"
 
+    /**
+     * 从远程或本地数据源获取行情数据。
+     * @param code 资产代码或业务标识。
+     * @return 处理后的结果或当前状态。
+     */
     override fun fetchQuote(code: String): FundQuote? {
         val normalizedCode = code.trim()
         if (normalizedCode.isEmpty()) {
@@ -36,6 +41,10 @@ class EastMoneyFundSearchIndexProvider(
 ) : FundSearchIndexProvider {
     override val providerName: String = "eastmoney-fund-search-index"
 
+    /**
+     * 加载Index数据。
+     * @return 处理后的结果或当前状态。
+     */
     override fun loadIndex(): List<FundSearchSuggestion> {
         val payload = httpClient.get(searchIndexUrlProvider()).body
         return parseFundSearchIndexPayload(httpClient, payload)
@@ -50,6 +59,10 @@ class CachedFundSearchIndexProvider(
     @Volatile
     private var cache: List<FundSearchSuggestion>? = null
 
+    /**
+     * 加载Index数据。
+     * @return 处理后的结果或当前状态。
+     */
     override fun loadIndex(): List<FundSearchSuggestion> {
         val cached = cache
         if (cached != null) {
@@ -63,6 +76,13 @@ class CachedFundSearchIndexProvider(
     }
 }
 
+/**
+ * 解析基金行情Payload数据，并转换为项目内部可用的结构。
+ * @param httpClient 统一 HTTP 客户端，用于发起请求和解析响应。
+ * @param requestedCode requested代码。
+ * @param payload payload。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun parseFundQuotePayload(
     httpClient: MoFishHttpClient,
     requestedCode: String,
@@ -74,6 +94,12 @@ internal fun parseFundQuotePayload(
     return data.toFundQuote(requestedCode)
 }
 
+/**
+ * 解析基金搜索IndexPayload数据，并转换为项目内部可用的结构。
+ * @param httpClient 统一 HTTP 客户端，用于发起请求和解析响应。
+ * @param payload payload。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun parseFundSearchIndexPayload(
     httpClient: MoFishHttpClient,
     payload: String,
@@ -139,6 +165,11 @@ private fun JsonObject.dateValue(key: String): LocalDate? {
     return runCatching { LocalDate.parse(raw) }.getOrNull()
 }
 
+/**
+ * 转换为基金搜索建议表示。
+ * @param item item。
+ * @return 处理后的结果或当前状态。
+ */
 private fun toFundSearchSuggestion(item: JsonElement): FundSearchSuggestion? {
     val fields = item.jsonArray
     val code = fields.stringValue(0) ?: return null
@@ -158,6 +189,15 @@ private fun JsonArray.stringValue(index: Int): String? {
 
 private val FUND_JSONP_WRAPPER = Regex("""jsonpgz\(([\s\S]*)\);?""")
 
+/**
+ * 处理 defaultFundQuoteUrl 相关逻辑，并返回调用方需要的结果。
+ * @param code 资产代码或业务标识。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun defaultFundQuoteUrl(code: String): String = "https://fundgz.1234567.com.cn/js/${code.trim()}.js"
 
+/**
+ * 处理 defaultFundSearchIndexUrl 相关逻辑，并返回调用方需要的结果。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun defaultFundSearchIndexUrl(): String = "https://fund.eastmoney.com/js/fundcode_search.js"

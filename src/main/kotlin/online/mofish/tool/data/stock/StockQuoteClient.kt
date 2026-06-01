@@ -47,6 +47,11 @@ class StockQuoteClient private constructor(
         ),
     )
 
+    /**
+     * 从远程或本地数据源获取行情数据。
+     * @param code 资产代码或业务标识。
+     * @return 处理后的结果或当前状态。
+     */
     fun fetchQuote(code: String): StockQuote {
         val normalizedCode = code.trim()
         require(normalizedCode.isNotEmpty()) { "股票代码不能为空。" }
@@ -55,6 +60,11 @@ class StockQuoteClient private constructor(
             ?: throw IllegalArgumentException("不支持的股票代码：$normalizedCode")
     }
 
+    /**
+     * 批量获取请求资产的最新行情。
+     * @param codes codes。
+     * @return 处理后的结果或当前状态。
+     */
     fun fetchQuotes(codes: List<String>): List<StockQuote> {
         val requestedStocks = codes
             .mapNotNull(::normalizeRequestedStock)
@@ -88,6 +98,11 @@ class StockQuoteClient private constructor(
         }
     }
 
+    /**
+     * 根据用户输入搜索可添加的候选资产。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
     fun searchSuggestions(keyword: String): List<StockSearchSuggestion> {
         val normalizedKeyword = keyword.trim()
         require(normalizedKeyword.isNotEmpty()) { "搜索关键词不能为空。" }
@@ -105,6 +120,11 @@ class StockQuoteClient private constructor(
     }
 }
 
+/**
+ * 判断当前上下文是否允许onicalize股票Input代码。
+ * @param rawCode 用户输入或接口返回的原始资产代码。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun canonicalizeStockInputCode(rawCode: String): String? {
     val normalizedCode = rawCode.trim().lowercase()
     if (normalizedCode.isBlank()) {
@@ -125,6 +145,11 @@ internal fun canonicalizeStockInputCode(rawCode: String): String? {
     }
 }
 
+/**
+ * 根据输入推断China市场Prefix。
+ * @param code 资产代码或业务标识。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun inferChinaMarketPrefix(code: String): String? {
     val normalizedCode = code.trim()
     if (!normalizedCode.matches(Regex("""\d{6}"""))) {
@@ -151,6 +176,12 @@ internal fun inferChinaMarketPrefix(code: String): String? {
     }
 }
 
+/**
+ * 从远程或本地数据源获取WithFallback数据。
+ * @param requestedStocks 需要批量查询行情的股票请求列表。
+ * @param providers providers。
+ * @return 处理后的结果或当前状态。
+ */
 private fun fetchWithFallback(
     requestedStocks: List<RequestedStock>,
     providers: List<StockQuoteProvider>,

@@ -25,6 +25,13 @@ internal object MoFishUiStyle {
     val popupHoverBackground = JBColor(Color(0xF6F8FC), Color(0x30343D))
     val linkForeground = JBColor.namedColor("Link.activeForeground", JBColor(Color(0x2F6BFF), Color(0x86A9FF)))
 
+    /**
+     * 处理 groupChip 相关逻辑，并返回调用方需要的结果。
+     * @param text 文本。
+     * @param selected 选中项。
+     * @param onClick onClick。
+     * @return 处理后的结果或当前状态。
+     */
     fun groupChip(text: String, selected: Boolean, onClick: () -> Unit): JButton {
         return roundedButton(
             text = text,
@@ -36,6 +43,11 @@ internal object MoFishUiStyle {
         }
     }
 
+    /**
+     * 处理 groupDropdownButton 相关逻辑，并返回调用方需要的结果。
+     * @param onClick onClick。
+     * @return 处理后的结果或当前状态。
+     */
     fun groupDropdownButton(onClick: (JButton) -> Unit): JButton {
         return roundedButton(
             text = "分组",
@@ -54,6 +66,10 @@ internal object MoFishUiStyle {
         }
     }
 
+    /**
+     * 处理 roundedButton 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     private fun roundedButton(
         text: String,
         selected: Boolean,
@@ -85,11 +101,19 @@ internal object MoFishUiStyle {
                 foreground = JBColor.foreground()
                 addMouseListener(
                     object : MouseAdapter() {
+                        /**
+                         * 处理 mouseEntered 相关逻辑，并返回调用方需要的结果。
+                         * @param event IntelliJ 平台传入的动作事件上下文。
+                         */
                         override fun mouseEntered(event: MouseEvent) {
                             hovered = true
                             repaint()
                         }
 
+                        /**
+                         * 处理 mouseExited 相关逻辑，并返回调用方需要的结果。
+                         * @param event IntelliJ 平台传入的动作事件上下文。
+                         */
                         override fun mouseExited(event: MouseEvent) {
                             hovered = false
                             repaint()
@@ -98,6 +122,10 @@ internal object MoFishUiStyle {
                 )
             }
 
+            /**
+             * 处理 paintComponent 相关逻辑，并返回调用方需要的结果。
+             * @param g g。
+             */
             override fun paintComponent(g: Graphics) {
                 val graphics = g.create() as Graphics2D
                 graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
@@ -117,6 +145,13 @@ internal object MoFishUiStyle {
         }
     }
 
+    /**
+     * 处理 menuItem 相关逻辑，并返回调用方需要的结果。
+     * @param text 文本。
+     * @param selected 选中项。
+     * @param onClick onClick。
+     * @return 处理后的结果或当前状态。
+     */
     fun menuItem(text: String, selected: Boolean = false, onClick: () -> Unit): JMenuItem {
         return JMenuItem(text, if (selected) AllIcons.Actions.Checked else null).apply {
             isOpaque = true

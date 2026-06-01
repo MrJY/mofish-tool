@@ -60,8 +60,16 @@ class MoFishSettingsConfigurable : Configurable {
     private var draftHoldings: List<HoldingConfig> = emptyList()
     private var draftReminders: List<ReminderRule> = emptyList()
 
+    /**
+     * 获取Display名称。
+     * @return 处理后的结果或当前状态。
+     */
     override fun getDisplayName(): String = "摸鱼工具"
 
+    /**
+     * 创建 IntelliJ 配置页或编辑器的根组件。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createComponent(): JComponent {
         if (rootPanel == null) {
             val ui = createEditorFields()
@@ -108,6 +116,10 @@ class MoFishSettingsConfigurable : Configurable {
         return requireNotNull(rootPanel)
     }
 
+    /**
+     * 创建编辑器Fields实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createEditorFields(): SettingsEditorFields {
         return SettingsEditorFields(
             fundCodesField = JBTextField(),
@@ -147,6 +159,10 @@ class MoFishSettingsConfigurable : Configurable {
         )
     }
 
+    /**
+     * 处理 bindEditorFields 相关逻辑，并返回调用方需要的结果。
+     * @param ui ui。
+     */
     private fun bindEditorFields(ui: SettingsEditorFields) {
         fundCodesField = ui.fundCodesField
         stockCodesField = ui.stockCodesField
@@ -178,15 +194,25 @@ class MoFishSettingsConfigurable : Configurable {
         editRemindersButton = ui.editRemindersButton
     }
 
+    /**
+     * 判断当前配置页内容是否相对持久化状态发生变化。
+     * @return 处理后的结果或当前状态。
+     */
     override fun isModified(): Boolean {
         return readEditorState() != settingsService.snapshot()
     }
 
+    /**
+     * 把配置页中的编辑内容写入持久化设置。
+     */
     @Throws(ConfigurationException::class)
     override fun apply() {
         settingsService.replaceState(readEditorState())
     }
 
+    /**
+     * 使用持久化设置重置配置页展示内容。
+     */
     override fun reset() {
         val state = settingsService.snapshot()
         draftHoldings = state.holdings.map { it.copy() }
@@ -194,6 +220,9 @@ class MoFishSettingsConfigurable : Configurable {
         writeEditorState(state)
     }
 
+    /**
+     * 处理 disposeUIResources 相关逻辑，并返回调用方需要的结果。
+     */
     override fun disposeUIResources() {
         rootPanel = null
         fundCodesField = null
@@ -228,6 +257,10 @@ class MoFishSettingsConfigurable : Configurable {
         draftReminders = emptyList()
     }
 
+    /**
+     * 处理 writeEditorState 相关逻辑，并返回调用方需要的结果。
+     * @param state 状态。
+     */
     private fun writeEditorState(state: MoFishSettingsState) {
         fundCodesField?.text = joinCodes(state.watchlist.fundCodes)
         stockCodesField?.text = joinCodes(state.watchlist.stockCodes)
@@ -268,6 +301,10 @@ class MoFishSettingsConfigurable : Configurable {
         updateDraftSummaries()
     }
 
+    /**
+     * 处理 readEditorState 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     private fun readEditorState(): MoFishSettingsState {
         val baseState = settingsService.snapshot()
         val stockCodes = parseLowercaseCodes(stockCodesField?.text.orEmpty())
@@ -331,6 +368,9 @@ class MoFishSettingsConfigurable : Configurable {
         )
     }
 
+    /**
+     * 打开持仓弹窗相关界面或详情。
+     */
     private fun openHoldingsDialog() {
         val dialog = MoFishHoldingsDialog(draftHoldings)
         if (dialog.showAndGet()) {
@@ -339,6 +379,9 @@ class MoFishSettingsConfigurable : Configurable {
         }
     }
 
+    /**
+     * 打开提醒弹窗相关界面或详情。
+     */
     private fun openRemindersDialog() {
         val dialog = MoFishRemindersDialog(draftReminders)
         if (dialog.showAndGet()) {
@@ -347,11 +390,18 @@ class MoFishSettingsConfigurable : Configurable {
         }
     }
 
+    /**
+     * 更新DraftSummaries。
+     */
     private fun updateDraftSummaries() {
         holdingsSummaryLabel?.text = buildHoldingsSummary()
         remindersSummaryLabel?.text = buildRemindersSummary()
     }
 
+    /**
+     * 构建持仓汇总，供后续界面展示或数据处理使用。
+     * @return 处理后的结果或当前状态。
+     */
     private fun buildHoldingsSummary(): String {
         val fundCount = draftHoldings.count { it.assetType.name == "FUND" }
         val stockCount = draftHoldings.count { it.assetType.name == "STOCK" }
@@ -359,11 +409,21 @@ class MoFishSettingsConfigurable : Configurable {
         return "${draftHoldings.size} 条持仓，摸鱼基金 $fundCount 条，摸鱼股票 $stockCount 条，摸鱼虚拟币 $cryptoCount 条"
     }
 
+    /**
+     * 构建提醒汇总，供后续界面展示或数据处理使用。
+     * @return 处理后的结果或当前状态。
+     */
     private fun buildRemindersSummary(): String {
         val enabledCount = draftReminders.count { it.enabled }
         return "${draftReminders.size} 条提醒规则，已启用 $enabledCount 条"
     }
 
+    /**
+     * 创建汇总行实例或展示内容。
+     * @param summaryLabel 汇总Label。
+     * @param actionButton 动作Button。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createSummaryRow(summaryLabel: JBLabel, actionButton: JButton): JPanel {
         val panel = JPanel(BorderLayout(JBUI.scale(8), 0))
         panel.add(summaryLabel, BorderLayout.CENTER)
@@ -371,12 +431,23 @@ class MoFishSettingsConfigurable : Configurable {
         return panel
     }
 
+    /**
+     * 创建时间Spinner实例或展示内容。
+     * @param initialValue initial值。
+     * @param maxValue max值。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createTimeSpinner(initialValue: Int, maxValue: Int): JSpinner {
         return JSpinner(SpinnerNumberModel(initialValue, 0, maxValue, 1)).apply {
             preferredSize = Dimension(JBUI.scale(68), preferredSize.height)
         }
     }
 
+    /**
+     * 创建时间Range面板实例或展示内容。
+     * @param ui ui。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createTimeRangePanel(ui: SettingsEditorFields): JPanel {
         val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0))
         panel.isOpaque = false
@@ -386,6 +457,11 @@ class MoFishSettingsConfigurable : Configurable {
         return panel
     }
 
+    /**
+     * 创建Auto刷新模块面板实例或展示内容。
+     * @param ui ui。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createAutoRefreshModulesPanel(ui: SettingsEditorFields): JPanel {
         val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
         panel.isOpaque = false
@@ -393,6 +469,11 @@ class MoFishSettingsConfigurable : Configurable {
         return panel
     }
 
+    /**
+     * 创建股票表格Columns面板实例或展示内容。
+     * @param ui ui。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createStockTableColumnsPanel(ui: SettingsEditorFields): JPanel {
         val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
         panel.isOpaque = false
@@ -400,6 +481,11 @@ class MoFishSettingsConfigurable : Configurable {
         return panel
     }
 
+    /**
+     * 创建Enabled模块面板实例或展示内容。
+     * @param ui ui。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createEnabledModulesPanel(ui: SettingsEditorFields): JPanel {
         val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
         panel.isOpaque = false
@@ -407,6 +493,11 @@ class MoFishSettingsConfigurable : Configurable {
         return panel
     }
 
+    /**
+     * 处理 readAutoRefreshModules 相关逻辑，并返回调用方需要的结果。
+     * @param fallbackModules fallback模块。
+     * @return 处理后的结果或当前状态。
+     */
     private fun readAutoRefreshModules(fallbackModules: Set<MoFishRefreshModule>): Set<MoFishRefreshModule> {
         if (autoRefreshModuleCheckBoxes.isEmpty()) {
             return fallbackModules
@@ -416,6 +507,11 @@ class MoFishSettingsConfigurable : Configurable {
             .keys
     }
 
+    /**
+     * 处理 readStockTableColumns 相关逻辑，并返回调用方需要的结果。
+     * @param fallbackColumns fallbackColumns。
+     * @return 处理后的结果或当前状态。
+     */
     private fun readStockTableColumns(fallbackColumns: Set<MoFishStockTableColumn>): Set<MoFishStockTableColumn> {
         if (stockTableColumnCheckBoxes.isEmpty()) {
             return fallbackColumns
@@ -426,6 +522,11 @@ class MoFishSettingsConfigurable : Configurable {
             .ifEmpty { MoFishStockTableColumn.defaultColumns }
     }
 
+    /**
+     * 处理 readEnabledModules 相关逻辑，并返回调用方需要的结果。
+     * @param fallbackModules fallback模块。
+     * @return 处理后的结果或当前状态。
+     */
     private fun readEnabledModules(fallbackModules: Set<MoFishRefreshModule>): Set<MoFishRefreshModule> {
         if (enabledModuleCheckBoxes.isEmpty()) {
             return fallbackModules
@@ -436,6 +537,12 @@ class MoFishSettingsConfigurable : Configurable {
             .ifEmpty { MoFishRefreshModule.defaultEnabledModules }
     }
 
+    /**
+     * 创建时间编辑器实例或展示内容。
+     * @param hourSpinner hourSpinner。
+     * @param minuteSpinner minuteSpinner。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createTimeEditor(hourSpinner: JSpinner, minuteSpinner: JSpinner): JPanel {
         val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(2), 0))
         panel.isOpaque = false
@@ -445,6 +552,12 @@ class MoFishSettingsConfigurable : Configurable {
         return panel
     }
 
+    /**
+     * 处理 writeMinuteOfDayToEditor 相关逻辑，并返回调用方需要的结果。
+     * @param minuteOfDay minuteOfDay。
+     * @param hourSpinner hourSpinner。
+     * @param minuteSpinner minuteSpinner。
+     */
     private fun writeMinuteOfDayToEditor(
         minuteOfDay: Int,
         hourSpinner: JSpinner?,
@@ -455,6 +568,13 @@ class MoFishSettingsConfigurable : Configurable {
         minuteSpinner?.value = normalizedMinuteOfDay % 60
     }
 
+    /**
+     * 处理 readMinuteOfDayFromEditor 相关逻辑，并返回调用方需要的结果。
+     * @param hourSpinner hourSpinner。
+     * @param minuteSpinner minuteSpinner。
+     * @param fallbackMinuteOfDay fallbackMinuteOfDay。
+     * @return 处理后的结果或当前状态。
+     */
     private fun readMinuteOfDayFromEditor(
         hourSpinner: JSpinner?,
         minuteSpinner: JSpinner?,
@@ -465,6 +585,11 @@ class MoFishSettingsConfigurable : Configurable {
         return minuteOfDay(hour, minute)
     }
 
+    /**
+     * 解析基金Codes数据，并转换为项目内部可用的结构。
+     * @param raw 用户输入或接口返回的原始文本。
+     * @return 处理后的结果或当前状态。
+     */
     private fun parseFundCodes(raw: String): List<String> {
         return raw
             .split(',', '\n', '\r', '\t', ' ')
@@ -473,6 +598,11 @@ class MoFishSettingsConfigurable : Configurable {
             .distinct()
     }
 
+    /**
+     * 解析LowercaseCodes数据，并转换为项目内部可用的结构。
+     * @param raw 用户输入或接口返回的原始文本。
+     * @return 处理后的结果或当前状态。
+     */
     private fun parseLowercaseCodes(raw: String): List<String> {
         return raw
             .split(',', '\n', '\r', '\t', ' ')
@@ -481,6 +611,11 @@ class MoFishSettingsConfigurable : Configurable {
             .distinct()
     }
 
+    /**
+     * 处理 joinCodes 相关逻辑，并返回调用方需要的结果。
+     * @param codes codes。
+     * @return 处理后的结果或当前状态。
+     */
     private fun joinCodes(codes: List<String>): String = codes.joinToString(", ")
 }
 

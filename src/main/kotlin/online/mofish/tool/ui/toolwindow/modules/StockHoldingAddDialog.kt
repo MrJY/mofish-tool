@@ -48,8 +48,23 @@ internal class StockHoldingAddDialog(
         }
 
         val recalculationListener = object : DocumentListener {
+            /**
+             * 处理 insertUpdate 相关逻辑，并返回调用方需要的结果。
+             * @param event IntelliJ 平台传入的动作事件上下文。
+             * @return 处理后的结果或当前状态。
+             */
             override fun insertUpdate(event: DocumentEvent) = updateInvestedAmount()
+            /**
+             * 删除Update。
+             * @param event IntelliJ 平台传入的动作事件上下文。
+             * @return 处理后的结果或当前状态。
+             */
             override fun removeUpdate(event: DocumentEvent) = updateInvestedAmount()
+            /**
+             * 处理 changedUpdate 相关逻辑，并返回调用方需要的结果。
+             * @param event IntelliJ 平台传入的动作事件上下文。
+             * @return 处理后的结果或当前状态。
+             */
             override fun changedUpdate(event: DocumentEvent) = updateInvestedAmount()
         }
         quantityField.document.addDocumentListener(recalculationListener)
@@ -57,8 +72,16 @@ internal class StockHoldingAddDialog(
         updateInvestedAmount()
     }
 
+    /**
+     * 获取PreferredFocused组件。
+     * @return 处理后的结果或当前状态。
+     */
     override fun getPreferredFocusedComponent(): JComponent = quantityField
 
+    /**
+     * 创建对话框或配置页的主体内容面板。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createCenterPanel(): JComponent {
         val panel = JPanel(BorderLayout())
         panel.preferredSize = JBUI.size(420, 210)
@@ -67,6 +90,9 @@ internal class StockHoldingAddDialog(
         return panel
     }
 
+    /**
+     * 在用户确认对话框时校验并提交当前编辑内容。
+     */
     override fun doOKAction() {
         val quantity = parseDecimal(quantityField.text, "持有份额") ?: return
         val purchaseCost = parseDecimal(purchaseCostField.text, "购入成本") ?: return
@@ -86,6 +112,10 @@ internal class StockHoldingAddDialog(
         super.doOKAction()
     }
 
+    /**
+     * 创建Form面板实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     private fun createFormPanel(): JPanel {
         val panel = JPanel(GridBagLayout())
         panel.isOpaque = false
@@ -97,6 +127,13 @@ internal class StockHoldingAddDialog(
         return panel
     }
 
+    /**
+     * 向表格模型追加一行数据并通知界面刷新。
+     * @param panel 面板。
+     * @param row 待添加、转换或展示的行数据。
+     * @param labelText label文本。
+     * @param valueComponent 值组件。
+     */
     private fun addRow(panel: JPanel, row: Int, labelText: String, valueComponent: JComponent) {
         val label = JBLabel(labelText).apply {
             font = quantityField.font
@@ -124,6 +161,11 @@ internal class StockHoldingAddDialog(
         )
     }
 
+    /**
+     * 处理 fixedValue 相关逻辑，并返回调用方需要的结果。
+     * @param label label。
+     * @return 处理后的结果或当前状态。
+     */
     private fun fixedValue(label: JBLabel): JComponent {
         return JPanel().apply {
             isOpaque = false
@@ -137,6 +179,9 @@ internal class StockHoldingAddDialog(
         }
     }
 
+    /**
+     * 更新Invested金额。
+     */
     private fun updateInvestedAmount() {
         val quantity = quantityField.text.trim().toBigDecimalOrNull()
         val purchaseCost = purchaseCostField.text.trim().toBigDecimalOrNull()
@@ -147,6 +192,12 @@ internal class StockHoldingAddDialog(
         }
     }
 
+    /**
+     * 解析Decimal数据，并转换为项目内部可用的结构。
+     * @param raw 用户输入或接口返回的原始文本。
+     * @param label label。
+     * @return 处理后的结果或当前状态。
+     */
     private fun parseDecimal(raw: String, label: String): BigDecimal? {
         val value = raw.trim()
         val decimal = value.toBigDecimalOrNull()
@@ -165,6 +216,10 @@ internal class StockHoldingAddDialog(
         return decimal
     }
 
+    /**
+     * 处理 defaultPurchaseCost 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     private fun defaultPurchaseCost(): BigDecimal {
         return quote.currentPrice ?: quote.previousClose ?: BigDecimal.ZERO
     }

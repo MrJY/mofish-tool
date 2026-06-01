@@ -13,6 +13,10 @@ enum class MoFishSortDirection(
     DESC("降序"),
     ;
 
+    /**
+     * 转换为String表示。
+     * @return 处理后的结果或当前状态。
+     */
     override fun toString(): String = displayName
 }
 
@@ -24,6 +28,10 @@ enum class MoFishQuoteSortField(
     UPDATED_AT("更新时间"),
     ;
 
+    /**
+     * 转换为String表示。
+     * @return 处理后的结果或当前状态。
+     */
     override fun toString(): String = displayName
 }
 
@@ -34,6 +42,10 @@ enum class MoFishReminderSortField(
     THRESHOLD("阈值"),
     ;
 
+    /**
+     * 转换为String表示。
+     * @return 处理后的结果或当前状态。
+     */
     override fun toString(): String = displayName
 }
 
@@ -51,6 +63,10 @@ enum class MoFishStockTableColumn(
     TOTAL_PROFIT("持仓收益"),
     ;
 
+    /**
+     * 转换为String表示。
+     * @return 处理后的结果或当前状态。
+     */
     override fun toString(): String = displayName
 
     companion object {
@@ -70,6 +86,10 @@ data class MoFishWatchlistSettings(
     val stockGroupAssignments: Map<String, String> = emptyMap(),
     val cryptoIds: List<String> = listOf("bitcoin"),
 ) {
+    /**
+     * 规范化d股票Groups，统一后续处理使用的表示形式。
+     * @return 处理后的结果或当前状态。
+     */
     fun normalizedStockGroups(): List<String> {
         return stockGroups
             .map(::normalizeStockGroupValue)
@@ -77,6 +97,11 @@ data class MoFishWatchlistSettings(
             .distinctBy { it.lowercase() }
     }
 
+    /**
+     * 处理 groupForStock 相关逻辑，并返回调用方需要的结果。
+     * @param code 资产代码或业务标识。
+     * @return 处理后的结果或当前状态。
+     */
     fun groupForStock(code: String): String? {
         val normalizedCode = code.trim().lowercase()
         val assignedGroup = stockGroupAssignments[normalizedCode] ?: stockGroupAssignments.entries
@@ -89,6 +114,11 @@ data class MoFishWatchlistSettings(
     }
 }
 
+/**
+ * 规范化股票Group值，统一后续处理使用的表示形式。
+ * @param rawGroupName rawGroup名称。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun normalizeStockGroupValue(rawGroupName: String): String = rawGroupName.trim()
 
 data class MoFishSortSettings(
@@ -142,14 +172,30 @@ data class MoFishSettingsState(
 
 private const val MINUTES_PER_DAY = 24 * 60
 
+/**
+ * 规范化MinuteOfDay，统一后续处理使用的表示形式。
+ * @param value 待解析、格式化或写入的原始值。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun normalizeMinuteOfDay(value: Int): Int = Math.floorMod(value, MINUTES_PER_DAY)
 
+/**
+ * 处理 minuteOfDay 相关逻辑，并返回调用方需要的结果。
+ * @param hour hour。
+ * @param minute minute。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun minuteOfDay(hour: Int, minute: Int): Int {
     val normalizedHour = hour.coerceIn(0, 23)
     val normalizedMinute = minute.coerceIn(0, 59)
     return normalizedHour * 60 + normalizedMinute
 }
 
+/**
+ * 格式化MinuteOfDay，用于界面展示。
+ * @param value 待解析、格式化或写入的原始值。
+ * @return 处理后的结果或当前状态。
+ */
 internal fun formatMinuteOfDay(value: Int): String {
     val normalized = normalizeMinuteOfDay(value)
     val hour = normalized / 60

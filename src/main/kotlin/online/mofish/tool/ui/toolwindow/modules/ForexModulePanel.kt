@@ -34,8 +34,17 @@ internal class ForexModulePanel(
 ) {
     override val tableModel: AssetTableModel<ForexListItem> = ForexTableModel()
 
+    /**
+     * 处理 moduleViewId 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
     override fun moduleViewId(): String = "forex"
 
+    /**
+     * 构建Rows，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @return 处理后的结果或当前状态。
+     */
     override fun buildRows(snapshot: MoFishWatchlistState): List<ForexListItem> {
         return snapshot.projectState.workspace.forexRates
             .map(::ForexListItem)
@@ -46,12 +55,26 @@ internal class ForexModulePanel(
             )
     }
 
+    /**
+     * 构建汇总文本，供后续界面展示或数据处理使用。
+     * @param snapshot 当前状态或数据快照。
+     * @param rows 当前表格或列表使用的数据行集合。
+     * @return 处理后的结果或当前状态。
+     */
     override fun buildSummaryText(snapshot: MoFishWatchlistState, rows: List<ForexListItem>): String {
         return buildDataUpdateSummary(snapshot, MoFishRefreshModule.FOREX)
     }
 
+    /**
+     * 创建列表CellRenderer实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createListCellRenderer(): ListCellRenderer<in ForexListItem> = ForexListRenderer()
 
+    /**
+     * 处理 configureTable 相关逻辑，并返回调用方需要的结果。
+     * @param table 表格。
+     */
     override fun configureTable(table: JBTable) {
         table.setDefaultRenderer(Any::class.java, ForexTableCellRenderer())
         table.columnModel.getColumn(0).preferredWidth = JBUI.scale(116)
@@ -61,6 +84,10 @@ internal class ForexModulePanel(
         table.columnModel.getColumn(4).preferredWidth = JBUI.scale(160)
     }
 
+    /**
+     * 创建ToolbarActions实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createToolbarActions(): List<AnAction> {
         return listOf(
             RefreshForexAction(),
@@ -68,6 +95,10 @@ internal class ForexModulePanel(
         )
     }
 
+    /**
+     * 创建PopupActions实例或展示内容。
+     * @return 处理后的结果或当前状态。
+     */
     override fun createPopupActions(): List<AnAction> {
         return listOf(
             RefreshForexAction(),
@@ -77,6 +108,15 @@ internal class ForexModulePanel(
     }
 
     private inner class ForexListRenderer : DefaultListCellRenderer() {
+        /**
+         * 获取列表CellRenderer组件。
+         * @param list 列表。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param index index。
+         * @param isSelected is选中项。
+         * @param cellHasFocus cellHasFocus。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getListCellRendererComponent(
             list: JList<*>?,
             value: Any?,
@@ -104,8 +144,17 @@ internal class ForexModulePanel(
     }
 
     private inner class ForexTableModel : AssetTableModel<ForexListItem>() {
+        /**
+         * 返回表格模型当前列数。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnCount(): Int = 5
 
+        /**
+         * 返回表格指定列的标题。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getColumnName(column: Int): String {
             return when (column) {
                 0 -> "币种代码"
@@ -116,6 +165,12 @@ internal class ForexModulePanel(
             }
         }
 
+        /**
+         * 读取表格指定行列的展示值。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
             val row = rowAt(rowIndex)
             return when (columnIndex) {
@@ -127,10 +182,26 @@ internal class ForexModulePanel(
             }
         }
 
+        /**
+         * 判断表格指定单元格是否允许编辑。
+         * @param rowIndex 目标表格行索引。
+         * @param columnIndex 目标表格列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = false
     }
 
     private inner class ForexTableCellRenderer : DefaultTableCellRenderer() {
+        /**
+         * 获取表格CellRenderer组件。
+         * @param table 表格。
+         * @param value 待解析、格式化或写入的原始值。
+         * @param isSelected is选中项。
+         * @param hasFocus hasFocus。
+         * @param row 待添加、转换或展示的行数据。
+         * @param column 目标列索引。
+         * @return 处理后的结果或当前状态。
+         */
         override fun getTableCellRendererComponent(
             table: JTable?,
             value: Any?,
@@ -153,6 +224,10 @@ internal class ForexModulePanel(
         "刷新摸鱼外汇牌价最新数据",
         AllIcons.Actions.Refresh,
     ) {
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.refreshModule(MoFishRefreshModule.FOREX)
@@ -164,10 +239,18 @@ internal class ForexModulePanel(
         "为当前摸鱼外汇添加提醒规则",
         AllIcons.General.Balloon,
     ) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.isEnabled = selectedRow() != null
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
             val threshold = forexReminderPrice(selected.quote) ?: BigDecimal.ZERO
@@ -197,6 +280,10 @@ internal class ForexModulePanel(
     }
 
     private inner class ToggleForexListViewAction : DumbAwareAction("切换视图", "切换摸鱼外汇列表展示方式", AllIcons.Nodes.DataTables) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun update(event: AnActionEvent) {
             event.presentation.text = nextViewMode().displayName
             event.presentation.icon = when (nextViewMode()) {
@@ -206,6 +293,10 @@ internal class ForexModulePanel(
             event.presentation.description = "切换为摸鱼外汇${nextViewMode().displayName}"
         }
 
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
         override fun actionPerformed(event: AnActionEvent) {
             val nextModeName = nextViewMode().displayName
             toggleViewMode()
@@ -213,11 +304,21 @@ internal class ForexModulePanel(
         }
     }
 
+    /**
+     * 处理 forexPriority 相关逻辑，并返回调用方需要的结果。
+     * @param currencyName 币种名称。
+     * @return 处理后的结果或当前状态。
+     */
     private fun forexPriority(currencyName: String): Int {
         val index = FOREX_PRIORITY_NAMES.indexOf(currencyName)
         return if (index >= 0) index else Int.MAX_VALUE
     }
 
+    /**
+     * 处理 forexReminderPrice 相关逻辑，并返回调用方需要的结果。
+     * @param rate 当前外汇牌价数据。
+     * @return 处理后的结果或当前状态。
+     */
     private fun forexReminderPrice(rate: ForexRate): BigDecimal? {
         return rate.conversionPrice
             ?: rate.spotBuyPrice
