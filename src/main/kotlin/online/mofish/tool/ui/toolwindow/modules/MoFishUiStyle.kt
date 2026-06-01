@@ -24,6 +24,12 @@ internal object MoFishUiStyle {
     val hoverSoftBackground = JBColor(Color(0xF6F8FC), Color(0x30343D))
     val popupHoverBackground = JBColor(Color(0xF6F8FC), Color(0x30343D))
     val linkForeground = JBColor.namedColor("Link.activeForeground", JBColor(Color(0x2F6BFF), Color(0x86A9FF)))
+    
+    // 卡片专属样式定义
+    val cardBackground = JBColor(Color(0xFFFFFF), Color(0x2B2D30))
+    val cardBorder = JBColor(Color(0xE5E7EB), Color(0x3C3F41))
+    val gridLineColor = JBColor(Color(0xF3F4F6), Color(0x3C3F41))
+    val textMuted = JBColor(Color(0x8C8C8C), Color(0x9E9E9E))
 
     /**
      * 处理 groupChip 相关逻辑，并返回调用方需要的结果。

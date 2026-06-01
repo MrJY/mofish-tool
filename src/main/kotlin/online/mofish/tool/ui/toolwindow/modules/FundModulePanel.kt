@@ -22,13 +22,21 @@ import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
 import online.mofish.tool.ui.web.MoFishFundTrend
 import online.mofish.tool.ui.web.MoFishWebEditorService
+import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Component
+import java.awt.FlowLayout
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.GridLayout
+import java.awt.RenderingHints
 import java.math.BigDecimal
 import java.util.UUID
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JEditorPane
 import javax.swing.JLabel
 import javax.swing.JList
+import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.JTable
 import javax.swing.table.DefaultTableCellRenderer
@@ -278,41 +286,249 @@ internal class FundModulePanel(
         callbacks.eventStatus.text = "已打开摸鱼基金 ${selected.quote.name} 的走势页。"
     }
 
-    private inner class FundListRenderer : DefaultListCellRenderer() {
-        /**
-         * 获取列表CellRenderer组件。
-         * @param list 列表。
-         * @param value 待解析、格式化或写入的原始值。
-         * @param index index。
-         * @param isSelected is选中项。
-         * @param cellHasFocus cellHasFocus。
-         * @return 处理后的结果或当前状态。
-         */
+    private inner class FundListRenderer : ListCellRenderer<FundListItem> {
+        private val card = FundCardComponent()
+        private var listBg: Color = MoFishUiStyle.navSurface
+        private val container = object : JPanel(BorderLayout()) {
+            init {
+                isOpaque = false
+                border = JBUI.Borders.empty(6, 8, 6, 8)
+                add(card, BorderLayout.CENTER)
+            }
+
+            override fun paintComponent(g: Graphics) {
+                val g2 = g.create() as Graphics2D
+                g2.color = listBg
+                g2.fillRect(0, 0, width, height)
+                g2.dispose()
+            }
+        }
+
         override fun getListCellRendererComponent(
-            list: JList<*>?,
-            value: Any?,
+            list: JList<out FundListItem>?,
+            value: FundListItem?,
             index: Int,
             isSelected: Boolean,
             cellHasFocus: Boolean,
         ): Component {
-            val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-            val label = component as? JLabel ?: return component
-            val row = value as? FundListItem ?: return component
-            val nav = formatDecimal(row.quote.estimatedNetValue)
-            val percent = formatPercent(row.quote.dailyChangePercent)
-            val profitLine = holdingProfitLine(row.profit)
-            label.border = JBUI.Borders.empty(6, 8)
-            label.verticalAlignment = JLabel.TOP
-            label.text =
-                """
-                <html>
-                <body>
-                  <b>${escape(row.quote.name)}</b> <span style='color:#888888;'>${escape(row.quote.code.uppercase())}</span><br/>
-                  估值：$nav　日涨跌幅：$percent$profitLine
-                </body>
-                </html>
-                """.trimIndent()
-            return component
+            listBg = list?.background ?: MoFishUiStyle.navSurface
+            val row = value ?: return container
+            val quote = row.quote
+            val nav = formatDecimal(quote.estimatedNetValue)
+            val percent = formatPercent(quote.dailyChangePercent)
+            val profitText = if (callbacks.watchlistService.snapshot()?.settingsState?.showHoldingProfit == true && row.profit != null) {
+                "总收益：${formatDecimal(row.profit?.totalProfit)}"
+            } else {
+                ""
+            }
+            val changeColor = marketColor(quote.dailyChangePercent)
+            val prevNetValue = formatDecimal(quote.previousNetValue)
+            val netValueDate = quote.netValueDate?.toString() ?: "--"
+            val valuationTime = quote.valuationTime?.toString() ?: "--"
+
+            card.setValues(
+                name = quote.name,
+                code = quote.code,
+                nav = nav,
+                percent = percent,
+                percentColor = changeColor,
+                prevNetValue = prevNetValue,
+                netValueDate = netValueDate,
+                valuationTime = valuationTime,
+                profitText = profitText,
+                selected = isSelected
+            )
+            return container
+        }
+    }
+
+    private class FundCardComponent : JPanel() {
+        private var isSelected = false
+
+        val nameLabel = JLabel()
+        val codeLabel = JLabel()
+        val navLabel = JLabel()
+        val percentLabel = JLabel()
+
+        val prevNetValueLabel = JLabel()
+        val netValueDateLabel = JLabel()
+        val valuationTimeLabel = JLabel()
+        val emptyLabel = JLabel()
+
+        val profitLabel = JLabel()
+
+        init {
+            isOpaque = false
+            layout = BorderLayout()
+            border = JBUI.Borders.empty(12)
+
+            val headerPanel = JPanel(BorderLayout(JBUI.scale(8), JBUI.scale(4))).apply {
+                isOpaque = false
+            }
+
+            val titlePanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                isOpaque = false
+            }
+            nameLabel.font = JBUI.Fonts.label().deriveFont(java.awt.Font.BOLD, JBUI.scale(15f))
+            nameLabel.border = JBUI.Borders.emptyRight(6)
+            codeLabel.font = JBUI.Fonts.smallFont()
+            codeLabel.foreground = MoFishUiStyle.textMuted
+            titlePanel.add(nameLabel)
+            titlePanel.add(codeLabel)
+            headerPanel.add(titlePanel, BorderLayout.NORTH)
+
+            val metricsPanel = JPanel(BorderLayout()).apply {
+                isOpaque = false
+                border = JBUI.Borders.emptyTop(4)
+            }
+
+            val navContainer = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                isOpaque = false
+            }
+            val navPrefix = JLabel("估值: ").apply {
+                font = JBUI.Fonts.smallFont()
+                foreground = MoFishUiStyle.textMuted
+                border = JBUI.Borders.emptyRight(4)
+            }
+            navLabel.font = JBUI.Fonts.label().deriveFont(java.awt.Font.BOLD, JBUI.scale(18f))
+            navContainer.add(navPrefix)
+            navContainer.add(navLabel)
+            metricsPanel.add(navContainer, BorderLayout.WEST)
+
+            val percentContainer = JPanel(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply {
+                isOpaque = false
+            }
+            val percentPrefix = JLabel("日涨跌幅: ").apply {
+                font = JBUI.Fonts.smallFont()
+                foreground = MoFishUiStyle.textMuted
+                border = JBUI.Borders.emptyRight(4)
+            }
+            percentLabel.font = JBUI.Fonts.label().deriveFont(java.awt.Font.BOLD, JBUI.scale(18f))
+            percentContainer.add(percentPrefix)
+            percentContainer.add(percentLabel)
+            metricsPanel.add(percentContainer, BorderLayout.EAST)
+
+            headerPanel.add(metricsPanel, BorderLayout.CENTER)
+            add(headerPanel, BorderLayout.NORTH)
+
+            val gridPanel = object : JPanel(GridLayout(2, 2, JBUI.scale(12), JBUI.scale(4))) {
+                init {
+                    isOpaque = false
+                    border = JBUI.Borders.empty(6, 0, 0, 0)
+                }
+
+                override fun paintComponent(g: Graphics) {
+                    super.paintComponent(g)
+                    val g2 = g.create() as Graphics2D
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                    g2.color = MoFishUiStyle.gridLineColor
+
+                    val w = width
+                    val h = height
+
+                    g2.drawLine(0, 0, w, 0)
+
+                    val rowHeight = h / 2
+                    g2.drawLine(0, rowHeight, w, rowHeight)
+
+                    g2.drawLine(w / 2, 0, w / 2, h)
+
+                    g2.dispose()
+                }
+            }
+
+            fun createGridCell(prefix: String, valueLabel: JLabel): JPanel {
+                return JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                    isOpaque = false
+                    border = JBUI.Borders.empty(6, 12)
+                    val prefLabel = JLabel(prefix).apply {
+                        font = JBUI.Fonts.smallFont()
+                        foreground = MoFishUiStyle.textMuted
+                        border = JBUI.Borders.emptyRight(4)
+                    }
+                    valueLabel.font = JBUI.Fonts.smallFont()
+                    add(prefLabel)
+                    add(valueLabel)
+                }
+            }
+
+            gridPanel.add(createGridCell("前日净值:", prevNetValueLabel))
+            gridPanel.add(createGridCell("净值日期:", netValueDateLabel))
+            gridPanel.add(createGridCell("估值时间:", valuationTimeLabel))
+            gridPanel.add(createGridCell("", emptyLabel))
+
+            val contentContainer = JPanel(BorderLayout(0, JBUI.scale(6))).apply {
+                isOpaque = false
+                border = JBUI.Borders.emptyTop(6)
+                add(gridPanel, BorderLayout.CENTER)
+            }
+
+            profitLabel.font = JBUI.Fonts.smallFont().deriveFont(java.awt.Font.ITALIC)
+            profitLabel.foreground = MoFishUiStyle.textMuted
+            profitLabel.border = JBUI.Borders.empty(4, 6, 0, 0)
+            contentContainer.add(profitLabel, BorderLayout.SOUTH)
+
+            add(contentContainer, BorderLayout.CENTER)
+        }
+
+        fun setValues(
+            name: String,
+            code: String,
+            nav: String,
+            percent: String,
+            percentColor: Color,
+            prevNetValue: String,
+            netValueDate: String,
+            valuationTime: String,
+            profitText: String,
+            selected: Boolean,
+        ) {
+            this.isSelected = selected
+            val defaultFg = JBColor.foreground()
+
+            nameLabel.text = name
+            nameLabel.foreground = defaultFg
+
+            codeLabel.text = code.uppercase()
+            codeLabel.foreground = MoFishUiStyle.textMuted
+
+            navLabel.text = nav
+            navLabel.foreground = defaultFg
+
+            percentLabel.text = percent
+            percentLabel.foreground = percentColor
+
+            prevNetValueLabel.text = prevNetValue
+            prevNetValueLabel.foreground = defaultFg
+
+            netValueDateLabel.text = netValueDate
+            netValueDateLabel.foreground = defaultFg
+
+            valuationTimeLabel.text = valuationTime
+            valuationTimeLabel.foreground = defaultFg
+
+            emptyLabel.text = ""
+
+            if (profitText.isNotEmpty()) {
+                profitLabel.text = profitText
+                profitLabel.foreground = MoFishUiStyle.textMuted
+                profitLabel.isVisible = true
+            } else {
+                profitLabel.isVisible = false
+            }
+        }
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+
+            g2.color = if (isSelected) MoFishUiStyle.selectionBackground else MoFishUiStyle.cardBackground
+            g2.fillRoundRect(0, 0, width - 1, height - 1, JBUI.scale(12), JBUI.scale(12))
+
+            g2.color = if (isSelected) MoFishUiStyle.linkForeground else MoFishUiStyle.cardBorder
+            g2.drawRoundRect(0, 0, width - 1, height - 1, JBUI.scale(12), JBUI.scale(12))
+
+            g2.dispose()
         }
     }
 

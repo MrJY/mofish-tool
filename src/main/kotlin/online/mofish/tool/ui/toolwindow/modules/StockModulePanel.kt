@@ -27,8 +27,12 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.FlowLayout
+import java.awt.Graphics
+import java.awt.Graphics2D
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
+import java.awt.GridLayout
+import java.awt.RenderingHints
 import java.math.BigDecimal
 import java.util.concurrent.ConcurrentHashMap
 import javax.swing.DefaultListCellRenderer
@@ -633,48 +637,270 @@ internal class StockModulePanel(
         callbacks.eventStatus.text = "已打开摸鱼股票 ${selected.quote.name} 的走势页。"
     }
 
-    private inner class StockListRenderer : DefaultListCellRenderer() {
-        /**
-         * 获取列表CellRenderer组件。
-         * @param list 列表。
-         * @param value 待解析、格式化或写入的原始值。
-         * @param index index。
-         * @param isSelected is选中项。
-         * @param cellHasFocus cellHasFocus。
-         * @return 处理后的结果或当前状态。
-         */
+    private inner class StockListRenderer : ListCellRenderer<StockListItem> {
+        private val card = StockCardComponent()
+        private var listBg: Color = MoFishUiStyle.navSurface
+        private val container = object : JPanel(BorderLayout()) {
+            init {
+                isOpaque = false
+                border = JBUI.Borders.empty(6, 8, 6, 8)
+                add(card, BorderLayout.CENTER)
+            }
+
+            override fun paintComponent(g: Graphics) {
+                val g2 = g.create() as Graphics2D
+                g2.color = listBg
+                g2.fillRect(0, 0, width, height)
+                g2.dispose()
+            }
+        }
+
         override fun getListCellRendererComponent(
-            list: JList<*>?,
-            value: Any?,
+            list: JList<out StockListItem>?,
+            value: StockListItem?,
             index: Int,
             isSelected: Boolean,
             cellHasFocus: Boolean,
         ): Component {
-            val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-            val label = component as? JLabel ?: return component
-            val row = value as? StockListItem ?: return component
-            val price = formatDecimal(row.quote.currentPrice)
-            val percent = formatPercent(stockChangePercent(row.quote))
-            val profitLine = holdingProfitLine(row.profit)
-            val changeColor = colorHex(marketColor(stockChangePercent(row.quote)))
-            val openPrice = formatDecimal(row.quote.openPrice)
-            val previousClose = formatDecimal(row.quote.previousClose)
-            val volume = formatTenThousand(row.quote.volume)
-            val turnover = formatTenThousand(row.quote.turnover)
-            label.border = JBUI.Borders.empty(6, 8)
-            label.verticalAlignment = JLabel.TOP
-            label.text =
-                """
-                <html>
-                <body>
-                  <b>${escape(row.quote.name)}</b> <span style='color:#888888;'>${escape(row.quote.code.uppercase())}</span><br/>
-                  现价：$price　涨跌幅：<span style='color:$changeColor;'>$percent</span><br/>
-                  开盘：$openPrice　昨收：$previousClose<br/>
-                  成交量：$volume　成交额：$turnover$profitLine
-                </body>
-                </html>
-                """.trimIndent()
-            return component
+            listBg = list?.background ?: MoFishUiStyle.navSurface
+            val row = value ?: return container
+            val quote = row.quote
+            val price = formatDecimal(quote.currentPrice)
+            val percent = formatPercent(stockChangePercent(quote))
+            val profitText = if (callbacks.watchlistService.snapshot()?.settingsState?.showHoldingProfit == true && row.profit != null) {
+                "总收益：${formatDecimal(row.profit?.totalProfit)}"
+            } else {
+                ""
+            }
+            val changeColor = marketColor(stockChangePercent(quote))
+            val openPrice = formatDecimal(quote.openPrice)
+            val previousClose = formatDecimal(quote.previousClose)
+            val highPrice = formatDecimal(quote.highPrice)
+            val lowPrice = formatDecimal(quote.lowPrice)
+            val volume = formatTenThousand(quote.volume)
+            val turnover = formatTenThousand(quote.turnover)
+
+            card.setValues(
+                name = quote.name,
+                code = quote.code,
+                price = price,
+                percent = percent,
+                percentColor = changeColor,
+                open = openPrice,
+                prevClose = previousClose,
+                high = highPrice,
+                low = lowPrice,
+                volume = volume,
+                turnover = turnover,
+                profitText = profitText,
+                selected = isSelected
+            )
+            return container
+        }
+    }
+
+    private class StockCardComponent : JPanel() {
+        private var isSelected = false
+
+        val nameLabel = JLabel()
+        val codeLabel = JLabel()
+        val priceLabel = JLabel()
+        val percentLabel = JLabel()
+
+        val openLabel = JLabel()
+        val prevCloseLabel = JLabel()
+        val highLabel = JLabel()
+        val lowLabel = JLabel()
+        val volumeLabel = JLabel()
+        val turnoverLabel = JLabel()
+
+        val profitLabel = JLabel()
+
+        init {
+            isOpaque = false
+            layout = BorderLayout()
+            border = JBUI.Borders.empty(12)
+
+            val headerPanel = JPanel(BorderLayout(JBUI.scale(8), JBUI.scale(4))).apply {
+                isOpaque = false
+            }
+
+            val titlePanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                isOpaque = false
+            }
+            nameLabel.font = JBUI.Fonts.label().deriveFont(java.awt.Font.BOLD, JBUI.scale(15f))
+            nameLabel.border = JBUI.Borders.emptyRight(6)
+            codeLabel.font = JBUI.Fonts.smallFont()
+            codeLabel.foreground = MoFishUiStyle.textMuted
+            titlePanel.add(nameLabel)
+            titlePanel.add(codeLabel)
+            headerPanel.add(titlePanel, BorderLayout.NORTH)
+
+            val metricsPanel = JPanel(BorderLayout()).apply {
+                isOpaque = false
+                border = JBUI.Borders.emptyTop(4)
+            }
+
+            val priceContainer = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                isOpaque = false
+            }
+            val pricePrefix = JLabel("现价: ").apply {
+                font = JBUI.Fonts.smallFont()
+                foreground = MoFishUiStyle.textMuted
+                border = JBUI.Borders.emptyRight(4)
+            }
+            priceLabel.font = JBUI.Fonts.label().deriveFont(java.awt.Font.BOLD, JBUI.scale(18f))
+            priceContainer.add(pricePrefix)
+            priceContainer.add(priceLabel)
+            metricsPanel.add(priceContainer, BorderLayout.WEST)
+
+            val percentContainer = JPanel(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply {
+                isOpaque = false
+            }
+            val percentPrefix = JLabel("涨跌幅: ").apply {
+                font = JBUI.Fonts.smallFont()
+                foreground = MoFishUiStyle.textMuted
+                border = JBUI.Borders.emptyRight(4)
+            }
+            percentLabel.font = JBUI.Fonts.label().deriveFont(java.awt.Font.BOLD, JBUI.scale(18f))
+            percentContainer.add(percentPrefix)
+            percentContainer.add(percentLabel)
+            metricsPanel.add(percentContainer, BorderLayout.EAST)
+
+            headerPanel.add(metricsPanel, BorderLayout.CENTER)
+            add(headerPanel, BorderLayout.NORTH)
+
+            val gridPanel = object : JPanel(GridLayout(3, 2, JBUI.scale(12), JBUI.scale(4))) {
+                init {
+                    isOpaque = false
+                    border = JBUI.Borders.empty(6, 0, 0, 0)
+                }
+
+                override fun paintComponent(g: Graphics) {
+                    super.paintComponent(g)
+                    val g2 = g.create() as Graphics2D
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                    g2.color = MoFishUiStyle.gridLineColor
+
+                    val w = width
+                    val h = height
+
+                    g2.drawLine(0, 0, w, 0)
+
+                    val rowHeight = h / 3
+                    g2.drawLine(0, rowHeight, w, rowHeight)
+                    g2.drawLine(0, rowHeight * 2, w, rowHeight * 2)
+
+                    g2.drawLine(w / 2, 0, w / 2, h)
+
+                    g2.dispose()
+                }
+            }
+
+            fun createGridCell(prefix: String, valueLabel: JLabel): JPanel {
+                return JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                    isOpaque = false
+                    border = JBUI.Borders.empty(6, 12)
+                    val prefLabel = JLabel(prefix).apply {
+                        font = JBUI.Fonts.smallFont()
+                        foreground = MoFishUiStyle.textMuted
+                        border = JBUI.Borders.emptyRight(4)
+                    }
+                    valueLabel.font = JBUI.Fonts.smallFont()
+                    add(prefLabel)
+                    add(valueLabel)
+                }
+            }
+
+            gridPanel.add(createGridCell("开盘:", openLabel))
+            gridPanel.add(createGridCell("昨收:", prevCloseLabel))
+            gridPanel.add(createGridCell("最高:", highLabel))
+            gridPanel.add(createGridCell("最低:", lowLabel))
+            gridPanel.add(createGridCell("成交量:", volumeLabel))
+            gridPanel.add(createGridCell("成交额:", turnoverLabel))
+
+            val contentContainer = JPanel(BorderLayout(0, JBUI.scale(6))).apply {
+                isOpaque = false
+                border = JBUI.Borders.emptyTop(6)
+                add(gridPanel, BorderLayout.CENTER)
+            }
+
+            profitLabel.font = JBUI.Fonts.smallFont().deriveFont(java.awt.Font.ITALIC)
+            profitLabel.foreground = MoFishUiStyle.textMuted
+            profitLabel.border = JBUI.Borders.empty(4, 6, 0, 0)
+            contentContainer.add(profitLabel, BorderLayout.SOUTH)
+
+            add(contentContainer, BorderLayout.CENTER)
+        }
+
+        fun setValues(
+            name: String,
+            code: String,
+            price: String,
+            percent: String,
+            percentColor: Color,
+            open: String,
+            prevClose: String,
+            high: String,
+            low: String,
+            volume: String,
+            turnover: String,
+            profitText: String,
+            selected: Boolean,
+        ) {
+            this.isSelected = selected
+            val defaultFg = JBColor.foreground()
+
+            nameLabel.text = name
+            nameLabel.foreground = defaultFg
+            
+            codeLabel.text = code.uppercase()
+            codeLabel.foreground = MoFishUiStyle.textMuted
+            
+            priceLabel.text = price
+            priceLabel.foreground = defaultFg
+            
+            percentLabel.text = percent
+            percentLabel.foreground = percentColor
+
+            openLabel.text = open
+            openLabel.foreground = defaultFg
+            
+            prevCloseLabel.text = prevClose
+            prevCloseLabel.foreground = defaultFg
+            
+            highLabel.text = high
+            highLabel.foreground = defaultFg
+            
+            lowLabel.text = low
+            lowLabel.foreground = defaultFg
+            
+            volumeLabel.text = volume
+            volumeLabel.foreground = defaultFg
+            
+            turnoverLabel.text = turnover
+            turnoverLabel.foreground = defaultFg
+
+            if (profitText.isNotEmpty()) {
+                profitLabel.text = profitText
+                profitLabel.foreground = MoFishUiStyle.textMuted
+                profitLabel.isVisible = true
+            } else {
+                profitLabel.isVisible = false
+            }
+        }
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+
+            g2.color = if (isSelected) MoFishUiStyle.selectionBackground else MoFishUiStyle.cardBackground
+            g2.fillRoundRect(0, 0, width - 1, height - 1, JBUI.scale(12), JBUI.scale(12))
+
+            g2.color = if (isSelected) MoFishUiStyle.linkForeground else MoFishUiStyle.cardBorder
+            g2.drawRoundRect(0, 0, width - 1, height - 1, JBUI.scale(12), JBUI.scale(12))
+
+            g2.dispose()
         }
     }
 

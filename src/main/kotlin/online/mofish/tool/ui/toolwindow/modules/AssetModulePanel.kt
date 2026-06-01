@@ -44,6 +44,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     private val listContent = JPanel(listContentLayout)
     private val tabLayout = CardLayout()
     private val tabContainer = JPanel(tabLayout)
+    private val raisedPanel = JPanel(BorderLayout())
     private lateinit var listPanel: JComponent
     private var detailVisible = false
     private var viewMode = AssetListViewMode.TABLE
@@ -61,6 +62,8 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     open fun createComponent(): JComponent {
         list.selectionMode = ListSelectionModel.SINGLE_SELECTION
         list.cellRenderer = createListCellRenderer()
+        list.background = MoFishUiStyle.navSurface
+        list.selectionBackground = MoFishUiStyle.navSurface
         list.addListSelectionListener {
             if (!it.valueIsAdjusting && !syncingSelection) {
                 val selectedCode = list.selectedValue?.code
@@ -104,11 +107,12 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         val dataPanel = createMinWidthPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
         dataPanel.isOpaque = false
         dataPanel.add(createRaisedContent(createListContent()), BorderLayout.CENTER)
-        summaryLabel.border = JBUI.Borders.empty(6, 10, 0, 10)
+        summaryLabel.border = JBUI.Borders.empty(6, 10, 6, 10)
         summaryLabel.font = summaryLabel.font.deriveFont(summaryLabel.font.size2D - 1f)
+        summaryLabel.foreground = MoFishUiStyle.textMuted
         dataPanel.add(summaryLabel, BorderLayout.SOUTH)
 
-        return wrapMinWidthScrollPane(dataPanel)
+        return dataPanel
     }
 
     /**
@@ -373,26 +377,39 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
      * @return 处理后的结果或当前状态。
      */
     private fun createListContent(): JComponent {
-        listContent.add(JBScrollPane(list), CARD_LIST_CARD)
-        listContent.add(JBScrollPane(table), TABLE_LIST_CARD)
+        val listScrollPane = JBScrollPane(list).apply {
+            border = JBUI.Borders.empty()
+            viewport.isOpaque = false
+            isOpaque = false
+        }
+        val tableScrollPane = JBScrollPane(table).apply {
+            border = JBUI.Borders.empty()
+        }
+        listContent.add(listScrollPane, CARD_LIST_CARD)
+        listContent.add(tableScrollPane, TABLE_LIST_CARD)
         refreshListViewLayout()
         return listContent
     }
 
-    /**
-     * 创建Raised内容实例或展示内容。
-     * @param content 需要渲染或包装的内容。
-     * @return 处理后的结果或当前状态。
-     */
     private fun createRaisedContent(content: JComponent): JComponent {
-        val panel = JPanel(BorderLayout())
-        panel.border = JBUI.Borders.compound(
-            JBUI.Borders.customLine(com.intellij.ui.JBColor.border(), 1),
-            JBUI.Borders.empty(8),
-        )
-        panel.background = MoFishUiStyle.surface
-        panel.add(content, BorderLayout.CENTER)
-        return panel
+        raisedPanel.isOpaque = false
+        raisedPanel.add(content, BorderLayout.CENTER)
+        updateRaisedPanelBorder()
+        return raisedPanel
+    }
+
+    private fun updateRaisedPanelBorder() {
+        if (viewMode == AssetListViewMode.CARD) {
+            raisedPanel.border = JBUI.Borders.empty()
+            raisedPanel.isOpaque = false
+        } else {
+            raisedPanel.border = JBUI.Borders.compound(
+                JBUI.Borders.customLine(com.intellij.ui.JBColor.border(), 1),
+                JBUI.Borders.empty(8),
+            )
+            raisedPanel.background = MoFishUiStyle.surface
+            raisedPanel.isOpaque = true
+        }
     }
 
     /**
@@ -521,6 +538,9 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
      */
     private fun refreshListViewLayout() {
         listContentLayout.show(listContent, viewMode.cardId)
+        updateRaisedPanelBorder()
+        raisedPanel.revalidate()
+        raisedPanel.repaint()
         listContent.revalidate()
         listContent.repaint()
     }
