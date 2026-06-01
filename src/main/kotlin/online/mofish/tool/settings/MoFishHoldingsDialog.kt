@@ -9,8 +9,6 @@ import online.mofish.tool.domain.HoldingConfig
 import java.awt.BorderLayout
 import java.math.BigDecimal
 import java.util.UUID
-import javax.swing.DefaultCellEditor
-import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.table.AbstractTableModel
@@ -37,21 +35,15 @@ class MoFishHoldingsDialog(
         table.rowHeight = JBUI.scale(28)
         table.putClientProperty("terminateEditOnFocusLost", true)
         table.autoCreateRowSorter = false
-        table.columnModel.getColumn(0).cellEditor = DefaultCellEditor(JComboBox(AssetType.entries.toTypedArray()))
     }
 
     override fun createCenterPanel(): JComponent {
         val panel = JPanel(BorderLayout())
         panel.preferredSize = JBUI.size(920, 320)
         panel.border = JBUI.Borders.empty(8)
-        panel.add(
-            ToolbarDecorator.createDecorator(table)
+        val decorator = ToolbarDecorator.createDecorator(table)
                 .setAddActionName("新增持仓")
                 .setRemoveActionName("删除所选持仓")
-                .setAddAction {
-                    stopEditing()
-                    tableModel.addRow(newEditableHoldingRow())
-                }
                 .setRemoveAction {
                     stopEditing()
                     val selectedRows = table.selectedRows
@@ -65,9 +57,15 @@ class MoFishHoldingsDialog(
                     modelRows.forEach(tableModel::removeRow)
                 }
                 .disableUpDownActions()
-                .createPanel(),
-            BorderLayout.CENTER,
-        )
+        val toolbar = if (newRowTemplate == null) {
+            decorator.disableAddAction()
+        } else {
+            decorator.setAddAction {
+                stopEditing()
+                tableModel.addRow(newEditableHoldingRow())
+            }
+        }
+        panel.add(toolbar.createPanel(), BorderLayout.CENTER)
         return panel
     }
 
@@ -108,7 +106,6 @@ class MoFishHoldingsDialog(
                 investedAmount = "",
                 quantity = "",
                 costPrice = "",
-                todayCostPrice = "",
                 currency = "CNY",
                 isSellOut = false,
             )
@@ -121,12 +118,9 @@ class MoFishHoldingsDialog(
             "资产类型",
             "代码",
             "名称",
-            "投入金额",
+            "持有金额",
             "持有份额",
-            "成本价",
-            "今日成本",
-            "币种",
-            "已清仓",
+            "持有成本",
         )
 
         override fun getRowCount(): Int = rows.size
@@ -135,12 +129,17 @@ class MoFishHoldingsDialog(
 
         override fun getColumnName(column: Int): String = columns[column]
 
-        override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = true
+        override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean {
+            if (columnIndex < 3) {
+                return false
+            }
+            val row = rows.getOrNull(rowIndex) ?: return false
+            return columnIndex != 3 || row.assetType != AssetType.STOCK
+        }
 
         override fun getColumnClass(columnIndex: Int): Class<*> {
             return when (columnIndex) {
                 0 -> AssetType::class.java
-                8 -> java.lang.Boolean::class.java
                 else -> String::class.java
             }
         }
@@ -154,9 +153,6 @@ class MoFishHoldingsDialog(
                 3 -> row.investedAmount
                 4 -> row.quantity
                 5 -> row.costPrice
-                6 -> row.todayCostPrice
-                7 -> row.currency
-                8 -> row.isSellOut
                 else -> ""
             }
         }
@@ -167,18 +163,12 @@ class MoFishHoldingsDialog(
             }
             val current = rows[rowIndex]
             rows[rowIndex] = when (columnIndex) {
-                0 -> current.copy(assetType = value as? AssetType ?: current.assetType)
-                1 -> current.copy(code = value?.toString().orEmpty())
-                2 -> current.copy(displayName = value?.toString().orEmpty())
                 3 -> current.copy(investedAmount = value?.toString().orEmpty())
-                4 -> current.copy(quantity = value?.toString().orEmpty())
-                5 -> current.copy(costPrice = value?.toString().orEmpty())
-                6 -> current.copy(todayCostPrice = value?.toString().orEmpty())
-                7 -> current.copy(currency = value?.toString().orEmpty())
-                8 -> current.copy(isSellOut = value as? Boolean ?: false)
+                4 -> current.copy(quantity = value?.toString().orEmpty()).withCalculatedStockAmount()
+                5 -> current.copy(costPrice = value?.toString().orEmpty()).withCalculatedStockAmount()
                 else -> current
             }
-            fireTableCellUpdated(rowIndex, columnIndex)
+            fireTableRowsUpdated(rowIndex, rowIndex)
         }
 
         fun addRow(row: EditableHoldingRow) {
@@ -203,7 +193,6 @@ class MoFishHoldingsDialog(
         val investedAmount: String,
         val quantity: String,
         val costPrice: String,
-        val todayCostPrice: String,
         val currency: String,
         val isSellOut: Boolean,
         val originalId: String? = null,
@@ -212,23 +201,38 @@ class MoFishHoldingsDialog(
             return runCatching {
                 val normalizedCode = code.trim()
                 val normalizedName = displayName.trim()
-                val normalizedCurrency = currency.trim().ifBlank { "CNY" }
                 require(normalizedCode.isNotEmpty()) { "第 $rowNumber 行缺少代码。" }
                 require(normalizedName.isNotEmpty()) { "第 $rowNumber 行缺少名称。" }
-                require(costPrice.trim().isNotEmpty()) { "第 $rowNumber 行缺少成本价。" }
+                require(costPrice.trim().isNotEmpty()) { "第 $rowNumber 行缺少持有成本。" }
 
                 HoldingConfig(
                     id = originalId ?: "${assetType.name.lowercase()}:${normalizedCode.ifBlank { UUID.randomUUID().toString() }}",
                     assetType = assetType,
                     code = normalizedCode,
                     displayName = normalizedName,
-                    investedAmount = parseOptionalDecimal(investedAmount, "投入金额", rowNumber),
+                    investedAmount = parseOptionalDecimal(resolvedInvestedAmount(), "持有金额", rowNumber),
                     quantity = parseOptionalDecimal(quantity, "持有份额", rowNumber),
-                    costPrice = parseRequiredDecimal(costPrice, "成本价", rowNumber),
-                    todayCostPrice = parseOptionalDecimal(todayCostPrice, "今日成本", rowNumber),
-                    currency = normalizedCurrency,
+                    costPrice = parseRequiredDecimal(costPrice, "持有成本", rowNumber),
+                    todayCostPrice = null,
+                    currency = currency.trim().ifBlank { "CNY" },
                     isSellOut = isSellOut,
                 )
+            }
+        }
+
+        fun withCalculatedStockAmount(): EditableHoldingRow {
+            if (assetType != AssetType.STOCK) {
+                return this
+            }
+            val calculatedAmount = calculateStockAmount(quantity, costPrice) ?: return this
+            return copy(investedAmount = calculatedAmount)
+        }
+
+        private fun resolvedInvestedAmount(): String {
+            return if (assetType == AssetType.STOCK) {
+                calculateStockAmount(quantity, costPrice) ?: investedAmount
+            } else {
+                investedAmount
             }
         }
 
@@ -241,11 +245,10 @@ class MoFishHoldingsDialog(
                     investedAmount = value.investedAmount?.toPlainString().orEmpty(),
                     quantity = value.quantity?.toPlainString().orEmpty(),
                     costPrice = value.costPrice.toPlainString(),
-                    todayCostPrice = value.todayCostPrice?.toPlainString().orEmpty(),
                     currency = value.currency,
                     isSellOut = value.isSellOut,
                     originalId = value.id,
-                )
+                ).withCalculatedStockAmount()
             }
 
             private fun parseOptionalDecimal(raw: String, label: String, rowNumber: Int): BigDecimal? {
@@ -265,6 +268,12 @@ class MoFishHoldingsDialog(
             private fun parseDecimal(raw: String, label: String, rowNumber: Int): BigDecimal {
                 return raw.toBigDecimalOrNull()
                     ?: throw IllegalArgumentException("第 $rowNumber 行的 ${label} 格式无效：$raw")
+            }
+
+            private fun calculateStockAmount(quantity: String, costPrice: String): String? {
+                val quantityValue = quantity.trim().toBigDecimalOrNull() ?: return null
+                val costPriceValue = costPrice.trim().toBigDecimalOrNull() ?: return null
+                return (quantityValue * costPriceValue).stripTrailingZeros().toPlainString()
             }
         }
     }
