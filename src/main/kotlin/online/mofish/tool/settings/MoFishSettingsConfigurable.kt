@@ -98,12 +98,6 @@ class MoFishSettingsConfigurable : Configurable {
                 .addComponent(TitledSeparator("持仓与提醒"))
                 .addLabeledComponent("持仓：", createSummaryRow(ui.holdingsSummaryLabel, ui.editHoldingsButton))
                 .addLabeledComponent("提醒：", createSummaryRow(ui.remindersSummaryLabel, ui.editRemindersButton))
-                .addComponent(
-                    JBLabel(
-                        "<html><body>请使用上方专用弹窗维护摸鱼基金持仓、摸鱼股票成本、摸鱼虚拟币持仓和提醒规则。" +
-                            "在点击\"应用\"或\"确定\"之前，改动只会保留在当前设置页中。</body></html>"
-                    )
-                )
                 .addComponentFillVertically(JPanel(), 0)
                 .panel
 

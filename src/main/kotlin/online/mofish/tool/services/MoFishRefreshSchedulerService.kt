@@ -1,12 +1,8 @@
 package online.mofish.tool.services
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import online.mofish.tool.settings.MoFishSettingsService
-import online.mofish.tool.settings.MoFishSettingsState
-import online.mofish.tool.settings.normalizeMinuteOfDay
-import online.mofish.tool.state.MoFishRefreshSchedulerConfig
-import online.mofish.tool.state.MoFishRefreshSchedulerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,16 +10,38 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import online.mofish.tool.settings.MoFishSettingsService
+import online.mofish.tool.settings.MoFishSettingsState
+import online.mofish.tool.settings.normalizeMinuteOfDay
+import online.mofish.tool.state.MoFishRefreshSchedulerConfig
+import online.mofish.tool.state.MoFishRefreshSchedulerState
 
 @Service(Service.Level.APP)
-class MoFishRefreshSchedulerService {
+class MoFishRefreshSchedulerService : Disposable {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val settingsService = service<MoFishSettingsService>()
     private val scheduler = MoFishRefreshScheduler(scope = scope)
+    private val settingsService: MoFishSettingsService by lazy { service() }
+
+    @Volatile
+    private var settingsObserverStarted = false
 
     val states: StateFlow<MoFishRefreshSchedulerState> = scheduler.states
 
-    init {
+    /**
+     * Synchronizes scheduler settings lazily. Application services can be constructed while the
+     * platform is still loading persisted configuration, so avoid touching other services in the
+     * constructor path.
+     */
+    private fun ensureSettingsObserverStarted() {
+        if (settingsObserverStarted) {
+            return
+        }
+        synchronized(this) {
+            if (settingsObserverStarted) {
+                return
+            }
+            settingsObserverStarted = true
+        }
         scheduler.updateConfig(settingsService.snapshot().toRefreshSchedulerConfig())
         scope.launch {
             settingsService.states.collectLatest { state ->
@@ -41,6 +59,7 @@ class MoFishRefreshSchedulerService {
         projectName: String,
         refreshAction: suspend (Boolean) -> Unit,
     ) {
+        ensureSettingsObserverStarted()
         scheduler.registerProject(projectName, refreshAction)
     }
 
@@ -62,6 +81,7 @@ class MoFishRefreshSchedulerService {
         projectName: String,
         force: Boolean = false,
     ) {
+        ensureSettingsObserverStarted()
         scheduler.triggerNow(projectName, force)
     }
 
@@ -69,12 +89,15 @@ class MoFishRefreshSchedulerService {
      * 返回当前服务或调度器的状态快照。
      * @return 处理后的结果或当前状态。
      */
-    fun snapshot(): MoFishRefreshSchedulerState = scheduler.snapshot()
+    fun snapshot(): MoFishRefreshSchedulerState {
+        ensureSettingsObserverStarted()
+        return scheduler.snapshot()
+    }
 
     /**
      * 释放服务持有的后台任务和运行资源。
      */
-    fun dispose() {
+    override fun dispose() {
         scheduler.close()
         scope.cancel()
     }
