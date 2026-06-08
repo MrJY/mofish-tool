@@ -120,21 +120,3 @@ enum class AiStockHistoryRange(
      */
     override fun toString(): String = label
 }
-
-enum class FlashNewsSource {
-    /** 金十数据快讯。 */
-    JIN10,
-    /** 选股宝快讯。 */
-    XUANGUBAO,
-    /** 自定义或静态回退快讯来源。 */
-    CUSTOM,
-}
-
-enum class FlashNewsImpact {
-    /** 偏利好影响。 */
-    POSITIVE,
-    /** 中性影响。 */
-    NEUTRAL,
-    /** 偏利空影响。 */
-    NEGATIVE,
-}

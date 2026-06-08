@@ -153,6 +153,7 @@ class MoFishWatchlistService(
      */
     private fun refreshConfiguredModules(force: Boolean = true) {
         val modules = settingsService.snapshot().refresh.autoRefreshModules
+            .intersect(MoFishRefreshModule.visibleModules)
         if (modules.isEmpty()) {
             return
         }

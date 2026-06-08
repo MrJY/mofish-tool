@@ -22,10 +22,7 @@ import online.mofish.tool.state.MoFishWatchlistState
 import java.awt.Component
 import java.math.BigDecimal
 import java.util.UUID
-import javax.swing.DefaultListCellRenderer
 import javax.swing.JLabel
-import javax.swing.JList
-import javax.swing.ListCellRenderer
 import javax.swing.JTable
 import javax.swing.table.DefaultTableCellRenderer
 
@@ -76,12 +73,6 @@ internal class IndexModulePanel(
     }
 
     /**
-     * 创建列表CellRenderer实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun createListCellRenderer(): ListCellRenderer<in IndexListItem> = IndexListRenderer()
-
-    /**
      * 处理 configureTable 相关逻辑，并返回调用方需要的结果。
      * @param table 表格。
      */
@@ -102,7 +93,6 @@ internal class IndexModulePanel(
             RefreshIndexAction(),
             AddIndexAction(),
             RemoveSelectedIndexAction(),
-            ToggleIndexListViewAction(),
             ToggleQuoteSortDirectionAction(),
         )
     }
@@ -117,46 +107,8 @@ internal class IndexModulePanel(
             AddIndexAction(),
             RemoveSelectedIndexAction(),
             AddSelectedIndexReminderAction(),
-            ToggleIndexListViewAction(),
             ToggleQuoteSortDirectionAction(),
         )
-    }
-
-    private inner class IndexListRenderer : DefaultListCellRenderer() {
-        /**
-         * 获取列表CellRenderer组件。
-         * @param list 列表。
-         * @param value 待解析、格式化或写入的原始值。
-         * @param index index。
-         * @param isSelected is选中项。
-         * @param cellHasFocus cellHasFocus。
-         * @return 处理后的结果或当前状态。
-         */
-        override fun getListCellRendererComponent(
-            list: JList<*>?,
-            value: Any?,
-            index: Int,
-            isSelected: Boolean,
-            cellHasFocus: Boolean,
-        ): Component {
-            val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-            val label = component as? JLabel ?: return component
-            val row = value as? IndexListItem ?: return component
-            val price = formatDecimal(row.quote.currentPrice)
-            val percent = formatPercent(stockChangePercent(row.quote))
-            label.border = JBUI.Borders.empty(6, 8)
-            label.verticalAlignment = JLabel.TOP
-            label.text =
-                """
-                <html>
-                <body>
-                  <b>${escape(formatNameWithCode(row.quote))}</b> <span style='color:#888888;'>${escape(row.marketLabel)}</span><br/>
-                  点位：$price　涨跌幅：$percent
-                </body>
-                </html>
-                """.trimIndent()
-            return component
-        }
     }
 
     private inner class IndexTableModel : AssetTableModel<IndexListItem>() {
@@ -337,30 +289,6 @@ internal class IndexModulePanel(
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.code)
             callbacks.eventStatus.text = "已添加摸鱼指数 ${selected.quote.name} 的提醒。"
-        }
-    }
-
-    private inner class ToggleIndexListViewAction : DumbAwareAction("切换视图", "切换摸鱼指数列表展示方式", AllIcons.Nodes.DataTables) {
-        /**
-         * 根据当前选择和上下文更新动作可用状态。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun update(event: AnActionEvent) {
-            event.presentation.text = nextViewMode().displayName
-            event.presentation.icon = when (nextViewMode()) {
-                AssetListViewMode.CARD -> AllIcons.Nodes.ModuleGroup
-                AssetListViewMode.TABLE -> AllIcons.Nodes.DataTables
-            }
-            event.presentation.description = "切换为摸鱼指数${nextViewMode().displayName}"
-        }
-
-        /**
-         * 处理用户触发的 IDE 动作。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun actionPerformed(event: AnActionEvent) {
-            toggleViewMode()
-            callbacks.eventStatus.text = "摸鱼指数列表已切换为${nextViewMode().displayName}。"
         }
     }
 

@@ -14,6 +14,7 @@ import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListModel
 import javax.swing.JLabel
 import javax.swing.JComponent
@@ -59,19 +60,21 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
      * @return 处理后的结果或当前状态。
      */
     open fun createComponent(): JComponent {
-        list.selectionMode = ListSelectionModel.SINGLE_SELECTION
-        list.cellRenderer = createListCellRenderer()
-        list.background = MoFishUiStyle.navSurface
-        list.selectionBackground = MoFishUiStyle.navSurface
-        list.addListSelectionListener {
-            if (!it.valueIsAdjusting && !syncingSelection) {
-                val selectedCode = list.selectedValue?.code
-                syncSelection(selectedCode)
-                selectAssetWhenActive(selectedCode)
+        if (hasCardView()) {
+            list.selectionMode = ListSelectionModel.SINGLE_SELECTION
+            list.cellRenderer = createListCellRenderer()
+            list.background = MoFishUiStyle.navSurface
+            list.selectionBackground = MoFishUiStyle.navSurface
+            list.addListSelectionListener {
+                if (!it.valueIsAdjusting && !syncingSelection) {
+                    val selectedCode = list.selectedValue?.code
+                    syncSelection(selectedCode)
+                    selectAssetWhenActive(selectedCode)
+                }
             }
+            installContextSelection(list)
+            installOpenDetailOnDoubleClick(list)
         }
-        installContextSelection(list)
-        installOpenDetailOnDoubleClick(list)
 
         configureTable(table)
         table.selectionModel.addListSelectionListener {
@@ -82,7 +85,9 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
             }
         }
         installContextSelection(table)
-        installOpenDetailOnDoubleClick(table)
+        if (hasDetailPage()) {
+            installOpenDetailOnDoubleClick(table)
+        }
 
         toolbarComponent = createToolbar()
 
@@ -140,7 +145,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
 
     protected abstract fun buildSummaryText(snapshot: MoFishWatchlistState, rows: List<R>): String
 
-    protected abstract fun createListCellRenderer(): ListCellRenderer<in R>
+    protected open fun createListCellRenderer(): ListCellRenderer<in R> = DefaultListCellRenderer()
 
     protected abstract fun configureTable(table: JBTable)
 
@@ -170,6 +175,12 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     protected open fun hasDetailPage(): Boolean = false
 
     /**
+     * 处理 hasCardView 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
+    protected open fun hasCardView(): Boolean = false
+
+    /**
      * 创建详情组件实例或展示内容。
      * @return 处理后的结果或当前状态。
      */
@@ -194,9 +205,13 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
      * @return 处理后的结果或当前状态。
      */
     protected fun selectedRow(): R? {
-        return when (viewMode) {
-            AssetListViewMode.CARD -> list.selectedValue ?: selectedTableRow()
-            AssetListViewMode.TABLE -> selectedTableRow() ?: list.selectedValue
+        return if (hasCardView()) {
+            when (viewMode) {
+                AssetListViewMode.CARD -> list.selectedValue ?: selectedTableRow()
+                AssetListViewMode.TABLE -> selectedTableRow() ?: list.selectedValue
+            }
+        } else {
+            selectedTableRow()
         }
     }
 
@@ -204,6 +219,9 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
      * 转换为ggle视图Mode表示。
      */
     protected fun toggleViewMode() {
+        if (!hasCardView()) {
+            return
+        }
         viewMode = viewMode.next()
         refreshListViewLayout()
         callbacks.watchlistService.selectView(moduleViewId())
@@ -287,7 +305,9 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         val tableScrollPane = JBScrollPane(table).apply {
             border = JBUI.Borders.empty()
         }
-        listContent.add(listScrollPane, CARD_LIST_CARD)
+        if (hasCardView()) {
+            listContent.add(listScrollPane, CARD_LIST_CARD)
+        }
         listContent.add(tableScrollPane, TABLE_LIST_CARD)
         refreshListViewLayout()
         return listContent

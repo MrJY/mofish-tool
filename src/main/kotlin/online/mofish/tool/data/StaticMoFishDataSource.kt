@@ -3,9 +3,6 @@ package online.mofish.tool.data
 import online.mofish.tool.data.index.MarketIndexDefinition
 import online.mofish.tool.data.index.marketIndexDefinitionFor
 import online.mofish.tool.domain.CryptoQuote
-import online.mofish.tool.domain.FlashNewsImpact
-import online.mofish.tool.domain.FlashNewsItem
-import online.mofish.tool.domain.FlashNewsSource
 import online.mofish.tool.domain.ForexRate
 import online.mofish.tool.domain.FundQuote
 import online.mofish.tool.domain.MoFishWorkspace
@@ -38,7 +35,6 @@ class StaticMoFishDataSource : MoFishDataSource {
             holdings = settings.holdings,
             reminderRules = settings.reminders,
             aiConfig = settings.aiConfig,
-            flashNews = emptyList(),
             forexRates = emptyList(),
             indexQuotes = settings.watchlist.indexCodes.map { placeholderIndexQuote(it, settings) },
         )
@@ -62,7 +58,6 @@ class StaticMoFishDataSource : MoFishDataSource {
             holdings = settings.holdings,
             reminderRules = settings.reminders,
             aiConfig = settings.aiConfig,
-            flashNews = sampleFlashNews(),
             forexRates = sampleForexRates(),
             indexQuotes = buildStaticIndexQuotes(settings),
         )
@@ -92,7 +87,6 @@ class StaticMoFishDataSource : MoFishDataSource {
             cryptoQuotes = if (MoFishRefreshModule.CRYPTO in modules) fallbackWorkspace.cryptoQuotes else currentWorkspace.cryptoQuotes,
             forexRates = if (MoFishRefreshModule.FOREX in modules) fallbackWorkspace.forexRates else currentWorkspace.forexRates,
             indexQuotes = if (MoFishRefreshModule.INDICES in modules) fallbackWorkspace.indexQuotes else currentWorkspace.indexQuotes,
-            flashNews = if (MoFishRefreshModule.NEWS in modules) fallbackWorkspace.flashNews else currentWorkspace.flashNews,
             holdings = settings.holdings,
             reminderRules = settings.reminders,
             aiConfig = settings.aiConfig,
@@ -401,37 +395,6 @@ private fun normalizeStockSymbol(code: String): String {
         .removePrefix("bj")
         .removePrefix("hk")
         .removePrefix("us")
-}
-
-/**
- * 处理 sampleFlashNews 相关逻辑，并返回调用方需要的结果。
- * @return 处理后的结果或当前状态。
- */
-private fun sampleFlashNews(): List<FlashNewsItem> {
-    return listOf(
-        FlashNewsItem(
-            id = "xgb-1001",
-            source = FlashNewsSource.XUANGUBAO,
-            title = "新能源板块盘中异动",
-            summary = "多只储能与电池链个股拉升，市场开始关注排产与出口预期。",
-            occurredAt = LocalDateTime.of(2026, 3, 24, 10, 32),
-            impact = FlashNewsImpact.POSITIVE,
-            important = true,
-            relatedBoards = listOf("新能源车", "储能"),
-            relatedStocks = listOf("宁德时代 300750", "亿纬锂能 300014"),
-            tags = listOf("sector", "battery"),
-        ),
-        FlashNewsItem(
-            id = "jin10-1002",
-            source = FlashNewsSource.JIN10,
-            title = "海外宏观数据公布",
-            summary = "市场等待晚间数据落地，成长赛道成交继续放大。",
-            occurredAt = LocalDateTime.of(2026, 3, 24, 20, 30),
-            impact = FlashNewsImpact.NEUTRAL,
-            important = false,
-            tags = listOf("macro"),
-        ),
-    )
 }
 
 /**

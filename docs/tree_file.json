@@ -128,8 +128,8 @@
     "en": "Quote data layer with remote data sources, static fallbacks, HTTP client, and market providers"
   },
   "src/main/kotlin/online/mofish/tool/data/MoFishDataSource.kt": {
-    "zh": "统一行情数据源接口，定义股票、指数、基金、虚拟币、外汇和快讯读取能力",
-    "en": "Unified quote data source interface for stocks, indexes, funds, crypto, forex, and flash news"
+    "zh": "统一行情数据源接口，定义股票、指数、基金、虚拟币和外汇读取能力",
+    "en": "Unified quote data source interface for stocks, indexes, funds, crypto, and forex"
   },
   "src/main/kotlin/online/mofish/tool/data/RemoteMoFishDataSource.kt": {
     "zh": "远程行情数据源实现，聚合各市场客户端和 provider 获取实时数据",
@@ -246,10 +246,6 @@
   "src/main/kotlin/online/mofish/tool/domain/DomainEnums.kt": {
     "zh": "领域枚举集合，定义市场、资产类别、趋势和视图等共享枚举",
     "en": "Domain enum collection for shared market, asset category, trend, and view values"
-  },
-  "src/main/kotlin/online/mofish/tool/domain/FlashNewsItem.kt": {
-    "zh": "快讯条目领域模型",
-    "en": "Flash news item domain model"
   },
   "src/main/kotlin/online/mofish/tool/domain/ForexRate.kt": {
     "zh": "外汇牌价领域模型",
@@ -428,8 +424,8 @@
     "en": "MoFish tool window factory that registers and creates tool window content for the IntelliJ Platform"
   },
   "src/main/kotlin/online/mofish/tool/ui/toolwindow/MoFishToolWindowPanel.kt": {
-    "zh": "摸鱼工具主界面，基于 Swing/JB UI 展示股票、指数、基金、虚拟币、外汇、快讯和设置入口",
-    "en": "Main MoFish UI built with Swing/JB UI, showing stocks, indexes, funds, crypto, forex, flash news, and settings entry points"
+    "zh": "摸鱼工具主界面，基于 Swing/JB UI 展示股票、指数、基金、虚拟币、外汇和设置入口",
+    "en": "Main MoFish UI built with Swing/JB UI, showing stocks, indexes, funds, crypto, forex, and settings entry points"
   },
   "src/main/kotlin/online/mofish/tool/ui/toolwindow/ModuleNavigationModels.kt": {
     "zh": "工具窗口模块导航模型，定义模块项、分组和导航状态",

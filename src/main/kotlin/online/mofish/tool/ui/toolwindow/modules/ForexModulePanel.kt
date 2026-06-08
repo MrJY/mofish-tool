@@ -18,10 +18,7 @@ import online.mofish.tool.state.MoFishWatchlistState
 import java.awt.Component
 import java.math.BigDecimal
 import java.util.UUID
-import javax.swing.DefaultListCellRenderer
 import javax.swing.JLabel
-import javax.swing.JList
-import javax.swing.ListCellRenderer
 import javax.swing.JTable
 import javax.swing.table.DefaultTableCellRenderer
 
@@ -66,12 +63,6 @@ internal class ForexModulePanel(
     }
 
     /**
-     * 创建列表CellRenderer实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun createListCellRenderer(): ListCellRenderer<in ForexListItem> = ForexListRenderer()
-
-    /**
      * 处理 configureTable 相关逻辑，并返回调用方需要的结果。
      * @param table 表格。
      */
@@ -91,7 +82,6 @@ internal class ForexModulePanel(
     override fun createToolbarActions(): List<AnAction> {
         return listOf(
             RefreshForexAction(),
-            ToggleForexListViewAction(),
         )
     }
 
@@ -103,44 +93,7 @@ internal class ForexModulePanel(
         return listOf(
             RefreshForexAction(),
             AddSelectedForexReminderAction(),
-            ToggleForexListViewAction(),
         )
-    }
-
-    private inner class ForexListRenderer : DefaultListCellRenderer() {
-        /**
-         * 获取列表CellRenderer组件。
-         * @param list 列表。
-         * @param value 待解析、格式化或写入的原始值。
-         * @param index index。
-         * @param isSelected is选中项。
-         * @param cellHasFocus cellHasFocus。
-         * @return 处理后的结果或当前状态。
-         */
-        override fun getListCellRendererComponent(
-            list: JList<*>?,
-            value: Any?,
-            index: Int,
-            isSelected: Boolean,
-            cellHasFocus: Boolean,
-        ): Component {
-            val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-            val label = component as? JLabel ?: return component
-            val row = value as? ForexListItem ?: return component
-            label.border = JBUI.Borders.empty(6, 8)
-            label.verticalAlignment = JLabel.TOP
-            label.text =
-                """
-                <html>
-                <body>
-                  <b>${escape(row.quote.currencyName)}</b> <span style='color:#888888;'>${escape(row.quote.currencyCode)}</span><br/>
-                  中行折算价：${formatDecimal(row.quote.conversionPrice)}　现汇买入：${formatDecimal(row.quote.spotBuyPrice)}<br/>
-                  发布时间：${escape(formatDateTime(row.quote.publishedAt))}
-                </body>
-                </html>
-                """.trimIndent()
-            return component
-        }
     }
 
     private inner class ForexTableModel : AssetTableModel<ForexListItem>() {
@@ -276,31 +229,6 @@ internal class ForexModulePanel(
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.currencyCode)
             callbacks.eventStatus.text = "已添加摸鱼外汇 ${selected.quote.currencyName} 的提醒。"
-        }
-    }
-
-    private inner class ToggleForexListViewAction : DumbAwareAction("切换视图", "切换摸鱼外汇列表展示方式", AllIcons.Nodes.DataTables) {
-        /**
-         * 根据当前选择和上下文更新动作可用状态。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun update(event: AnActionEvent) {
-            event.presentation.text = nextViewMode().displayName
-            event.presentation.icon = when (nextViewMode()) {
-                AssetListViewMode.CARD -> AllIcons.Nodes.ModuleGroup
-                AssetListViewMode.TABLE -> AllIcons.Nodes.DataTables
-            }
-            event.presentation.description = "切换为摸鱼外汇${nextViewMode().displayName}"
-        }
-
-        /**
-         * 处理用户触发的 IDE 动作。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun actionPerformed(event: AnActionEvent) {
-            val nextModeName = nextViewMode().displayName
-            toggleViewMode()
-            callbacks.eventStatus.text = "摸鱼外汇列表已切换为$nextModeName。"
         }
     }
 

@@ -132,6 +132,12 @@ internal class StockModulePanel(
     override fun hasDetailPage(): Boolean = true
 
     /**
+     * 处理 hasCardView 相关逻辑，并返回调用方需要的结果。
+     * @return 处理后的结果或当前状态。
+     */
+    override fun hasCardView(): Boolean = true
+
+    /**
      * 创建Toolbar面板实例或展示内容。
      * @return 处理后的结果或当前状态。
      */

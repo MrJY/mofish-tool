@@ -47,7 +47,7 @@ class MoFishProjectService(
             selectedViewId = current?.selectedViewId ?: DEFAULT_VIEW_ID,
             selectedAssetCode = current?.selectedAssetCode,
             lastRefreshAt = now,
-            moduleRefreshAt = MoFishRefreshModule.entries.associateWith { now },
+            moduleRefreshAt = MoFishRefreshModule.visibleModules.associateWith { now },
             loadOrigin = WorkspaceLoadOrigin.PLACEHOLDER,
             cacheHit = false,
         )
@@ -111,7 +111,7 @@ class MoFishProjectService(
             selectedViewId = previous?.selectedViewId ?: DEFAULT_VIEW_ID,
             selectedAssetCode = previous?.selectedAssetCode,
             lastRefreshAt = now,
-            moduleRefreshAt = MoFishRefreshModule.entries.associateWith { now },
+            moduleRefreshAt = MoFishRefreshModule.visibleModules.associateWith { now },
             loadOrigin = if (cachedEntry == null) WorkspaceLoadOrigin.DATA_SOURCE else WorkspaceLoadOrigin.MEMORY_CACHE,
             cacheHit = cachedEntry != null,
         )

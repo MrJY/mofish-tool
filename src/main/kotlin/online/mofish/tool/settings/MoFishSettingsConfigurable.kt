@@ -141,7 +141,7 @@ class MoFishSettingsConfigurable : Configurable {
             stockTableColumnCheckBoxes = MoFishStockTableColumn.entries.associateWith { column ->
                 JBCheckBox(column.toString())
             },
-            enabledModuleCheckBoxes = MoFishRefreshModule.entries.associateWith { module ->
+            enabledModuleCheckBoxes = MoFishRefreshModule.visibleModules.associateWith { module ->
                 JBCheckBox(module.toString())
             },
             openToolWindowOnStartupCheckBox = JBCheckBox("IDE 启动时自动打开摸鱼工具窗口"),

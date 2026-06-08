@@ -9,7 +9,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filterNotNull
@@ -64,7 +63,6 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     private val forexModule = ForexModulePanel(moduleCallbacks)
     private val cryptoModule = CryptoModulePanel(moduleCallbacks)
     private val fundModule = FundModulePanel(moduleCallbacks)
-    private val newsPlaceholder = createPlaceholderPane("快讯页已预留，后续会接入筛选与详情。")
 
     private lateinit var tabComponent: ModuleTabComponent
     private var lastEnabledViewIds = emptyList<String>()
@@ -86,7 +84,6 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         moduleContent.add(fundModule.createComponent(), "funds")
         moduleContent.add(cryptoModule.createComponent(), "crypto")
         moduleContent.add(forexModule.createComponent(), "forex")
-        moduleContent.add(wrapPlaceholderPanel(newsPlaceholder), "news")
 
         val container = JPanel(BorderLayout())
         container.border = JBUI.Borders.empty()
@@ -125,58 +122,6 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         rootPanel.add(topContainer, BorderLayout.NORTH)
         rootPanel.add(moduleContent, BorderLayout.CENTER)
         return rootPanel
-    }
-
-    /**
-     * 处理 wrapPlaceholderPanel 相关逻辑，并返回调用方需要的结果。
-     * @param detailPane 详情Pane。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun wrapPlaceholderPanel(detailPane: JEditorPane): JComponent {
-        val panel = JPanel(BorderLayout())
-        panel.border = JBUI.Borders.empty(8, 8, 8, 8)
-        panel.add(JBScrollPane(detailPane), BorderLayout.CENTER)
-        return panel
-    }
-
-    /**
-     * 创建PlaceholderPane实例或展示内容.
-     * @param message 需要展示给用户的消息内容。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createPlaceholderPane(message: String): JEditorPane {
-        val pane = createHtmlPane()
-        pane.text =
-            """
-            <html>
-            <body style='padding: 8px;'>
-              <p>$message</p>
-            </body>
-            </html>
-            """.trimIndent()
-        return pane
-    }
-
-    /**
-     * 创建HTMLPane实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createHtmlPane(): JEditorPane {
-        return object : JEditorPane() {
-            /**
-             * 获取ScrollableTracksViewportWidth。
-             * @return 处理后的结果或当前状态。
-             */
-            override fun getScrollableTracksViewportWidth(): Boolean = true
-        }.apply {
-            contentType = "text/html"
-            isEditable = false
-            isOpaque = false
-            putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true)
-            foreground = JBColor.foreground()
-            border = JBUI.Borders.empty()
-            margin = JBUI.emptyInsets()
-        }
     }
 
     /**
@@ -268,7 +213,9 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     private fun MoFishWatchlistState.enabledModuleItems(): List<ModuleNavItem> {
-        val enabledModules = settingsState.ui.enabledModules.ifEmpty { MoFishRefreshModule.defaultEnabledModules }
+        val enabledModules = settingsState.ui.enabledModules
+            .intersect(MoFishRefreshModule.visibleModules)
+            .ifEmpty { MoFishRefreshModule.defaultEnabledModules }
         return DEFAULT_MODULES.filter { item ->
             enabledModules.any { module -> module.viewId == item.viewId }
         }.ifEmpty {

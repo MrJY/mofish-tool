@@ -150,10 +150,6 @@ class RemoteMoFishDataSource(
             nextWorkspace = nextWorkspace.copy(forexRates = liveForexRates)
         }
 
-        if (MoFishRefreshModule.NEWS in modules) {
-            nextWorkspace = nextWorkspace.copy(flashNews = fallbackWorkspace.flashNews)
-        }
-
         return nextWorkspace
     }
 

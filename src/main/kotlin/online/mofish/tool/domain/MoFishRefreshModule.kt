@@ -16,7 +16,8 @@ enum class MoFishRefreshModule(
     CRYPTO("crypto", "摸鱼虚拟币"),
     /** 外汇牌价模块。 */
     FOREX("forex", "摸鱼外汇"),
-    /** 财经快讯模块。 */
+    /** 旧配置兼容项：快讯模块已移除，不再展示或刷新。 */
+    @Deprecated("The flash news module has been removed; keep this entry only for persisted settings compatibility.")
     NEWS("news", "快讯"),
     ;
 
@@ -27,16 +28,19 @@ enum class MoFishRefreshModule(
     override fun toString(): String = displayName
 
     companion object {
-        /** 默认启用的模块集合，包含所有刷新模块。 */
-        val defaultEnabledModules: Set<MoFishRefreshModule> = entries.toSet()
-
-        /** 默认参与自动刷新的模块集合，排除快讯等非默认自动刷新内容。 */
-        val defaultAutoRefreshModules: Set<MoFishRefreshModule> = setOf(
+        /** 当前产品中可见的模块集合。 */
+        val visibleModules: Set<MoFishRefreshModule> = setOf(
             STOCKS,
             INDICES,
             FUNDS,
             CRYPTO,
             FOREX,
         )
+
+        /** 默认启用的模块集合，包含所有可见刷新模块。 */
+        val defaultEnabledModules: Set<MoFishRefreshModule> = visibleModules
+
+        /** 默认参与自动刷新的模块集合。 */
+        val defaultAutoRefreshModules: Set<MoFishRefreshModule> = visibleModules
     }
 }

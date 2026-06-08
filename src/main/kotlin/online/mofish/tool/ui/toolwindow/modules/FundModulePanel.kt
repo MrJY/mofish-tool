@@ -19,24 +19,10 @@ import online.mofish.tool.settings.MoFishHoldingsDialog
 import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
-import online.mofish.tool.ui.web.MoFishFundTrend
-import online.mofish.tool.ui.web.MoFishWebEditorService
-import java.awt.BorderLayout
-import java.awt.Color
 import java.awt.Component
-import java.awt.FlowLayout
-import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.GridLayout
-import java.awt.RenderingHints
 import java.math.BigDecimal
 import java.util.UUID
-import javax.swing.DefaultListCellRenderer
-import javax.swing.JEditorPane
 import javax.swing.JLabel
-import javax.swing.JList
-import javax.swing.JPanel
-import javax.swing.ListCellRenderer
 import javax.swing.JTable
 import javax.swing.table.DefaultTableCellRenderer
 
@@ -48,10 +34,6 @@ internal class FundModulePanel(
     popupPlace = "MoFishFundsPopup",
 ) {
     override val tableModel: AssetTableModel<FundListItem> = FundTableModel()
-    private val detailPane = JEditorPane("text/html", "").apply {
-        isEditable = false
-        putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, true)
-    }
     private var fundGroupFilter = FundGroupFilter.ALL
 
     /**
@@ -59,27 +41,6 @@ internal class FundModulePanel(
      * @return 处理后的结果或当前状态。
      */
     override fun moduleViewId(): String = "funds"
-
-    /**
-     * 处理 hasDetailPage 相关逻辑，并返回调用方需要的结果。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun hasDetailPage(): Boolean = true
-
-    /**
-     * 创建详情组件实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun createDetailComponent() = createDetailPage("摸鱼基金详情", detailPane)
-
-    /**
-     * 更新详情。
-     * @param snapshot 当前状态或数据快照。
-     * @param row 待添加、转换或展示的行数据。
-     */
-    override fun updateDetail(snapshot: MoFishWatchlistState, row: FundListItem?) {
-        detailPane.text = buildDetailHtml(snapshot, row)
-    }
 
     /**
      * 构建Rows，供后续界面展示或数据处理使用。
@@ -125,12 +86,6 @@ internal class FundModulePanel(
     }
 
     /**
-     * 创建列表CellRenderer实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun createListCellRenderer(): ListCellRenderer<in FundListItem> = FundListRenderer()
-
-    /**
      * 处理 configureTable 相关逻辑，并返回调用方需要的结果。
      * @param table 表格。
      */
@@ -153,8 +108,6 @@ internal class FundModulePanel(
             RemoveSelectedFundAction(),
             AddSelectedFundHoldingAction(),
             AddSelectedFundReminderAction(),
-            OpenFundTrendAction(),
-            ToggleFundListViewAction(),
             CycleFundGroupFilterAction(),
         )
     }
@@ -165,363 +118,11 @@ internal class FundModulePanel(
      */
     override fun createPopupActions(): List<AnAction> {
         return listOf(
-            FocusSelectedFundAction(),
             RefreshFundAction(),
             AddFundAction(),
             RemoveSelectedFundAction(),
-            OpenFundTrendAction(),
-            ToggleFundListViewAction(),
             CycleFundGroupFilterAction(),
         )
-    }
-
-    /**
-     * 处理 onOpenDetail 相关逻辑，并返回调用方需要的结果。
-     */
-    override fun onOpenDetail() {
-        openSelectedFundDetail()
-    }
-
-    /**
-     * 构建详情HTML，供后续界面展示或数据处理使用。
-     * @param snapshot 当前状态或数据快照。
-     * @param row 待添加、转换或展示的行数据。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun buildDetailHtml(snapshot: MoFishWatchlistState, row: FundListItem?): String {
-        if (row == null) {
-            return """
-                <html>
-                <body style='padding: 8px;'>
-                  <p>请选择一只基金查看详情。</p>
-                  <p>从列表页双击基金，或使用右键菜单中的"查看详情"，即可进入详情页面。</p>
-                </body>
-                </html>
-            """.trimIndent()
-        }
-        val holding = row.holding
-        val profit = row.profit
-        val reminderRules = snapshot.settingsState.reminders
-            .filter { it.code.equals(row.quote.code, ignoreCase = true) }
-        val holdingValue = profit?.currentValue?.toPlainString() ?: "--"
-        return """
-            <html>
-            <body style='padding: 8px;'>
-              <h3>${escape(row.quote.name)}</h3>
-              <p>代码：<code>${escape(row.quote.code)}</code></p>
-              <p>状态：<code>${row.quote.status}</code> | 估值类型：<code>${if (row.quote.isEstimated) "盘中估值" else "净值"}</code></p>
-              <p>估值：<code>${row.quote.estimatedNetValue?.toPlainString() ?: "--"}</code></p>
-              <p>前一日净值：<code>${row.quote.previousNetValue?.toPlainString() ?: "--"}</code></p>
-              <p>日涨跌幅：<code>${row.quote.dailyChangePercent?.toPlainString() ?: "--"}%</code></p>
-              <p>估值时间：<code>${row.quote.valuationTime?.toString() ?: "--"}</code></p>
-              <p>净值日期：<code>${row.quote.netValueDate?.toString() ?: "--"}</code></p>
-              <hr/>
-              <p>持仓份额：<code>${holding?.quantity?.toPlainString() ?: "--"}</code></p>
-              <p>持仓成本：<code>${holding?.costPrice?.toPlainString() ?: "--"}</code></p>
-              <p>持仓市值：<code>$holdingValue</code></p>
-              <p>总收益：<code>${profit?.totalProfit?.toPlainString() ?: "--"}</code></p>
-              <p>总收益率：<code>${profit?.totalProfitPercent?.toPlainString() ?: "--"}%</code></p>
-              <p>今日收益：<code>${profit?.todayProfit?.toPlainString() ?: "--"}</code></p>
-              <p>今日收益率：<code>${profit?.todayProfitPercent?.toPlainString() ?: "--"}%</code></p>
-              <hr/>
-              <p>提醒规则：<code>${reminderRules.size}</code> 条</p>
-              ${buildReminderRulesHtml(reminderRules)}
-            </body>
-            </html>
-        """.trimIndent()
-    }
-
-    /**
-     * 构建提醒规则HTML，供后续界面展示或数据处理使用。
-     * @param reminderRules 当前资产关联的提醒规则列表。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun buildReminderRulesHtml(reminderRules: List<online.mofish.tool.domain.ReminderRule>): String {
-        if (reminderRules.isEmpty()) {
-            return "<p>当前资产暂无提醒规则。</p>"
-        }
-        val content = reminderRules.joinToString(separator = "") { rule ->
-            "<li>${escape(rule.displayName)}：${rule.metric} ${rule.direction} ${rule.threshold.toPlainString()}</li>"
-        }
-        return "<ul>$content</ul>"
-    }
-
-    /**
-     * 处理 holdingProfitLine 相关逻辑，并返回调用方需要的结果。
-     * @param profit 收益。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun holdingProfitLine(profit: online.mofish.tool.domain.PositionProfitSnapshot?): String {
-        if (callbacks.watchlistService.snapshot()?.settingsState?.showHoldingProfit != true) {
-            return ""
-        }
-        return "<br/>总收益：${formatDecimal(profit?.totalProfit)}"
-    }
-
-    /**
-     * 打开选中项基金详情相关界面或详情。
-     */
-    private fun openSelectedFundDetail() {
-        val selected = selectedRow() ?: return
-        setDetailVisible(true)
-        callbacks.watchlistService.selectView(moduleViewId())
-        callbacks.watchlistService.selectAsset(selected.quote.code)
-        callbacks.eventStatus.text = "已打开摸鱼基金 ${selected.quote.name} 的详情。"
-    }
-
-    /**
-     * 打开选中项基金Trend相关界面或详情。
-     */
-    private fun openSelectedFundTrend() {
-        val selected = selectedRow() ?: return
-        MoFishWebEditorService.open(callbacks.project, MoFishFundTrend.requestFor(selected.quote))
-        callbacks.eventStatus.text = "已打开摸鱼基金 ${selected.quote.name} 的走势页。"
-    }
-
-    private inner class FundListRenderer : ListCellRenderer<FundListItem> {
-        private val card = FundCardComponent()
-        private var listBg: Color = MoFishUiStyle.navSurface
-        private val container = object : JPanel(BorderLayout()) {
-            init {
-                isOpaque = false
-                border = JBUI.Borders.empty(6, 8, 6, 8)
-                add(card, BorderLayout.CENTER)
-            }
-
-            override fun paintComponent(g: Graphics) {
-                val g2 = g.create() as Graphics2D
-                g2.color = listBg
-                g2.fillRect(0, 0, width, height)
-                g2.dispose()
-            }
-        }
-
-        override fun getListCellRendererComponent(
-            list: JList<out FundListItem>?,
-            value: FundListItem?,
-            index: Int,
-            isSelected: Boolean,
-            cellHasFocus: Boolean,
-        ): Component {
-            listBg = list?.background ?: MoFishUiStyle.navSurface
-            val row = value ?: return container
-            val quote = row.quote
-            val nav = formatDecimal(quote.estimatedNetValue)
-            val percent = formatPercent(quote.dailyChangePercent)
-            val profitText = if (callbacks.watchlistService.snapshot()?.settingsState?.showHoldingProfit == true && row.profit != null) {
-                "总收益：${formatDecimal(row.profit?.totalProfit)}"
-            } else {
-                ""
-            }
-            val changeColor = marketColor(quote.dailyChangePercent)
-            val prevNetValue = formatDecimal(quote.previousNetValue)
-            val netValueDate = quote.netValueDate?.toString() ?: "--"
-            val valuationTime = quote.valuationTime?.toString() ?: "--"
-
-            card.setValues(
-                name = quote.name,
-                code = quote.code,
-                nav = nav,
-                percent = percent,
-                percentColor = changeColor,
-                prevNetValue = prevNetValue,
-                netValueDate = netValueDate,
-                valuationTime = valuationTime,
-                profitText = profitText,
-                selected = isSelected
-            )
-            return container
-        }
-    }
-
-    private class FundCardComponent : JPanel() {
-        private var isSelected = false
-
-        val nameLabel = JLabel()
-        val codeLabel = JLabel()
-        val navLabel = JLabel()
-        val percentLabel = JLabel()
-
-        val prevNetValueLabel = JLabel()
-        val netValueDateLabel = JLabel()
-        val valuationTimeLabel = JLabel()
-        val emptyLabel = JLabel()
-
-        val profitLabel = JLabel()
-
-        init {
-            isOpaque = false
-            layout = BorderLayout()
-            border = JBUI.Borders.empty(12)
-
-            val headerPanel = JPanel(BorderLayout(JBUI.scale(8), JBUI.scale(4))).apply {
-                isOpaque = false
-            }
-
-            val titlePanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-                isOpaque = false
-            }
-            nameLabel.font = JBUI.Fonts.label().deriveFont(java.awt.Font.BOLD, JBUI.scale(15f))
-            nameLabel.border = JBUI.Borders.emptyRight(6)
-            codeLabel.font = JBUI.Fonts.smallFont()
-            codeLabel.foreground = MoFishUiStyle.textMuted
-            titlePanel.add(nameLabel)
-            titlePanel.add(codeLabel)
-            headerPanel.add(titlePanel, BorderLayout.NORTH)
-
-            val metricsPanel = JPanel(BorderLayout()).apply {
-                isOpaque = false
-                border = JBUI.Borders.emptyTop(4)
-            }
-
-            val navContainer = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-                isOpaque = false
-            }
-            val navPrefix = JLabel("估值: ").apply {
-                font = JBUI.Fonts.smallFont()
-                foreground = MoFishUiStyle.textMuted
-                border = JBUI.Borders.emptyRight(4)
-            }
-            navLabel.font = JBUI.Fonts.label().deriveFont(java.awt.Font.BOLD, JBUI.scale(18f))
-            navContainer.add(navPrefix)
-            navContainer.add(navLabel)
-            metricsPanel.add(navContainer, BorderLayout.WEST)
-
-            val percentContainer = JPanel(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply {
-                isOpaque = false
-            }
-            val percentPrefix = JLabel("日涨跌幅: ").apply {
-                font = JBUI.Fonts.smallFont()
-                foreground = MoFishUiStyle.textMuted
-                border = JBUI.Borders.emptyRight(4)
-            }
-            percentLabel.font = JBUI.Fonts.label().deriveFont(java.awt.Font.BOLD, JBUI.scale(18f))
-            percentContainer.add(percentPrefix)
-            percentContainer.add(percentLabel)
-            metricsPanel.add(percentContainer, BorderLayout.EAST)
-
-            headerPanel.add(metricsPanel, BorderLayout.CENTER)
-            add(headerPanel, BorderLayout.NORTH)
-
-            val gridPanel = object : JPanel(GridLayout(2, 2, JBUI.scale(12), JBUI.scale(4))) {
-                init {
-                    isOpaque = false
-                    border = JBUI.Borders.empty(6, 0, 0, 0)
-                }
-
-                override fun paintComponent(g: Graphics) {
-                    super.paintComponent(g)
-                    val g2 = g.create() as Graphics2D
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                    g2.color = MoFishUiStyle.gridLineColor
-
-                    val w = width
-                    val h = height
-
-                    g2.drawLine(0, 0, w, 0)
-
-                    val rowHeight = h / 2
-                    g2.drawLine(0, rowHeight, w, rowHeight)
-
-                    g2.drawLine(w / 2, 0, w / 2, h)
-
-                    g2.dispose()
-                }
-            }
-
-            fun createGridCell(prefix: String, valueLabel: JLabel): JPanel {
-                return JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-                    isOpaque = false
-                    border = JBUI.Borders.empty(6, 12)
-                    val prefLabel = JLabel(prefix).apply {
-                        font = JBUI.Fonts.smallFont()
-                        foreground = MoFishUiStyle.textMuted
-                        border = JBUI.Borders.emptyRight(4)
-                    }
-                    valueLabel.font = JBUI.Fonts.smallFont()
-                    add(prefLabel)
-                    add(valueLabel)
-                }
-            }
-
-            gridPanel.add(createGridCell("前日净值:", prevNetValueLabel))
-            gridPanel.add(createGridCell("净值日期:", netValueDateLabel))
-            gridPanel.add(createGridCell("估值时间:", valuationTimeLabel))
-            gridPanel.add(createGridCell("", emptyLabel))
-
-            val contentContainer = JPanel(BorderLayout(0, JBUI.scale(6))).apply {
-                isOpaque = false
-                border = JBUI.Borders.emptyTop(6)
-                add(gridPanel, BorderLayout.CENTER)
-            }
-
-            profitLabel.font = JBUI.Fonts.smallFont().deriveFont(java.awt.Font.ITALIC)
-            profitLabel.foreground = MoFishUiStyle.textMuted
-            profitLabel.border = JBUI.Borders.empty(4, 6, 0, 0)
-            contentContainer.add(profitLabel, BorderLayout.SOUTH)
-
-            add(contentContainer, BorderLayout.CENTER)
-        }
-
-        fun setValues(
-            name: String,
-            code: String,
-            nav: String,
-            percent: String,
-            percentColor: Color,
-            prevNetValue: String,
-            netValueDate: String,
-            valuationTime: String,
-            profitText: String,
-            selected: Boolean,
-        ) {
-            this.isSelected = selected
-            val defaultFg = JBColor.foreground()
-
-            nameLabel.text = name
-            nameLabel.foreground = defaultFg
-
-            codeLabel.text = code.uppercase()
-            codeLabel.foreground = MoFishUiStyle.textMuted
-
-            navLabel.text = nav
-            navLabel.foreground = defaultFg
-
-            percentLabel.text = percent
-            percentLabel.foreground = percentColor
-
-            prevNetValueLabel.text = prevNetValue
-            prevNetValueLabel.foreground = defaultFg
-
-            netValueDateLabel.text = netValueDate
-            netValueDateLabel.foreground = defaultFg
-
-            valuationTimeLabel.text = valuationTime
-            valuationTimeLabel.foreground = defaultFg
-
-            emptyLabel.text = ""
-
-            if (profitText.isNotEmpty()) {
-                profitLabel.text = profitText
-                profitLabel.foreground = MoFishUiStyle.textMuted
-                profitLabel.isVisible = true
-            } else {
-                profitLabel.isVisible = false
-            }
-        }
-
-        override fun paintComponent(g: Graphics) {
-            val g2 = g.create() as Graphics2D
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-
-            g2.color = if (isSelected) MoFishUiStyle.selectionBackground else MoFishUiStyle.cardBackground
-            g2.fillRoundRect(0, 0, width - 1, height - 1, JBUI.scale(12), JBUI.scale(12))
-
-            g2.color = if (isSelected) MoFishUiStyle.linkForeground else MoFishUiStyle.cardBorder
-            g2.drawRoundRect(0, 0, width - 1, height - 1, JBUI.scale(12), JBUI.scale(12))
-
-            g2.dispose()
-        }
     }
 
     private inner class FundTableModel : AssetTableModel<FundListItem>() {
@@ -618,24 +219,6 @@ internal class FundModulePanel(
         }
     }
 
-    private inner class OpenFundTrendAction : DumbAwareAction("查看走势", "在编辑器标签页中查看当前摸鱼基金走势", AllIcons.Actions.Preview) {
-        /**
-         * 根据当前选择和上下文更新动作可用状态。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun update(event: AnActionEvent) {
-            event.presentation.isEnabled = selectedRow() != null
-        }
-
-        /**
-         * 处理用户触发的 IDE 动作。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun actionPerformed(event: AnActionEvent) {
-            openSelectedFundTrend()
-        }
-    }
-
     private inner class AddFundAction : DumbAwareAction("添加摸鱼基金", "按摸鱼基金代码添加摸鱼基金", AllIcons.General.Add) {
         /**
          * 处理用户触发的 IDE 动作。
@@ -647,24 +230,6 @@ internal class FundModulePanel(
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(fundCode)
             callbacks.eventStatus.text = "已添加摸鱼基金 $fundCode，正在刷新。"
-        }
-    }
-
-    private inner class FocusSelectedFundAction : DumbAwareAction("查看详情", "查看当前摸鱼基金的详情", AllIcons.General.ZoomIn) {
-        /**
-         * 根据当前选择和上下文更新动作可用状态。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun update(event: AnActionEvent) {
-            event.presentation.isEnabled = selectedRow() != null
-        }
-
-        /**
-         * 处理用户触发的 IDE 动作。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun actionPerformed(event: AnActionEvent) {
-            openSelectedFundDetail()
         }
     }
 
@@ -807,28 +372,4 @@ internal class FundModulePanel(
         }
     }
 
-    private inner class ToggleFundListViewAction : DumbAwareAction("切换视图", "切换摸鱼基金列表展示方式", AllIcons.Nodes.DataTables) {
-        /**
-         * 根据当前选择和上下文更新动作可用状态。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun update(event: AnActionEvent) {
-            event.presentation.text = nextViewMode().displayName
-            event.presentation.icon = when (nextViewMode()) {
-                AssetListViewMode.CARD -> AllIcons.Nodes.ModuleGroup
-                AssetListViewMode.TABLE -> AllIcons.Nodes.DataTables
-            }
-            event.presentation.description = "切换为摸鱼基金${nextViewMode().displayName}"
-        }
-
-        /**
-         * 处理用户触发的 IDE 动作。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun actionPerformed(event: AnActionEvent) {
-            val nextModeName = nextViewMode().displayName
-            toggleViewMode()
-            callbacks.eventStatus.text = "摸鱼基金列表已切换为$nextModeName。"
-        }
-    }
 }
