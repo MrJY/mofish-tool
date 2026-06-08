@@ -34,7 +34,6 @@ internal class FundModulePanel(
     popupPlace = "MoFishFundsPopup",
 ) {
     override val tableModel: AssetTableModel<FundListItem> = FundTableModel()
-    private var fundGroupFilter = FundGroupFilter.ALL
 
     /**
      * 处理 moduleViewId 相关逻辑，并返回调用方需要的结果。
@@ -59,12 +58,6 @@ internal class FundModulePanel(
                 holding = holdingsByCode[quote.code.lowercase()],
                 profit = profitsByCode[quote.code.lowercase()],
             )
-        }.filter { row ->
-            when (fundGroupFilter) {
-                FundGroupFilter.ALL -> true
-                FundGroupFilter.HELD -> row.holding?.hasPosition == true
-                FundGroupFilter.WATCHLIST_ONLY -> row.holding?.hasPosition != true
-            }
         }
 
         val sortSettings = snapshot.settingsState.sortSettings
@@ -106,9 +99,6 @@ internal class FundModulePanel(
             RefreshFundAction(),
             AddFundAction(),
             RemoveSelectedFundAction(),
-            AddSelectedFundHoldingAction(),
-            AddSelectedFundReminderAction(),
-            CycleFundGroupFilterAction(),
         )
     }
 
@@ -121,7 +111,8 @@ internal class FundModulePanel(
             RefreshFundAction(),
             AddFundAction(),
             RemoveSelectedFundAction(),
-            CycleFundGroupFilterAction(),
+            AddSelectedFundHoldingAction(),
+            AddSelectedFundReminderAction(),
         )
     }
 
@@ -348,27 +339,6 @@ internal class FundModulePanel(
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.code)
             callbacks.eventStatus.text = "已添加摸鱼基金 ${selected.quote.name} 的提醒。"
-        }
-    }
-
-    private inner class CycleFundGroupFilterAction : DumbAwareAction("切换分组", "在全部、持仓中、仅关注之间切换", AllIcons.Actions.GroupBy) {
-        /**
-         * 根据当前选择和上下文更新动作可用状态。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun update(event: AnActionEvent) {
-            event.presentation.icon = AllIcons.Actions.GroupBy
-            event.presentation.text = fundGroupFilter.next().displayName
-            event.presentation.description = "切换摸鱼基金分组为${fundGroupFilter.next().displayName}"
-        }
-
-        /**
-         * 处理用户触发的 IDE 动作。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun actionPerformed(event: AnActionEvent) {
-            fundGroupFilter = fundGroupFilter.next()
-            render(callbacks.watchlistService.snapshot() ?: return)
         }
     }
 

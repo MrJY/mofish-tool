@@ -31,22 +31,6 @@ internal enum class AssetListViewMode(val displayName: String, val cardId: Strin
     }
 }
 
-internal enum class FundGroupFilter(val displayName: String) {
-    ALL("全部"),
-    HELD("持仓中"),
-    WATCHLIST_ONLY("仅关注"),
-    ;
-
-    /**
-     * 处理 next 相关逻辑，并返回调用方需要的结果。
-     * @return 处理后的结果或当前状态。
-     */
-    fun next(): FundGroupFilter {
-        val values = entries
-        return values[(values.indexOf(this) + 1) % values.size]
-    }
-}
-
 internal data class StockListItem(
     override val quote: StockQuote,
     val groupName: String?,

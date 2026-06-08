@@ -138,8 +138,7 @@ private fun buildStaticCryptoQuotes(
     watchlist: MoFishWatchlistSettings,
     settings: MoFishSettingsState,
 ): List<CryptoQuote> {
-    val codes = watchlist.cryptoIds.ifEmpty { listOf(DEFAULT_CRYPTO_CODE) }
-    return codes.map { code ->
+    return watchlist.cryptoIds.map { code ->
         if (code.equals(DEFAULT_CRYPTO_CODE, ignoreCase = true)) {
             sampleCryptoQuote()
         } else {

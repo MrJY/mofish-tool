@@ -99,8 +99,6 @@ internal class CryptoModulePanel(
             RefreshCryptoAction(),
             AddCryptoAction(),
             RemoveSelectedCryptoAction(),
-            AddSelectedCryptoHoldingAction(),
-            AddSelectedCryptoReminderAction(),
         )
     }
 
@@ -113,6 +111,8 @@ internal class CryptoModulePanel(
             RefreshCryptoAction(),
             AddCryptoAction(),
             RemoveSelectedCryptoAction(),
+            AddSelectedCryptoHoldingAction(),
+            AddSelectedCryptoReminderAction(),
         )
     }
 

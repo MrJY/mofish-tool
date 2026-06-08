@@ -19,7 +19,10 @@ class CryptoQuoteClient(
                 httpClient = httpClient,
                 vsCurrency = vsCurrency,
                 marketsUrlProvider = marketsUrlProvider,
-            )
+            ),
+            BinanceCryptoQuoteProvider(
+                httpClient = httpClient,
+            ),
         ),
         searchIndexProviders = listOf(
             CachedCryptoSearchIndexProvider(
@@ -58,14 +61,24 @@ class CryptoQuoteClient(
             return emptyList()
         }
 
+        val resolved = linkedMapOf<String, CryptoQuote>()
+        var remainingCodes = normalizedCodes
+
         quoteProviders.forEach { provider ->
-            val quotesByCode = runCatching { provider.fetchQuotes(normalizedCodes) }.getOrDefault(emptyMap())
-            if (quotesByCode.isNotEmpty()) {
-                return normalizedCodes.mapNotNull(quotesByCode::get)
+            if (remainingCodes.isEmpty()) {
+                return@forEach
             }
+
+            val quotesByCode = runCatching { provider.fetchQuotes(remainingCodes) }.getOrDefault(emptyMap())
+            quotesByCode.forEach { (code, quote) ->
+                if (quote.currentPrice != null) {
+                    resolved.putIfAbsent(code, quote)
+                }
+            }
+            remainingCodes = remainingCodes.filterNot(resolved::containsKey)
         }
 
-        return emptyList()
+        return normalizedCodes.mapNotNull(resolved::get)
     }
 
     /**
