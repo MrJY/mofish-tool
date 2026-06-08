@@ -11,4 +11,6 @@ data class StockSearchSuggestion(
     val marketLabel: String,
     /** 搜索结果补充描述，没有额外信息时为空。 */
     val description: String? = null,
+    /** 搜索接口返回的资产类别，例如 GP 股票、ZS 指数。 */
+    val category: String = "",
 )

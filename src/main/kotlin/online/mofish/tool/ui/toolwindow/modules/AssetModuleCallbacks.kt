@@ -16,6 +16,7 @@ internal interface AssetModuleCallbacks {
      * @return 处理后的结果或当前状态。
      */
     fun showStockSearchDialog(): SearchableChoice?
+    fun showIndexSearchDialog(): SearchableChoice?
     fun showFundSearchDialog(): SearchableChoice?
     fun showCryptoSearchDialog(): SearchableChoice?
 }

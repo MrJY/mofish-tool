@@ -3,10 +3,10 @@ package online.mofish.tool.data
 import online.mofish.tool.data.crypto.CryptoQuoteClient
 import online.mofish.tool.data.forex.BocForexClient
 import online.mofish.tool.data.fund.FundQuoteClient
-import online.mofish.tool.data.index.defaultMarketIndexCodes
 import online.mofish.tool.data.stock.StockQuoteClient
 import online.mofish.tool.domain.MoFishWorkspace
 import online.mofish.tool.domain.MoFishRefreshModule
+import online.mofish.tool.domain.StockQuote
 import online.mofish.tool.settings.MoFishSettingsState
 
 class RemoteMoFishDataSource(
@@ -16,7 +16,6 @@ class RemoteMoFishDataSource(
     private val fundQuoteClient: FundQuoteClient = FundQuoteClient(),
     private val stockQuoteClient: StockQuoteClient = StockQuoteClient(),
     private val marketIndexQuoteClient: StockQuoteClient = StockQuoteClient(),
-    private val marketIndexCodes: List<String> = defaultMarketIndexCodes(),
 ) : MoFishDataSource {
     /**
      * 创建一个轻量级工作区骨架，用于界面首次打开时先展示占位状态。
@@ -60,7 +59,9 @@ class RemoteMoFishDataSource(
                 quoteByCode[fallbackQuote.code] ?: fallbackQuote
             }
         }.getOrElse { fallbackWorkspace.cryptoQuotes }
-        val liveIndexQuotes = runCatching { marketIndexQuoteClient.fetchQuotes(marketIndexCodes) }
+        val liveIndexQuotes = runCatching {
+            fetchIndexQuotes(fallbackWorkspace.indexQuotes)
+        }
             .map { quotes -> quotes.ifEmpty { fallbackWorkspace.indexQuotes } }
             .getOrElse { fallbackWorkspace.indexQuotes }
         val liveForexRates = runCatching { bocForexClient.fetchRates() }
@@ -134,7 +135,9 @@ class RemoteMoFishDataSource(
         }
 
         if (MoFishRefreshModule.INDICES in modules) {
-            val liveIndexQuotes = runCatching { marketIndexQuoteClient.fetchQuotes(marketIndexCodes) }
+            val liveIndexQuotes = runCatching {
+                fetchIndexQuotes(fallbackWorkspace.indexQuotes)
+            }
                 .map { quotes -> quotes.ifEmpty { fallbackWorkspace.indexQuotes } }
                 .getOrElse { fallbackWorkspace.indexQuotes }
             nextWorkspace = nextWorkspace.copy(indexQuotes = liveIndexQuotes)
@@ -152,5 +155,13 @@ class RemoteMoFishDataSource(
         }
 
         return nextWorkspace
+    }
+
+    private fun fetchIndexQuotes(fallbackQuotes: List<StockQuote>): List<StockQuote> {
+        val fetchedQuotes = marketIndexQuoteClient.fetchQuotes(fallbackQuotes.map { it.code })
+        val quoteByCode = fetchedQuotes.associateBy { it.code.lowercase() }
+        return fallbackQuotes.map { fallbackQuote ->
+            quoteByCode[fallbackQuote.code.lowercase()] ?: fallbackQuote
+        }
     }
 }

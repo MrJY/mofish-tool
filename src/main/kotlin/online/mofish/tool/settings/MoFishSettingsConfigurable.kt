@@ -306,6 +306,7 @@ class MoFishSettingsConfigurable : Configurable {
             watchlist = MoFishWatchlistSettings(
                 fundCodes = parseFundCodes(fundCodesField?.text.orEmpty()),
                 stockCodes = stockCodes,
+                indexCodes = baseState.watchlist.indexCodes,
                 stockGroups = stockGroups,
                 stockGroupAssignments = stockGroupAssignments,
                 cryptoIds = parseLowercaseCodes(cryptoCodesField?.text.orEmpty()),

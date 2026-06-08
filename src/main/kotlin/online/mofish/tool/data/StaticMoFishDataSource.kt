@@ -1,7 +1,6 @@
 package online.mofish.tool.data
 
 import online.mofish.tool.data.index.MarketIndexDefinition
-import online.mofish.tool.data.index.defaultMarketIndexDefinitions
 import online.mofish.tool.data.index.marketIndexDefinitionFor
 import online.mofish.tool.domain.CryptoQuote
 import online.mofish.tool.domain.FlashNewsImpact
@@ -41,7 +40,7 @@ class StaticMoFishDataSource : MoFishDataSource {
             aiConfig = settings.aiConfig,
             flashNews = emptyList(),
             forexRates = emptyList(),
-            indexQuotes = defaultMarketIndexDefinitions().map(::placeholderIndexQuote),
+            indexQuotes = settings.watchlist.indexCodes.map { placeholderIndexQuote(it, settings) },
         )
     }
 
@@ -65,7 +64,7 @@ class StaticMoFishDataSource : MoFishDataSource {
             aiConfig = settings.aiConfig,
             flashNews = sampleFlashNews(),
             forexRates = sampleForexRates(),
-            indexQuotes = sampleIndexQuotes(),
+            indexQuotes = buildStaticIndexQuotes(settings),
         )
     }
 
@@ -152,6 +151,18 @@ private fun buildStaticCryptoQuotes(
         } else {
             placeholderCryptoQuote(code, settings)
         }
+    }
+}
+
+/**
+ * 构建Static市场指数行情，供后续界面展示或数据处理使用。
+ * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @return 处理后的结果或当前状态。
+ */
+private fun buildStaticIndexQuotes(settings: MoFishSettingsState): List<StockQuote> {
+    val samplesByCode = sampleIndexQuotes().associateBy { it.code.lowercase() }
+    return settings.watchlist.indexCodes.map { code ->
+        samplesByCode[code.lowercase()] ?: placeholderIndexQuote(code, settings)
     }
 }
 
@@ -276,11 +287,37 @@ private fun placeholderStockQuote(
  * @return 处理后的结果或当前状态。
  */
 private fun placeholderIndexQuote(definition: MarketIndexDefinition): StockQuote {
-    return StockQuote(
+    return placeholderIndexQuote(
         code = definition.code,
-        name = definition.displayName,
-        symbol = normalizeStockSymbol(definition.code).uppercase(),
-        exchange = inferExchange(definition.code),
+        displayName = definition.displayName,
+    )
+}
+
+/**
+ * 处理 placeholderIndexQuote 相关逻辑，并返回调用方需要的结果。
+ * @param code 资产代码或业务标识。
+ * @param settings 当前摸鱼工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @return 处理后的结果或当前状态。
+ */
+private fun placeholderIndexQuote(
+    code: String,
+    settings: MoFishSettingsState,
+): StockQuote {
+    return placeholderIndexQuote(
+        code = code,
+        displayName = displayNameFor(code, settings) ?: "$code 暂无数据",
+    )
+}
+
+private fun placeholderIndexQuote(
+    code: String,
+    displayName: String,
+): StockQuote {
+    return StockQuote(
+        code = code,
+        name = displayName,
+        symbol = normalizeStockSymbol(code).uppercase(),
+        exchange = inferExchange(code),
         currentPrice = null,
         previousClose = null,
         openPrice = null,

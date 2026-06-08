@@ -425,6 +425,7 @@ internal fun toSearchSuggestion(item: JsonElement): StockSearchSuggestion? {
         exchange = requested.exchange,
         marketLabel = marketLabel(requested.market),
         description = description,
+        category = category,
     )
 }
 

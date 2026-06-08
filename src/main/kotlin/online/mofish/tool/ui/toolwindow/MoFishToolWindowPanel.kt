@@ -44,6 +44,11 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
          */
         override fun showStockSearchDialog(): SearchableChoice? = this@MoFishToolWindowPanel.showStockSearchDialog()
         /**
+         * 展示指数搜索弹窗。
+         * @return 处理后的结果或当前状态。
+         */
+        override fun showIndexSearchDialog(): SearchableChoice? = this@MoFishToolWindowPanel.showIndexSearchDialog()
+        /**
          * 展示基金搜索弹窗。
          * @return 处理后的结果或当前状态。
          */
@@ -308,6 +313,16 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     /**
+     * 处理 maybeResolveIndexCode 相关逻辑，并返回调用方需要的结果。
+     * @param rawInput 用户输入的原始文本。
+     * @return 处理后的结果或当前状态。
+     */
+    private fun maybeResolveIndexCode(rawInput: String): String? {
+        val normalized = rawInput.trim().lowercase()
+        return normalized.takeIf { it.matches(Regex("""[a-z0-9]+""")) }
+    }
+
+    /**
      * 处理 maybeResolveFundCode 相关逻辑，并返回调用方需要的结果。
      * @param rawInput 用户输入的原始文本。
      * @return 处理后的结果或当前状态。
@@ -337,6 +352,20 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             searchPlaceholder = "请输入股票代码、名称或关键词，例如：sz300750、hk00700、NVDA、腾讯",
             idleHint = "请输入股票代码、名称或关键词，最多展示 20 条候选结果。",
             searcher = ::searchStockChoices,
+        )
+        return if (dialog.showAndGet()) dialog.selectedChoice else null
+    }
+
+    /**
+     * 展示指数搜索弹窗。
+     * @return 处理后的结果或当前状态。
+     */
+    private fun showIndexSearchDialog(): SearchableChoice? {
+        val dialog = MoFishSearchableChoiceDialog(
+            dialogTitle = "添加摸鱼指数",
+            searchPlaceholder = "请输入指数代码、名称或市场，例如：sh000001、恒生、纳斯达克",
+            idleHint = "请输入指数代码、名称或市场，最多展示 20 条候选结果。",
+            searcher = ::searchIndexChoices,
         )
         return if (dialog.showAndGet()) dialog.selectedChoice else null
     }
@@ -387,6 +416,34 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         }
 
         val directCode = maybeResolveStockCode(keyword) ?: return emptyList()
+        return listOf(
+            SearchableChoice(
+                code = directCode,
+                title = directCode,
+                subtitle = "按代码直接添加",
+            )
+        )
+    }
+
+    /**
+     * 处理 searchIndexChoices 相关逻辑，并返回调用方需要的结果。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
+    private fun searchIndexChoices(keyword: String): List<SearchableChoice> {
+        val suggestions = watchlistService.searchStockSuggestions(keyword)
+            .filter { it.category.equals(INDEX_SEARCH_CATEGORY, ignoreCase = true) }
+        if (suggestions.isNotEmpty()) {
+            return suggestions.take(20).map { suggestion ->
+                SearchableChoice(
+                    code = suggestion.code,
+                    title = suggestion.name,
+                    subtitle = suggestion.description ?: suggestion.marketLabel,
+                )
+            }
+        }
+
+        val directCode = maybeResolveIndexCode(keyword) ?: return emptyList()
         return listOf(
             SearchableChoice(
                 code = directCode,
@@ -736,6 +793,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
                 }
             }
         }
+    }
+
+    companion object {
+        private const val INDEX_SEARCH_CATEGORY = "ZS"
     }
 
 }

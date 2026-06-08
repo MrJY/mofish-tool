@@ -224,6 +224,22 @@ class MoFishWatchlistService(
     }
 
     /**
+     * 添加市场指数代码。
+     * @param code 资产代码或业务标识。
+     */
+    fun addIndexCode(code: String) {
+        val normalizedCode = normalizeIndexCode(code)
+        if (normalizedCode.isEmpty()) {
+            return
+        }
+        updateWatchlist { watchlist ->
+            watchlist.copy(
+                indexCodes = upsertWatchlistCode(watchlist.indexCodes, normalizedCode),
+            )
+        }
+    }
+
+    /**
      * 添加股票Group。
      * @param groupName group名称。
      */
@@ -365,6 +381,22 @@ class MoFishWatchlistService(
                 stockCodes = removeWatchlistCode(watchlist.stockCodes, normalizedCode),
                 stockGroupAssignments = watchlist.stockGroupAssignments
                     .filterKeys { !it.equals(normalizedCode, ignoreCase = true) },
+            )
+        }
+    }
+
+    /**
+     * 删除市场指数代码。
+     * @param code 资产代码或业务标识。
+     */
+    fun removeIndexCode(code: String) {
+        val normalizedCode = normalizeIndexCode(code)
+        if (normalizedCode.isEmpty()) {
+            return
+        }
+        updateWatchlist { watchlist ->
+            watchlist.copy(
+                indexCodes = removeWatchlistCode(watchlist.indexCodes, normalizedCode),
             )
         }
     }
@@ -629,6 +661,13 @@ internal fun normalizeFundCode(rawCode: String): String = rawCode.trim()
  * @return 处理后的结果或当前状态。
  */
 internal fun normalizeStockCode(rawCode: String): String = rawCode.trim().lowercase()
+
+/**
+ * 规范化指数代码，统一后续处理使用的表示形式。
+ * @param rawCode 用户输入或接口返回的原始资产代码。
+ * @return 处理后的结果或当前状态。
+ */
+internal fun normalizeIndexCode(rawCode: String): String = rawCode.trim().lowercase()
 
 /**
  * 规范化虚拟币代码，统一后续处理使用的表示形式。

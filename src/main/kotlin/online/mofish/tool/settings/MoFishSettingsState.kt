@@ -1,5 +1,6 @@
 package online.mofish.tool.settings
 
+import online.mofish.tool.data.index.defaultMarketIndexCodes
 import online.mofish.tool.domain.AiConfig
 import online.mofish.tool.domain.AiStockHistoryRange
 import online.mofish.tool.domain.HoldingConfig
@@ -67,6 +68,7 @@ enum class MoFishStockTableColumn(
 data class MoFishWatchlistSettings(
     val fundCodes: List<String> = emptyList(),
     val stockCodes: List<String> = emptyList(),
+    val indexCodes: List<String> = defaultMarketIndexCodes(),
     val stockGroups: List<String> = emptyList(),
     val stockGroupAssignments: Map<String, String> = emptyMap(),
     val cryptoIds: List<String> = listOf("bitcoin"),

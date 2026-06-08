@@ -236,6 +236,7 @@ class MoFishProjectService(
     private fun MoFishWorkspace.matches(settingsState: MoFishSettingsState): Boolean {
         return fundQuotes.map { it.code } == settingsState.watchlist.fundCodes &&
                 stockQuotes.map { it.code } == settingsState.watchlist.stockCodes &&
+                indexQuotes.map { it.code } == settingsState.watchlist.indexCodes &&
                 cryptoQuotes.map { it.code } == settingsState.watchlist.cryptoIds &&
                 holdings == settingsState.holdings &&
                 reminderRules == settingsState.reminders &&

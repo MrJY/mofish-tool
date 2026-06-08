@@ -4,6 +4,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
@@ -87,11 +88,9 @@ internal class IndexModulePanel(
     override fun configureTable(table: JBTable) {
         table.setDefaultRenderer(Any::class.java, IndexTableCellRenderer())
         table.columnModel.getColumn(0).preferredWidth = JBUI.scale(72)
-        table.columnModel.getColumn(1).preferredWidth = JBUI.scale(116)
-        table.columnModel.getColumn(2).preferredWidth = JBUI.scale(188)
-        table.columnModel.getColumn(3).preferredWidth = JBUI.scale(110)
-        table.columnModel.getColumn(4).preferredWidth = JBUI.scale(96)
-        table.columnModel.getColumn(5).preferredWidth = JBUI.scale(156)
+        table.columnModel.getColumn(1).preferredWidth = JBUI.scale(220)
+        table.columnModel.getColumn(2).preferredWidth = JBUI.scale(110)
+        table.columnModel.getColumn(3).preferredWidth = JBUI.scale(96)
     }
 
     /**
@@ -101,6 +100,8 @@ internal class IndexModulePanel(
     override fun createToolbarActions(): List<AnAction> {
         return listOf(
             RefreshIndexAction(),
+            AddIndexAction(),
+            RemoveSelectedIndexAction(),
             ToggleIndexListViewAction(),
             ToggleQuoteSortDirectionAction(),
         )
@@ -113,6 +114,8 @@ internal class IndexModulePanel(
     override fun createPopupActions(): List<AnAction> {
         return listOf(
             RefreshIndexAction(),
+            AddIndexAction(),
+            RemoveSelectedIndexAction(),
             AddSelectedIndexReminderAction(),
             ToggleIndexListViewAction(),
             ToggleQuoteSortDirectionAction(),
@@ -147,9 +150,8 @@ internal class IndexModulePanel(
                 """
                 <html>
                 <body>
-                  <b>${escape(row.quote.name)}</b> <span style='color:#888888;'>${escape(row.marketLabel)} / ${escape(formatCode(row.quote.code))}</span><br/>
-                  点位：$price　涨跌幅：$percent<br/>
-                  更新时间：${escape(formatDateTime(row.quote.updatedAt))}
+                  <b>${escape(formatNameWithCode(row.quote))}</b> <span style='color:#888888;'>${escape(row.marketLabel)}</span><br/>
+                  点位：$price　涨跌幅：$percent
                 </body>
                 </html>
                 """.trimIndent()
@@ -162,7 +164,7 @@ internal class IndexModulePanel(
          * 返回表格模型当前列数。
          * @return 处理后的结果或当前状态。
          */
-        override fun getColumnCount(): Int = 6
+        override fun getColumnCount(): Int = 4
 
         /**
          * 返回表格指定列的标题。
@@ -172,11 +174,9 @@ internal class IndexModulePanel(
         override fun getColumnName(column: Int): String {
             return when (column) {
                 0 -> "市场"
-                1 -> "代码"
-                2 -> "名称"
-                3 -> "点位"
-                4 -> "涨跌幅"
-                else -> "更新时间"
+                1 -> "名称（代码）"
+                2 -> "点位"
+                else -> "涨跌幅"
             }
         }
 
@@ -190,11 +190,9 @@ internal class IndexModulePanel(
             val row = rowAt(rowIndex)
             return when (columnIndex) {
                 0 -> row.marketLabel
-                1 -> formatCode(row.quote.code)
-                2 -> row.quote.name
-                3 -> formatDecimal(row.quote.currentPrice)
-                4 -> formatPercent(stockChangePercent(row.quote))
-                else -> formatDateTime(row.quote.updatedAt)
+                1 -> formatNameWithCode(row.quote)
+                2 -> formatDecimal(row.quote.currentPrice)
+                else -> formatPercent(stockChangePercent(row.quote))
             }
         }
 
@@ -230,8 +228,8 @@ internal class IndexModulePanel(
             val label = component as? JLabel ?: return component
             val item = tableModel.itemAt(this@IndexModulePanel.table.convertRowIndexToModel(row)) ?: return component
             label.border = JBUI.Borders.empty(0, 8)
-            label.horizontalAlignment = if (column >= 3) JLabel.RIGHT else JLabel.LEFT
-            label.foreground = if (column == 3 || column == 4) {
+            label.horizontalAlignment = if (column >= 2) JLabel.RIGHT else JLabel.LEFT
+            label.foreground = if (column == 3) {
                 marketColor(stockChangePercent(item.quote))
             } else {
                 JBColor.foreground()
@@ -252,6 +250,49 @@ internal class IndexModulePanel(
         override fun actionPerformed(event: AnActionEvent) {
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.refreshModule(MoFishRefreshModule.INDICES)
+        }
+    }
+
+    private inner class AddIndexAction : DumbAwareAction("添加摸鱼指数", "按代码或关键词添加摸鱼指数", AllIcons.General.Add) {
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
+        override fun actionPerformed(event: AnActionEvent) {
+            val selectedCode = callbacks.showIndexSearchDialog()?.code ?: return
+            callbacks.watchlistService.addIndexCode(selectedCode)
+            callbacks.watchlistService.selectView(moduleViewId())
+            callbacks.watchlistService.selectAsset(selectedCode)
+            callbacks.eventStatus.text = "已添加摸鱼指数 $selectedCode，正在刷新。"
+        }
+    }
+
+    private inner class RemoveSelectedIndexAction : DumbAwareAction("删除摸鱼指数", "删除当前选中的摸鱼指数", AllIcons.General.Remove) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedRow() ?: return
+            val confirm = Messages.showYesNoDialog(
+                callbacks.project,
+                "确认从自选指数中删除 ${selected.quote.name}（${selected.quote.code}）吗？",
+                "删除摸鱼指数",
+                AllIcons.General.WarningDialog,
+            )
+            if (confirm != Messages.YES) {
+                return
+            }
+            callbacks.watchlistService.removeIndexCode(selected.quote.code)
+            callbacks.eventStatus.text = "已删除摸鱼指数 ${selected.quote.code}，正在刷新。"
         }
     }
 
@@ -387,4 +428,13 @@ internal class IndexModulePanel(
      * @return 处理后的结果或当前状态。
      */
     private fun formatCode(value: String): String = value.uppercase()
+
+    /**
+     * 格式化指数名称和代码，用于界面展示。
+     * @param quote 当前资产行情数据。
+     * @return 处理后的结果或当前状态。
+     */
+    private fun formatNameWithCode(quote: StockQuote): String {
+        return "${quote.name}（${formatCode(quote.code)}）"
+    }
 }
