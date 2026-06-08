@@ -35,7 +35,6 @@ class MoFishSettingsConfigurable : Configurable {
     private var aiModelField: JBTextField? = null
     private var aiApiKeyField: JBPasswordField? = null
     private var aiHistoryRangeCombo: JComboBox<AiStockHistoryRange>? = null
-    private var quoteSortFieldCombo: JComboBox<MoFishQuoteSortField>? = null
     private var quoteSortDirectionCombo: JComboBox<MoFishSortDirection>? = null
     private var reminderSortFieldCombo: JComboBox<MoFishReminderSortField>? = null
     private var reminderSortDirectionCombo: JComboBox<MoFishSortDirection>? = null
@@ -129,7 +128,6 @@ class MoFishSettingsConfigurable : Configurable {
             aiModelField = JBTextField(),
             aiApiKeyField = JBPasswordField(),
             aiHistoryRangeCombo = JComboBox(AiStockHistoryRange.entries.toTypedArray()),
-            quoteSortFieldCombo = JComboBox(MoFishQuoteSortField.entries.toTypedArray()),
             quoteSortDirectionCombo = JComboBox(MoFishSortDirection.entries.toTypedArray()),
             reminderSortFieldCombo = JComboBox(MoFishReminderSortField.entries.toTypedArray()),
             reminderSortDirectionCombo = JComboBox(MoFishSortDirection.entries.toTypedArray()),
@@ -171,7 +169,6 @@ class MoFishSettingsConfigurable : Configurable {
         aiModelField = ui.aiModelField
         aiApiKeyField = ui.aiApiKeyField
         aiHistoryRangeCombo = ui.aiHistoryRangeCombo
-        quoteSortFieldCombo = ui.quoteSortFieldCombo
         quoteSortDirectionCombo = ui.quoteSortDirectionCombo
         reminderSortFieldCombo = ui.reminderSortFieldCombo
         reminderSortDirectionCombo = ui.reminderSortDirectionCombo
@@ -232,7 +229,6 @@ class MoFishSettingsConfigurable : Configurable {
         aiModelField = null
         aiApiKeyField = null
         aiHistoryRangeCombo = null
-        quoteSortFieldCombo = null
         quoteSortDirectionCombo = null
         reminderSortFieldCombo = null
         reminderSortDirectionCombo = null
@@ -269,7 +265,6 @@ class MoFishSettingsConfigurable : Configurable {
         aiModelField?.text = state.aiConfig.model
         aiApiKeyField?.text = state.aiConfig.apiKey
         aiHistoryRangeCombo?.selectedItem = state.aiConfig.stockHistoryRange
-        quoteSortFieldCombo?.selectedItem = state.sortSettings.quoteField
         quoteSortDirectionCombo?.selectedItem = state.sortSettings.quoteDirection
         reminderSortFieldCombo?.selectedItem = state.sortSettings.reminderField
         reminderSortDirectionCombo?.selectedItem = state.sortSettings.reminderDirection
@@ -331,8 +326,6 @@ class MoFishSettingsConfigurable : Configurable {
                     ?: baseState.aiConfig.stockHistoryRange,
             ),
             sortSettings = MoFishSortSettings(
-                quoteField = quoteSortFieldCombo?.selectedItem as? MoFishQuoteSortField
-                    ?: baseState.sortSettings.quoteField,
                 quoteDirection = quoteSortDirectionCombo?.selectedItem as? MoFishSortDirection
                     ?: baseState.sortSettings.quoteDirection,
                 reminderField = reminderSortFieldCombo?.selectedItem as? MoFishReminderSortField
@@ -627,7 +620,6 @@ private data class SettingsEditorFields(
     val aiModelField: JBTextField,
     val aiApiKeyField: JBPasswordField,
     val aiHistoryRangeCombo: JComboBox<AiStockHistoryRange>,
-    val quoteSortFieldCombo: JComboBox<MoFishQuoteSortField>,
     val quoteSortDirectionCombo: JComboBox<MoFishSortDirection>,
     val reminderSortFieldCombo: JComboBox<MoFishReminderSortField>,
     val reminderSortDirectionCombo: JComboBox<MoFishSortDirection>,

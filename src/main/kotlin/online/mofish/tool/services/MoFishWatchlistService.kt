@@ -13,7 +13,6 @@ import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.ReminderRule
 import online.mofish.tool.domain.StockSearchSuggestion
-import online.mofish.tool.settings.MoFishQuoteSortField
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.settings.MoFishSettingsService
 import online.mofish.tool.settings.MoFishSettingsState
@@ -423,20 +422,6 @@ class MoFishWatchlistService(
             return emptyList()
         }
         return fundQuoteClient.searchSuggestions(normalizedKeyword)
-    }
-
-    /**
-     * 处理 cycleQuoteSortField 相关逻辑，并返回调用方需要的结果。
-     */
-    fun cycleQuoteSortField() {
-        val currentField = settingsService.snapshot().sortSettings.quoteField
-        val fields = MoFishQuoteSortField.entries
-        val nextField = fields[(fields.indexOf(currentField) + 1) % fields.size]
-        updateSettings { state ->
-            state.copy(
-                sortSettings = state.sortSettings.copy(quoteField = nextField),
-            )
-        }
     }
 
     /**

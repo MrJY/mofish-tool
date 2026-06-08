@@ -6,7 +6,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
-import com.intellij.util.PlatformIcons
 import com.intellij.util.ui.JBUI
 import online.mofish.tool.data.index.marketIndexDefinitionFor
 import online.mofish.tool.domain.AssetType
@@ -16,7 +15,6 @@ import online.mofish.tool.domain.ReminderMetric
 import online.mofish.tool.domain.ReminderRule
 import online.mofish.tool.domain.StockExchange
 import online.mofish.tool.domain.StockQuote
-import online.mofish.tool.settings.MoFishQuoteSortField
 import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
@@ -58,17 +56,8 @@ internal class IndexModulePanel(
             )
         }
         val sortSettings = snapshot.settingsState.sortSettings
-        val comparator = when (sortSettings.quoteField) {
-            MoFishQuoteSortField.DISPLAY_NAME ->
-                compareBy<IndexListItem> { it.quote.name.lowercase() }
-                    .thenBy { indexPriority(it.quote.code) }
-            MoFishQuoteSortField.DAILY_CHANGE_PERCENT ->
-                compareBy<IndexListItem> { stockChangePercent(it.quote) ?: BigDecimal.ZERO }
-                    .thenBy { indexPriority(it.quote.code) }
-            MoFishQuoteSortField.UPDATED_AT ->
-                compareBy<IndexListItem> { it.quote.updatedAt }
-                    .thenBy { indexPriority(it.quote.code) }
-        }
+        val comparator = compareBy<IndexListItem> { stockChangePercent(it.quote) ?: BigDecimal.ZERO }
+            .thenBy { indexPriority(it.quote.code) }
         return when (sortSettings.quoteDirection) {
             MoFishSortDirection.ASC -> rows.sortedWith(comparator)
             MoFishSortDirection.DESC -> rows.sortedWith(comparator.reversed())
@@ -113,7 +102,6 @@ internal class IndexModulePanel(
         return listOf(
             RefreshIndexAction(),
             ToggleIndexListViewAction(),
-            CycleQuoteSortFieldAction(),
             ToggleQuoteSortDirectionAction(),
         )
     }
@@ -127,7 +115,6 @@ internal class IndexModulePanel(
             RefreshIndexAction(),
             AddSelectedIndexReminderAction(),
             ToggleIndexListViewAction(),
-            CycleQuoteSortFieldAction(),
             ToggleQuoteSortDirectionAction(),
         )
     }
@@ -333,27 +320,6 @@ internal class IndexModulePanel(
         override fun actionPerformed(event: AnActionEvent) {
             toggleViewMode()
             callbacks.eventStatus.text = "摸鱼指数列表已切换为${nextViewMode().displayName}。"
-        }
-    }
-
-    private inner class CycleQuoteSortFieldAction : DumbAwareAction("排序字段", "在名称、日涨跌幅、更新时间之间切换", PlatformIcons.PROPERTY_ICON) {
-        /**
-         * 根据当前选择和上下文更新动作可用状态。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun update(event: AnActionEvent) {
-            val sortField = callbacks.watchlistService.snapshot()?.settingsState?.sortSettings?.quoteField
-            event.presentation.text = sortField?.toString() ?: "排序字段"
-            event.presentation.icon = PlatformIcons.PROPERTY_ICON
-            event.presentation.description = "切换行情排序字段"
-        }
-
-        /**
-         * 处理用户触发的 IDE 动作。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun actionPerformed(event: AnActionEvent) {
-            callbacks.watchlistService.cycleQuoteSortField()
         }
     }
 

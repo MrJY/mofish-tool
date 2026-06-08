@@ -21,11 +21,6 @@ import online.mofish.tool.ui.dialogs.MoFishSearchableChoiceDialog
 import online.mofish.tool.ui.dialogs.SearchableChoice
 import online.mofish.tool.ui.toolwindow.modules.*
 import java.awt.*
-import java.awt.datatransfer.DataFlavor
-import java.awt.datatransfer.StringSelection
-import java.awt.datatransfer.Transferable
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.swing.*
@@ -36,14 +31,8 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     private val instantFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         .withZone(ZoneId.systemDefault())
     private val eventStatus = JBLabel("等待状态事件...")
-    private val moduleListModel = DefaultListModel<ModuleNavItem>()
-    private val moduleList = JList(moduleListModel)
     private val moduleContentLayout = CardLayout()
     private val moduleContent = JPanel(moduleContentLayout)
-    private val moduleShell = JPanel(BorderLayout())
-    private val moduleNavPanel = JPanel(BorderLayout())
-    private val moduleNavToggleLabel = JBLabel(AllIcons.Actions.Back)
-    private val collapsedModuleNav = JPanel(BorderLayout())
     private val moduleCallbacks = object : AssetModuleCallbacks {
         override val project: Project = this@MoFishToolWindowPanel.project
         override val watchlistService: MoFishWatchlistService = this@MoFishToolWindowPanel.watchlistService
@@ -72,17 +61,21 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     private val fundModule = FundModulePanel(moduleCallbacks)
     private val newsPlaceholder = createPlaceholderPane("快讯页已预留，后续会接入筛选与详情。")
 
+    private lateinit var tabComponent: ModuleTabComponent
+    private var lastEnabledViewIds = emptyList<String>()
+    private val globalToolbarHolder = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        border = JBUI.Borders.empty(2, 12, 0, 12)
+    }
+
     @Volatile
     private var disposed = false
 
-    @Volatile
-    private var syncingModuleSelection = false
-
-    @Volatile
-    private var moduleNavCollapsed = false
-
     init {
-        configureModuleNavigation()
+        tabComponent = ModuleTabComponent { item ->
+            watchlistService.selectView(item.viewId)
+        }
+
         moduleContent.add(stockModule.createComponent(), "stocks")
         moduleContent.add(indexModule.createComponent(), "indices")
         moduleContent.add(fundModule.createComponent(), "funds")
@@ -91,7 +84,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         moduleContent.add(wrapPlaceholderPanel(newsPlaceholder), "news")
 
         val container = JPanel(BorderLayout())
-        container.border = JBUI.Borders.empty(8)
+        container.border = JBUI.Borders.empty()
         container.add(createModuleShell(), BorderLayout.CENTER)
         setContent(container)
 
@@ -112,135 +105,21 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     /**
-     * 处理 configureModuleNavigation 相关逻辑，并返回调用方需要的结果。
-     */
-    private fun configureModuleNavigation() {
-        DEFAULT_MODULES.forEach(moduleListModel::addElement)
-        moduleList.selectionMode = ListSelectionModel.SINGLE_SELECTION
-        moduleList.layoutOrientation = JList.VERTICAL
-        moduleList.visibleRowCount = DEFAULT_MODULES.size
-        moduleList.fixedCellHeight = JBUI.scale(36)
-        moduleList.cellRenderer = ModuleNavRenderer()
-        moduleList.dragEnabled = true
-        moduleList.dropMode = DropMode.INSERT
-        moduleList.transferHandler = ModuleNavTransferHandler()
-        moduleList.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        moduleList.addListSelectionListener {
-            if (!it.valueIsAdjusting && !syncingModuleSelection) {
-                moduleList.selectedValue?.viewId?.let(watchlistService::selectView)
-            }
-        }
-        moduleList.selectedIndex = 0
-    }
-
-    /**
      * 创建模块Shell实例或展示内容。
      * @return 处理后的结果或当前状态。
      */
     private fun createModuleShell(): JComponent {
-        moduleNavPanel.border = JBUI.Borders.compound(
-            JBUI.Borders.customLine(JBColor.border(), 0, 0, 0, 1),
-            JBUI.Borders.empty(8, 8, 8, 6),
-        )
-        moduleNavPanel.background = MoFishUiStyle.navSurface
-        moduleNavPanel.preferredSize = Dimension(MODULE_NAV_WIDTH, 0)
-        moduleNavPanel.add(createExpandedModuleNavHeader(), BorderLayout.NORTH)
-        moduleNavPanel.add(moduleList, BorderLayout.CENTER)
-        configureCollapsedModuleNav()
+        val rootPanel = JPanel(BorderLayout())
+        rootPanel.isOpaque = false
 
-        val contentPanel = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
-        contentPanel.border = JBUI.Borders.compound(
-            JBUI.Borders.customLine(JBColor.border(), 1),
-            JBUI.Borders.empty(10),
-        )
-        contentPanel.background = MoFishUiStyle.contentSurface
-        contentPanel.add(moduleContent, BorderLayout.CENTER)
+        val topContainer = JPanel(BorderLayout())
+        topContainer.isOpaque = false
+        topContainer.add(globalToolbarHolder, BorderLayout.NORTH)
+        topContainer.add(tabComponent, BorderLayout.SOUTH)
 
-        moduleShell.add(moduleNavPanel, BorderLayout.WEST)
-        moduleShell.add(contentPanel, BorderLayout.CENTER)
-        return moduleShell
-    }
-
-    /**
-     * 创建Expanded模块NavHeader实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createExpandedModuleNavHeader(): JComponent {
-        val header = JPanel(BorderLayout())
-        header.isOpaque = false
-        header.border = JBUI.Borders.empty(0, 0, 8, 0)
-        moduleNavToggleLabel.apply {
-            text = ""
-            horizontalAlignment = JLabel.LEFT
-            border = JBUI.Borders.empty(2, 0, 2, 2)
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            toolTipText = "收起分类"
-            addMouseListener(
-                object : MouseAdapter() {
-                    /**
-                     * 处理 mouseClicked 相关逻辑，并返回调用方需要的结果。
-                     * @param event IntelliJ 平台传入的动作事件上下文。
-                     */
-                    override fun mouseClicked(event: MouseEvent) {
-                        toggleModuleNav()
-                    }
-                }
-            )
-        }
-        header.add(moduleNavToggleLabel, BorderLayout.WEST)
-        return header
-    }
-
-    /**
-     * 处理 configureCollapsedModuleNav 相关逻辑，并返回调用方需要的结果。
-     */
-    private fun configureCollapsedModuleNav() {
-        collapsedModuleNav.background = MoFishUiStyle.navSurface
-        collapsedModuleNav.border = JBUI.Borders.compound(
-            JBUI.Borders.customLine(JBColor.border(), 0, 0, 0, 1),
-            JBUI.Borders.empty(8, 0, 10, 0),
-        )
-        collapsedModuleNav.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        collapsedModuleNav.toolTipText = "展开分类"
-        collapsedModuleNav.addMouseListener(
-            object : MouseAdapter() {
-                /**
-                 * 处理 mouseClicked 相关逻辑，并返回调用方需要的结果。
-                 * @param event IntelliJ 平台传入的动作事件上下文。
-                 */
-                override fun mouseClicked(event: MouseEvent) {
-                    toggleModuleNav()
-                }
-            }
-        )
-        val expandIcon = JBLabel(AllIcons.Actions.Forward).apply {
-            horizontalAlignment = JLabel.CENTER
-            border = JBUI.Borders.emptyBottom(12)
-        }
-        val collapsedLabelHolder = JPanel(GridBagLayout()).apply {
-            isOpaque = false
-            add(VerticalTextLabel("分类"))
-        }
-        collapsedModuleNav.add(expandIcon, BorderLayout.NORTH)
-        collapsedModuleNav.add(collapsedLabelHolder, BorderLayout.CENTER)
-    }
-
-    /**
-     * 转换为ggle模块Nav表示。
-     */
-    private fun toggleModuleNav() {
-        moduleNavCollapsed = !moduleNavCollapsed
-        moduleShell.remove(moduleNavPanel)
-        moduleShell.remove(collapsedModuleNav)
-        if (moduleNavCollapsed) {
-            collapsedModuleNav.preferredSize = Dimension(MODULE_NAV_COLLAPSED_WIDTH, 0)
-            moduleShell.add(collapsedModuleNav, BorderLayout.WEST)
-        } else {
-            moduleNavPanel.preferredSize = Dimension(MODULE_NAV_WIDTH, 0)
-            moduleShell.add(moduleNavPanel, BorderLayout.WEST)
-        }
-        moduleShell.revalidate()
-        moduleShell.repaint()
+        rootPanel.add(topContainer, BorderLayout.NORTH)
+        rootPanel.add(moduleContent, BorderLayout.CENTER)
+        return rootPanel
     }
 
     /**
@@ -256,7 +135,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     /**
-     * 创建PlaceholderPane实例或展示内容。
+     * 创建PlaceholderPane实例或展示内容.
      * @param message 需要展示给用户的消息内容。
      * @return 处理后的结果或当前状态。
      */
@@ -332,21 +211,12 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
      */
     private fun syncEnabledModules(snapshot: MoFishWatchlistState) {
         val enabledItems = snapshot.enabledModuleItems()
-        val currentViewIds = (0 until moduleListModel.size()).map { moduleListModel.getElementAt(it).viewId }
         val nextViewIds = enabledItems.map { it.viewId }
-        if (currentViewIds == nextViewIds) {
-            moduleList.visibleRowCount = enabledItems.size
+        if (lastEnabledViewIds == nextViewIds) {
             return
         }
-
-        syncingModuleSelection = true
-        try {
-            moduleListModel.clear()
-            enabledItems.forEach(moduleListModel::addElement)
-            moduleList.visibleRowCount = enabledItems.size
-        } finally {
-            syncingModuleSelection = false
-        }
+        lastEnabledViewIds = nextViewIds
+        tabComponent.updateTabs(enabledItems)
     }
 
     /**
@@ -356,17 +226,25 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     private fun syncModuleView(viewId: String) {
         val targetViewId = normalizeViewId(viewId)
         moduleContentLayout.show(moduleContent, targetViewId)
-        val targetIndex = moduleIndexOf(targetViewId)
-        if (targetIndex < 0 || moduleList.selectedIndex == targetIndex) {
-            return
+        tabComponent.selectTabByViewId(targetViewId)
+
+        val activePanel = when (targetViewId) {
+            "stocks" -> stockModule
+            "indices" -> indexModule
+            "funds" -> fundModule
+            "crypto" -> cryptoModule
+            "forex" -> forexModule
+            else -> null
         }
-        syncingModuleSelection = true
-        try {
-            moduleList.selectedIndex = targetIndex
-            moduleList.ensureIndexIsVisible(targetIndex)
-        } finally {
-            syncingModuleSelection = false
+        globalToolbarHolder.removeAll()
+        if (activePanel != null) {
+            val toolbarComp = activePanel.getToolbarComponent()
+            if (toolbarComp != null) {
+                globalToolbarHolder.add(toolbarComp, BorderLayout.CENTER)
+            }
         }
+        globalToolbarHolder.revalidate()
+        globalToolbarHolder.repaint()
     }
 
     /**
@@ -375,27 +253,13 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
      * @return 处理后的结果或当前状态。
      */
     private fun normalizeViewId(viewId: String): String {
-        return if (moduleIndexOf(viewId) >= 0) {
+        return if (lastEnabledViewIds.contains(viewId)) {
             viewId
-        } else if (moduleListModel.size() > 0) {
-            moduleListModel.getElementAt(0).viewId
+        } else if (lastEnabledViewIds.isNotEmpty()) {
+            lastEnabledViewIds[0]
         } else {
             "stocks"
         }
-    }
-
-    /**
-     * 处理 moduleIndexOf 相关逻辑，并返回调用方需要的结果。
-     * @param viewId 视图Id。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun moduleIndexOf(viewId: String): Int {
-        for (index in 0 until moduleListModel.size()) {
-            if (moduleListModel.getElementAt(index).viewId == viewId) {
-                return index
-            }
-        }
-        return -1
     }
 
     private fun MoFishWatchlistState.enabledModuleItems(): List<ModuleNavItem> {
@@ -586,98 +450,290 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         )
     }
 
-    private inner class ModuleNavRenderer : DefaultListCellRenderer() {
-        /**
-         * 获取列表CellRenderer组件。
-         * @param list 列表。
-         * @param value 待解析、格式化或写入的原始值。
-         * @param index index。
-         * @param isSelected is选中项。
-         * @param cellHasFocus cellHasFocus。
-         * @return 处理后的结果或当前状态。
-         */
-        override fun getListCellRendererComponent(
-            list: JList<*>,
-            value: Any?,
-            index: Int,
-            isSelected: Boolean,
-            cellHasFocus: Boolean,
-        ): Component {
-            val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
-            component.border = JBUI.Borders.empty(0, 12)
-            component.horizontalAlignment = JLabel.LEFT
-            return component
+    private class ModuleTabComponent(
+        private val onSelected: (ModuleNavItem) -> Unit
+    ) : JPanel(null) {
+        private var selectedIndex = 0
+        private var firstVisibleIndex = 0
+        private var revealSelectedOnLayout = true
+        private var items = emptyList<ModuleNavItem>()
+        private val buttons = mutableListOf<JButton>()
+        private val previousButton = createNavigationButton(AllIcons.Actions.Back, "切换到前一个模块") {
+            selectAdjacentTab(-1)
         }
-    }
-
-    private inner class ModuleNavTransferHandler : TransferHandler() {
-        /**
-         * 获取数据源Actions。
-         * @param component 组件。
-         * @return 处理后的结果或当前状态。
-         */
-        override fun getSourceActions(component: JComponent): Int = MOVE
-
-        /**
-         * 创建Transferable实例或展示内容。
-         * @param component 组件。
-         * @return 处理后的结果或当前状态。
-         */
-        override fun createTransferable(component: JComponent): Transferable {
-            val selectedIndex = moduleList.selectedIndex
-            return StringSelection(selectedIndex.toString())
+        private val nextButton = createNavigationButton(AllIcons.Actions.Forward, "切换到后一个模块") {
+            selectAdjacentTab(1)
         }
 
-        /**
-         * 判断当前上下文是否允许Import。
-         * @param support support。
-         * @return 处理后的结果或当前状态。
-         */
-        override fun canImport(support: TransferSupport): Boolean {
-            return support.component == moduleList && support.isDataFlavorSupported(DataFlavor.stringFlavor)
-        }
-
-        /**
-         * 处理 importData 相关逻辑，并返回调用方需要的结果。
-         * @param support support。
-         * @return 处理后的结果或当前状态。
-         */
-        override fun importData(support: TransferSupport): Boolean {
-            if (!canImport(support)) {
-                return false
-            }
-            val sourceIndex = support.transferable.getTransferData(DataFlavor.stringFlavor).toString().toIntOrNull()
-                ?: return false
-            val dropLocation = support.dropLocation as? JList.DropLocation ?: return false
-            var targetIndex = dropLocation.index.coerceIn(0, moduleListModel.size())
-            if (sourceIndex == targetIndex || sourceIndex + 1 == targetIndex) {
-                return false
-            }
-            val item = moduleListModel.getElementAt(sourceIndex)
-            moduleListModel.removeElementAt(sourceIndex)
-            if (sourceIndex < targetIndex) {
-                targetIndex -= 1
-            }
-            moduleListModel.add(targetIndex, item)
-            moduleList.selectedIndex = targetIndex
-            watchlistService.selectView(item.viewId)
-            return true
-        }
-    }
-
-    private class VerticalTextLabel(text: String) : JLabel(text.toVerticalHtml()) {
         init {
-            horizontalAlignment = CENTER
-            verticalAlignment = TOP
+            isOpaque = false
+            border = JBUI.Borders.empty(2, 12, 2, 12)
+            add(previousButton)
+            add(nextButton)
         }
 
-        companion object {
-            private fun String.toVerticalHtml(): String {
-                return toCharArray().joinToString(
-                    separator = "<br/>",
-                    prefix = "<html><body style='text-align:center;'>",
-                    postfix = "</body></html>"
-                )
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            val g2 = g.create() as Graphics2D
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+
+            // 1. 绘制贯穿底部的分割细线，完美靠底对齐
+            g2.color = MoFishUiStyle.gridLineColor
+            val lineY = height - JBUI.scale(1)
+            g2.fillRect(0, lineY, width, JBUI.scale(1))
+
+            // 2. 绘制当前选中项的指示粗线，紧贴分割线，呈现连体的高级视觉感
+            if (selectedIndex in buttons.indices) {
+                val selectedButton = buttons[selectedIndex]
+                if (!selectedButton.isVisible) {
+                    g2.dispose()
+                    return
+                }
+                g2.color = JBColor.foreground()
+
+                val btnX = selectedButton.x
+                val btnW = selectedButton.width
+                val font = selectedButton.font
+                val textWidth = selectedButton.getFontMetrics(font).stringWidth(selectedButton.text)
+                val lineW = textWidth + JBUI.scale(4)
+                val lineX = btnX + (btnW - lineW) / 2
+
+                val indicatorH = JBUI.scale(2)
+                val indicatorY = height - indicatorH
+                g2.fillRect(lineX, indicatorY, lineW, indicatorH)
+            }
+            g2.dispose()
+        }
+
+        override fun doLayout() {
+            val contentInsets = insets
+            val contentX = contentInsets.left
+            val contentY = contentInsets.top
+            val contentHeight = (height - contentInsets.top - contentInsets.bottom).coerceAtLeast(0)
+            val availableWidth = (width - contentInsets.left - contentInsets.right).coerceAtLeast(0)
+            val needsNavigation = totalTabsWidth() > availableWidth
+            val navigationWidth = JBUI.scale(22)
+            val navigationGap = JBUI.scale(6)
+            val tabsX = if (needsNavigation) contentX + navigationWidth + navigationGap else contentX
+            val tabsWidth = if (needsNavigation) {
+                (availableWidth - navigationWidth * 2 - navigationGap * 2).coerceAtLeast(0)
+            } else {
+                availableWidth
+            }
+
+            previousButton.isVisible = needsNavigation
+            nextButton.isVisible = needsNavigation
+            if (needsNavigation) {
+                val navigationY = contentY + (contentHeight - navigationWidth).coerceAtLeast(0) / 2
+                previousButton.setBounds(contentX, navigationY, navigationWidth, navigationWidth)
+                nextButton.setBounds(contentX + availableWidth - navigationWidth, navigationY, navigationWidth, navigationWidth)
+            }
+
+            buttons.forEach { it.isVisible = false }
+            if (buttons.isEmpty()) {
+                previousButton.isEnabled = false
+                nextButton.isEnabled = false
+                return
+            }
+
+            if (!needsNavigation) {
+                firstVisibleIndex = 0
+                revealSelectedOnLayout = false
+            } else {
+                firstVisibleIndex = firstVisibleIndex.coerceIn(0, buttons.lastIndex)
+                if (revealSelectedOnLayout || selectedIndex !in visibleIndicesFrom(firstVisibleIndex, tabsWidth)) {
+                    firstVisibleIndex = firstIndexShowingSelected(tabsWidth)
+                    revealSelectedOnLayout = false
+                } else {
+                    firstVisibleIndex = firstIndexFillingTrailingSpace(firstVisibleIndex, tabsWidth)
+                }
+            }
+
+            val visibleIndices = visibleIndicesFrom(firstVisibleIndex, tabsWidth)
+            val visibleGap = visibleTabGap(visibleIndices, tabsWidth)
+            var x = tabsX
+            visibleIndices.forEachIndexed { visibleOrder, index ->
+                val button = buttons[index]
+                if (visibleOrder > 0) {
+                    x += visibleGap
+                }
+                val buttonWidth = button.preferredSize.width
+                button.isVisible = true
+                button.setBounds(x, contentY, buttonWidth, contentHeight)
+                x += buttonWidth
+            }
+
+            val lastVisibleIndex = visibleIndices.lastOrNull() ?: firstVisibleIndex
+            previousButton.isEnabled = needsNavigation && selectedIndex > 0
+            nextButton.isEnabled = needsNavigation && selectedIndex < buttons.lastIndex
+        }
+
+        override fun getPreferredSize(): Dimension {
+            val contentInsets = insets
+            return Dimension(
+                totalTabsWidth() + contentInsets.left + contentInsets.right,
+                JBUI.scale(26) + contentInsets.top + contentInsets.bottom,
+            )
+        }
+
+        fun updateTabs(newItems: List<ModuleNavItem>) {
+            this.items = newItems
+            removeAll()
+            add(previousButton)
+            add(nextButton)
+            buttons.clear()
+
+            newItems.forEachIndexed { index, item ->
+                val button = createTabButton(index, item)
+                buttons.add(button)
+                add(button)
+            }
+            if (selectedIndex >= newItems.size) {
+                selectedIndex = (newItems.size - 1).coerceAtLeast(0)
+            }
+            firstVisibleIndex = firstVisibleIndex.coerceAtMost(buttons.lastIndex.coerceAtLeast(0))
+            revealSelectedOnLayout = true
+            revalidate()
+            repaint()
+        }
+
+        fun selectTabByViewId(viewId: String) {
+            val index = items.indexOfFirst { it.viewId == viewId }
+            if (index >= 0) {
+                selectedIndex = index
+                revealSelectedOnLayout = true
+                revalidate()
+                repaint()
+            }
+        }
+
+        private fun selectAdjacentTab(offset: Int) {
+            val nextIndex = (selectedIndex + offset).coerceIn(0, buttons.lastIndex)
+            if (nextIndex == selectedIndex || nextIndex !in items.indices) {
+                return
+            }
+            selectedIndex = nextIndex
+            revealSelectedOnLayout = true
+            revalidate()
+            repaint()
+            onSelected(items[nextIndex])
+        }
+
+        private fun totalTabsWidth(): Int {
+            if (buttons.isEmpty()) {
+                return 0
+            }
+            return buttons.sumOf { it.preferredSize.width } + minTabGap() * (buttons.size - 1)
+        }
+
+        private fun visibleIndicesFrom(startIndex: Int, tabsWidth: Int): List<Int> {
+            if (buttons.isEmpty()) {
+                return emptyList()
+            }
+            val indices = mutableListOf<Int>()
+            var usedWidth = 0
+            for (index in startIndex.coerceIn(0, buttons.lastIndex)..buttons.lastIndex) {
+                val buttonWidth = buttons[index].preferredSize.width
+                val nextWidth = if (indices.isEmpty()) buttonWidth else usedWidth + minTabGap() + buttonWidth
+                if (nextWidth > tabsWidth && indices.isNotEmpty()) {
+                    break
+                }
+                indices.add(index)
+                usedWidth = nextWidth
+                if (nextWidth > tabsWidth) {
+                    break
+                }
+            }
+            return indices
+        }
+
+        private fun firstIndexShowingSelected(tabsWidth: Int): Int {
+            if (selectedIndex !in buttons.indices) {
+                return firstVisibleIndex.coerceIn(0, buttons.lastIndex)
+            }
+            var candidate = selectedIndex
+            for (index in selectedIndex downTo 0) {
+                if (selectedIndex in visibleIndicesFrom(index, tabsWidth)) {
+                    candidate = index
+                } else {
+                    break
+                }
+            }
+            return candidate
+        }
+
+        private fun firstIndexFillingTrailingSpace(startIndex: Int, tabsWidth: Int): Int {
+            var candidate = startIndex.coerceIn(0, buttons.lastIndex)
+            while (candidate > 0) {
+                val previousVisibleIndices = visibleIndicesFrom(candidate - 1, tabsWidth)
+                if (previousVisibleIndices.lastOrNull() != buttons.lastIndex) {
+                    break
+                }
+                candidate -= 1
+            }
+            return candidate
+        }
+
+        private fun visibleTabGap(visibleIndices: List<Int>, tabsWidth: Int): Int {
+            if (visibleIndices.size <= 1) {
+                return 0
+            }
+            val tabWidth = visibleIndices.sumOf { buttons[it].preferredSize.width }
+            val expandedGap = (tabsWidth - tabWidth) / (visibleIndices.size - 1)
+            return expandedGap.coerceAtLeast(minTabGap())
+        }
+
+        private fun minTabGap(): Int = JBUI.scale(12)
+
+        private fun createNavigationButton(icon: Icon, tooltip: String, onClick: () -> Unit): JButton {
+            return JButton(icon).apply {
+                isContentAreaFilled = false
+                isBorderPainted = false
+                isOpaque = false
+                isFocusable = false
+                toolTipText = tooltip
+                cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+                margin = JBUI.emptyInsets()
+                addActionListener { onClick() }
+            }
+        }
+
+        private fun createTabButton(index: Int, item: ModuleNavItem): JButton {
+            val cleanName = item.displayName.removePrefix("摸鱼")
+            return object : JButton(cleanName) {
+                private var hovered = false
+                init {
+                    isContentAreaFilled = false
+                    isBorderPainted = false
+                    isOpaque = false
+                    isFocusable = false
+                    cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+                    margin = JBUI.emptyInsets()
+                    addMouseListener(object : java.awt.event.MouseAdapter() {
+                        override fun mouseEntered(e: java.awt.event.MouseEvent) { hovered = true; repaint() }
+                        override fun mouseExited(e: java.awt.event.MouseEvent) { hovered = false; repaint() }
+                    })
+                    addActionListener { 
+                        if (selectedIndex != index) {
+                            selectedIndex = index
+                            revealSelectedOnLayout = true
+                            repaint()
+                            onSelected(item) 
+                        }
+                    }
+                }
+
+                override fun paintComponent(g: Graphics) {
+                    val isCurrent = selectedIndex == index
+                    font = JBUI.Fonts.label().deriveFont(if (isCurrent) java.awt.Font.BOLD else java.awt.Font.PLAIN, JBUI.scale(13f))
+                    foreground = if (isCurrent) JBColor.foreground() else MoFishUiStyle.textMuted
+                    super.paintComponent(g)
+                }
+
+                override fun getPreferredSize(): Dimension {
+                    val textWidth = getFontMetrics(font).stringWidth(text)
+                    return Dimension(textWidth + JBUI.scale(8), JBUI.scale(26))
+                }
             }
         }
     }

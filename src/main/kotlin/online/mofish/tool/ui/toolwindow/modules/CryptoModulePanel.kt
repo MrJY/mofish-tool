@@ -16,7 +16,6 @@ import online.mofish.tool.domain.ReminderDirection
 import online.mofish.tool.domain.ReminderMetric
 import online.mofish.tool.domain.ReminderRule
 import online.mofish.tool.settings.MoFishHoldingsDialog
-import online.mofish.tool.settings.MoFishQuoteSortField
 import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
@@ -91,14 +90,7 @@ internal class CryptoModulePanel(
         }
 
         val sortSettings = snapshot.settingsState.sortSettings
-        val comparator = when (sortSettings.quoteField) {
-            MoFishQuoteSortField.DISPLAY_NAME ->
-                compareBy<CryptoListItem> { it.quote.name.lowercase() }
-            MoFishQuoteSortField.DAILY_CHANGE_PERCENT ->
-                compareBy<CryptoListItem> { it.quote.priceChangePercentage24h ?: BigDecimal.ZERO }
-            MoFishQuoteSortField.UPDATED_AT ->
-                compareBy<CryptoListItem> { it.quote.updatedAt }
-        }
+        val comparator = compareBy<CryptoListItem> { it.quote.priceChangePercentage24h ?: BigDecimal.ZERO }
         return when (sortSettings.quoteDirection) {
             MoFishSortDirection.ASC -> rows.sortedWith(comparator)
             MoFishSortDirection.DESC -> rows.sortedWith(comparator.reversed())

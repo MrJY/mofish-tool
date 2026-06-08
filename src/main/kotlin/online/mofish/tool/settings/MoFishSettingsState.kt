@@ -20,21 +20,6 @@ enum class MoFishSortDirection(
     override fun toString(): String = displayName
 }
 
-enum class MoFishQuoteSortField(
-    private val displayName: String,
-) {
-    DISPLAY_NAME("名称"),
-    DAILY_CHANGE_PERCENT("日涨跌幅"),
-    UPDATED_AT("更新时间"),
-    ;
-
-    /**
-     * 转换为String表示。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun toString(): String = displayName
-}
-
 enum class MoFishReminderSortField(
     private val displayName: String,
 ) {
@@ -122,7 +107,6 @@ data class MoFishWatchlistSettings(
 internal fun normalizeStockGroupValue(rawGroupName: String): String = rawGroupName.trim()
 
 data class MoFishSortSettings(
-    val quoteField: MoFishQuoteSortField = MoFishQuoteSortField.DAILY_CHANGE_PERCENT,
     val quoteDirection: MoFishSortDirection = MoFishSortDirection.DESC,
     val reminderField: MoFishReminderSortField = MoFishReminderSortField.DISPLAY_NAME,
     val reminderDirection: MoFishSortDirection = MoFishSortDirection.ASC,

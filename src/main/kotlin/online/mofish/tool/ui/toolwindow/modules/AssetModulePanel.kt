@@ -40,6 +40,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     protected val table: JBTable by lazy { createAssetTable(tableModel) }
     protected val summaryLabel = JBLabel()
 
+    private var toolbarComponent: JComponent? = null
     private val listContentLayout = CardLayout()
     private val listContent = JPanel(listContentLayout)
     private val tabLayout = CardLayout()
@@ -51,8 +52,10 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     private var lastSelectionCode: String? = null
     private var syncingSelection = false
 
+    fun getToolbarComponent(): JComponent? = toolbarComponent
+
     init {
-        border = JBUI.Borders.empty()
+        border = JBUI.Borders.empty(3, 0, 0, 0)
     }
 
     /**
@@ -85,7 +88,12 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         installContextSelection(table)
         installOpenDetailOnDoubleClick(table)
 
-        add(createToolbarPanel(), BorderLayout.NORTH)
+        toolbarComponent = createToolbar()
+
+        val headerPanel = createToolbarPanel()
+        if (headerPanel != null) {
+            add(headerPanel, BorderLayout.NORTH)
+        }
         add(createScrollableDataArea(), BorderLayout.CENTER)
         listPanel = this
 
@@ -285,7 +293,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
      * 创建Toolbar面板实例或展示内容。
      * @return 处理后的结果或当前状态。
      */
-    protected open fun createToolbarPanel(): JComponent = createToolbar()
+    protected open fun createToolbarPanel(): JComponent? = null
 
     /**
      * 选择ed行并同步相关界面状态。
@@ -405,7 +413,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         } else {
             raisedPanel.border = JBUI.Borders.compound(
                 JBUI.Borders.customLine(com.intellij.ui.JBColor.border(), 1),
-                JBUI.Borders.empty(8),
+                JBUI.Borders.empty(0, 8, 8, 8),
             )
             raisedPanel.background = MoFishUiStyle.surface
             raisedPanel.isOpaque = true

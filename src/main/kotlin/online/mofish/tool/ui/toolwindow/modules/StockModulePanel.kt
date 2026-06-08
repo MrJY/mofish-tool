@@ -9,14 +9,12 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
-import com.intellij.util.PlatformIcons
 import com.intellij.util.ui.JBUI
 import online.mofish.tool.data.stock.StockDetailClient
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.PositionProfitSnapshot
 import online.mofish.tool.domain.StockDetailSnapshot
 import online.mofish.tool.domain.StockQuote
-import online.mofish.tool.settings.MoFishQuoteSortField
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.settings.MoFishStockTableColumn
 import online.mofish.tool.settings.normalizeStockGroupValue
@@ -138,31 +136,29 @@ internal class StockModulePanel(
      * @return 处理后的结果或当前状态。
      */
     override fun createToolbarPanel(): JComponent {
-        val panel = JPanel(BorderLayout())
-        panel.add(super.createToolbarPanel(), BorderLayout.NORTH)
-
         stockGroupButtonRow.isOpaque = false
         stockGroupBar.isOpaque = false
-        stockGroupBar.border = JBUI.Borders.empty(0, 2, 0, 2)
-        stockGroupBar.add(
-            stockGroupButtonRow,
-            GridBagConstraints().apply {
-                gridx = 0
-                weightx = 1.0
-                fill = GridBagConstraints.HORIZONTAL
-                anchor = GridBagConstraints.WEST
-            },
-        )
-        stockGroupBar.add(
-            stockGroupSelectorButton,
-            GridBagConstraints().apply {
-                gridx = 1
-                weightx = 0.0
-                anchor = GridBagConstraints.EAST
-            },
-        )
-        panel.add(stockGroupBar, BorderLayout.SOUTH)
-        return panel
+        stockGroupBar.border = JBUI.Borders.empty(4, 8, 2, 8)
+        if (stockGroupBar.componentCount == 0) {
+            stockGroupBar.add(
+                stockGroupButtonRow,
+                GridBagConstraints().apply {
+                    gridx = 0
+                    weightx = 1.0
+                    fill = GridBagConstraints.HORIZONTAL
+                    anchor = GridBagConstraints.WEST
+                },
+            )
+            stockGroupBar.add(
+                stockGroupSelectorButton,
+                GridBagConstraints().apply {
+                    gridx = 1
+                    weightx = 0.0
+                    anchor = GridBagConstraints.EAST
+                },
+            )
+        }
+        return stockGroupBar
     }
 
     /**
@@ -257,7 +253,6 @@ internal class StockModulePanel(
             RemoveSelectedStockAction(),
             OpenStockTrendAction(),
             ToggleStockListViewAction(),
-            CycleQuoteSortFieldAction(),
             ToggleQuoteSortDirectionAction(),
         )
     }
@@ -277,7 +272,6 @@ internal class StockModulePanel(
             EditSelectedStockReminderAction(),
             OpenStockTrendAction(),
             ToggleStockListViewAction(),
-            CycleQuoteSortFieldAction(),
             ToggleQuoteSortDirectionAction(),
         )
     }
@@ -346,14 +340,7 @@ internal class StockModulePanel(
      */
     private fun stockComparator(snapshot: MoFishWatchlistState): Comparator<StockListItem> {
         val sortSettings = snapshot.settingsState.sortSettings
-        val quoteComparator = when (sortSettings.quoteField) {
-            MoFishQuoteSortField.DISPLAY_NAME ->
-                compareBy<StockListItem> { it.quote.name.lowercase() }
-            MoFishQuoteSortField.DAILY_CHANGE_PERCENT ->
-                compareBy<StockListItem> { stockChangePercent(it.quote) ?: BigDecimal.ZERO }
-            MoFishQuoteSortField.UPDATED_AT ->
-                compareBy<StockListItem> { it.quote.updatedAt }
-        }
+        val quoteComparator = compareBy<StockListItem> { stockChangePercent(it.quote) ?: BigDecimal.ZERO }
         val comparator = compareBy<StockListItem> { stockGroupPriority(snapshot, it.groupName) }
             .then(quoteComparator)
         return when (sortSettings.quoteDirection) {
@@ -1263,27 +1250,6 @@ internal class StockModulePanel(
             val nextModeName = nextViewMode().displayName
             toggleViewMode()
             callbacks.eventStatus.text = "摸鱼股票列表已切换为$nextModeName。"
-        }
-    }
-
-    private inner class CycleQuoteSortFieldAction : DumbAwareAction("排序字段", "在名称、日涨跌幅、更新时间之间切换", PlatformIcons.PROPERTY_ICON) {
-        /**
-         * 根据当前选择和上下文更新动作可用状态。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun update(event: AnActionEvent) {
-            val sortField = callbacks.watchlistService.snapshot()?.settingsState?.sortSettings?.quoteField
-            event.presentation.text = sortField?.toString() ?: "排序字段"
-            event.presentation.icon = PlatformIcons.PROPERTY_ICON
-            event.presentation.description = "切换行情排序字段"
-        }
-
-        /**
-         * 处理用户触发的 IDE 动作。
-         * @param event IntelliJ 平台传入的动作事件上下文。
-         */
-        override fun actionPerformed(event: AnActionEvent) {
-            callbacks.watchlistService.cycleQuoteSortField()
         }
     }
 

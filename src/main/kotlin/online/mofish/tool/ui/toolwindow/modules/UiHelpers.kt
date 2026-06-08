@@ -134,6 +134,6 @@ internal fun buildAssetSummary(
         countText,
         profitText,
         extraText,
-        "排序 ${sortSettings.quoteField} / ${sortSettings.quoteDirection}",
+        "排序 日涨跌幅 / ${sortSettings.quoteDirection}",
     ).joinToString(" | ")
 }
