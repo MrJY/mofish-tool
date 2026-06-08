@@ -55,7 +55,6 @@ internal class StockModulePanel(
     callbacks: AssetModuleCallbacks,
 ) : AssetModulePanel<StockQuote, StockListItem>(
     callbacks = callbacks,
-    toolbarPlace = "MoFishStocksToolbar",
     popupPlace = "MoFishStocksPopup",
 ) {
     override val tableModel: AssetTableModel<StockListItem> = StockTableModel()
@@ -246,21 +245,6 @@ internal class StockModulePanel(
     override fun configureTable(table: JBTable) {
         table.setDefaultRenderer(Any::class.java, StockTableCellRenderer())
         applyStockTableColumnWidths()
-    }
-
-    /**
-     * 创建ToolbarActions实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun createToolbarActions(): List<AnAction> {
-        return listOf(
-            RefreshStockAction(),
-            AddStockAction(),
-            RemoveSelectedStockAction(),
-            OpenStockTrendAction(),
-            ToggleStockListViewAction(),
-            ToggleQuoteSortDirectionAction(),
-        )
     }
 
     /**

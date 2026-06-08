@@ -66,11 +66,6 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
 
     private lateinit var tabComponent: ModuleTabComponent
     private var lastEnabledViewIds = emptyList<String>()
-    private val globalToolbarHolder = JPanel(BorderLayout()).apply {
-        isOpaque = false
-        border = JBUI.Borders.empty(2, 12, 0, 12)
-    }
-
     @Volatile
     private var disposed = false
 
@@ -114,12 +109,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         val rootPanel = JPanel(BorderLayout())
         rootPanel.isOpaque = false
 
-        val topContainer = JPanel(BorderLayout())
-        topContainer.isOpaque = false
-        topContainer.add(globalToolbarHolder, BorderLayout.NORTH)
-        topContainer.add(tabComponent, BorderLayout.SOUTH)
-
-        rootPanel.add(topContainer, BorderLayout.NORTH)
+        rootPanel.add(tabComponent, BorderLayout.NORTH)
         rootPanel.add(moduleContent, BorderLayout.CENTER)
         return rootPanel
     }
@@ -178,23 +168,6 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         moduleContentLayout.show(moduleContent, targetViewId)
         tabComponent.selectTabByViewId(targetViewId)
 
-        val activePanel = when (targetViewId) {
-            "stocks" -> stockModule
-            "indices" -> indexModule
-            "funds" -> fundModule
-            "crypto" -> cryptoModule
-            "forex" -> forexModule
-            else -> null
-        }
-        globalToolbarHolder.removeAll()
-        if (activePanel != null) {
-            val toolbarComp = activePanel.getToolbarComponent()
-            if (toolbarComp != null) {
-                globalToolbarHolder.add(toolbarComp, BorderLayout.CENTER)
-            }
-        }
-        globalToolbarHolder.revalidate()
-        globalToolbarHolder.repaint()
     }
 
     /**

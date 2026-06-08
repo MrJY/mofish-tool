@@ -1,6 +1,5 @@
 package online.mofish.tool.ui.toolwindow.modules
 
-import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -28,7 +27,6 @@ import javax.swing.table.AbstractTableModel
 
 internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     protected val callbacks: AssetModuleCallbacks,
-    private val toolbarPlace: String,
     private val popupPlace: String,
 ) : JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8))) {
     protected val listModel = DefaultListModel<R>()
@@ -37,7 +35,6 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     protected val table: JBTable by lazy { createAssetTable(tableModel) }
     protected val summaryLabel = JBLabel()
 
-    private var toolbarComponent: JComponent? = null
     private val listContentLayout = CardLayout()
     private val listContent = JPanel(listContentLayout)
     private val tabLayout = CardLayout()
@@ -48,8 +45,6 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     private var viewMode = AssetListViewMode.TABLE
     private var lastSelectionCode: String? = null
     private var syncingSelection = false
-
-    fun getToolbarComponent(): JComponent? = toolbarComponent
 
     init {
         border = JBUI.Borders.empty(3, 0, 0, 0)
@@ -88,8 +83,6 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         if (hasDetailPage()) {
             installOpenDetailOnDoubleClick(table)
         }
-
-        toolbarComponent = createToolbar()
 
         val headerPanel = createToolbarPanel()
         if (headerPanel != null) {
@@ -148,8 +141,6 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     protected open fun createListCellRenderer(): ListCellRenderer<in R> = DefaultListCellRenderer()
 
     protected abstract fun configureTable(table: JBTable)
-
-    protected abstract fun createToolbarActions(): List<AnAction>
 
     protected abstract fun createPopupActions(): List<AnAction>
 
@@ -276,20 +267,6 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
      */
     protected fun isActive(snapshot: MoFishWatchlistState): Boolean {
         return snapshot.projectState.selectedViewId == moduleViewId()
-    }
-
-    /**
-     * 创建Toolbar实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createToolbar(): JComponent {
-        val toolbar = ActionManager.getInstance().createActionToolbar(
-            toolbarPlace,
-            DefaultActionGroup(createToolbarActions()),
-            true,
-        )
-        toolbar.setTargetComponent(listContent)
-        return toolbar.component
     }
 
     /**

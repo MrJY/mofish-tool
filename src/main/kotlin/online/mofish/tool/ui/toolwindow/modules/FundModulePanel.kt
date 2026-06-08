@@ -19,6 +19,8 @@ import online.mofish.tool.settings.MoFishHoldingsDialog
 import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
+import online.mofish.tool.ui.web.MoFishFundTrend
+import online.mofish.tool.ui.web.MoFishWebEditorService
 import java.awt.Component
 import java.math.BigDecimal
 import java.util.UUID
@@ -30,7 +32,6 @@ internal class FundModulePanel(
     callbacks: AssetModuleCallbacks,
 ) : AssetModulePanel<FundQuote, FundListItem>(
     callbacks = callbacks,
-    toolbarPlace = "MoFishFundsToolbar",
     popupPlace = "MoFishFundsPopup",
 ) {
     override val tableModel: AssetTableModel<FundListItem> = FundTableModel()
@@ -91,18 +92,6 @@ internal class FundModulePanel(
     }
 
     /**
-     * 创建ToolbarActions实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun createToolbarActions(): List<AnAction> {
-        return listOf(
-            RefreshFundAction(),
-            AddFundAction(),
-            RemoveSelectedFundAction(),
-        )
-    }
-
-    /**
      * 创建PopupActions实例或展示内容。
      * @return 处理后的结果或当前状态。
      */
@@ -111,6 +100,7 @@ internal class FundModulePanel(
             RefreshFundAction(),
             AddFundAction(),
             RemoveSelectedFundAction(),
+            OpenFundTrendAction(),
             AddSelectedFundHoldingAction(),
             AddSelectedFundReminderAction(),
         )
@@ -250,6 +240,33 @@ internal class FundModulePanel(
             }
             callbacks.watchlistService.removeFundCode(selected.quote.code)
             callbacks.eventStatus.text = "已删除摸鱼基金 ${selected.quote.code}，正在刷新。"
+        }
+    }
+
+    /**
+     * 打开选中项基金Trend相关界面或详情。
+     */
+    private fun openSelectedFundTrend() {
+        val selected = selectedRow() ?: return
+        MoFishWebEditorService.open(callbacks.project, MoFishFundTrend.requestFor(selected.quote))
+        callbacks.eventStatus.text = "已打开摸鱼基金 ${selected.quote.name} 的走势页。"
+    }
+
+    private inner class OpenFundTrendAction : DumbAwareAction("查看走势", "在编辑器标签页中查看当前摸鱼基金走势", AllIcons.Actions.Preview) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
+        override fun actionPerformed(event: AnActionEvent) {
+            openSelectedFundTrend()
         }
     }
 

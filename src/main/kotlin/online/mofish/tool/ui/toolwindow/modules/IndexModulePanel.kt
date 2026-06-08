@@ -30,7 +30,6 @@ internal class IndexModulePanel(
     callbacks: AssetModuleCallbacks,
 ) : AssetModulePanel<StockQuote, IndexListItem>(
     callbacks = callbacks,
-    toolbarPlace = "MoFishIndicesToolbar",
     popupPlace = "MoFishIndicesPopup",
 ) {
     override val tableModel: AssetTableModel<IndexListItem> = IndexTableModel()
@@ -82,19 +81,6 @@ internal class IndexModulePanel(
         table.columnModel.getColumn(1).preferredWidth = JBUI.scale(220)
         table.columnModel.getColumn(2).preferredWidth = JBUI.scale(110)
         table.columnModel.getColumn(3).preferredWidth = JBUI.scale(96)
-    }
-
-    /**
-     * 创建ToolbarActions实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun createToolbarActions(): List<AnAction> {
-        return listOf(
-            RefreshIndexAction(),
-            AddIndexAction(),
-            RemoveSelectedIndexAction(),
-            ToggleQuoteSortDirectionAction(),
-        )
     }
 
     /**

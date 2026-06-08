@@ -26,7 +26,6 @@ internal class ForexModulePanel(
     callbacks: AssetModuleCallbacks,
 ) : AssetModulePanel<ForexRate, ForexListItem>(
     callbacks = callbacks,
-    toolbarPlace = "MoFishForexToolbar",
     popupPlace = "MoFishForexPopup",
 ) {
     override val tableModel: AssetTableModel<ForexListItem> = ForexTableModel()
@@ -73,16 +72,6 @@ internal class ForexModulePanel(
         table.columnModel.getColumn(2).preferredWidth = JBUI.scale(104)
         table.columnModel.getColumn(3).preferredWidth = JBUI.scale(104)
         table.columnModel.getColumn(4).preferredWidth = JBUI.scale(160)
-    }
-
-    /**
-     * 创建ToolbarActions实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun createToolbarActions(): List<AnAction> {
-        return listOf(
-            RefreshForexAction(),
-        )
     }
 
     /**

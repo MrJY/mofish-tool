@@ -30,7 +30,6 @@ internal class CryptoModulePanel(
     callbacks: AssetModuleCallbacks,
 ) : AssetModulePanel<CryptoQuote, CryptoListItem>(
     callbacks = callbacks,
-    toolbarPlace = "MoFishCryptosToolbar",
     popupPlace = "MoFishCryptosPopup",
 ) {
     override val tableModel: AssetTableModel<CryptoListItem> = CryptoTableModel()
@@ -88,18 +87,6 @@ internal class CryptoModulePanel(
         table.columnModel.getColumn(1).preferredWidth = JBUI.scale(180)
         table.columnModel.getColumn(2).preferredWidth = JBUI.scale(96)
         table.columnModel.getColumn(3).preferredWidth = JBUI.scale(108)
-    }
-
-    /**
-     * 创建ToolbarActions实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun createToolbarActions(): List<AnAction> {
-        return listOf(
-            RefreshCryptoAction(),
-            AddCryptoAction(),
-            RemoveSelectedCryptoAction(),
-        )
     }
 
     /**
