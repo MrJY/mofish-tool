@@ -12,8 +12,6 @@ import com.intellij.util.ui.JBUI
 import online.mofish.tool.state.MoFishWatchlistState
 import java.awt.BorderLayout
 import java.awt.CardLayout
-import java.awt.Dimension
-import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.DefaultListModel
@@ -22,8 +20,6 @@ import javax.swing.JComponent
 import javax.swing.JEditorPane
 import javax.swing.JList
 import javax.swing.JPanel
-import javax.swing.ScrollPaneConstants
-import javax.swing.Scrollable
 import javax.swing.JTable
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
@@ -94,7 +90,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         if (headerPanel != null) {
             add(headerPanel, BorderLayout.NORTH)
         }
-        add(createScrollableDataArea(), BorderLayout.CENTER)
+        add(createDataArea(), BorderLayout.CENTER)
         listPanel = this
 
         return if (hasDetailPage()) {
@@ -108,11 +104,11 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     }
 
     /**
-     * 创建Scrollable数据Area实例或展示内容。
+     * 创建数据Area实例或展示内容。
      * @return 处理后的结果或当前状态。
      */
-    private fun createScrollableDataArea(): JComponent {
-        val dataPanel = createMinWidthPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
+    private fun createDataArea(): JComponent {
+        val dataPanel = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
         dataPanel.isOpaque = false
         dataPanel.add(createRaisedContent(createListContent()), BorderLayout.CENTER)
         summaryLabel.border = JBUI.Borders.empty(6, 10, 6, 10)
@@ -121,108 +117,6 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         dataPanel.add(summaryLabel, BorderLayout.SOUTH)
 
         return dataPanel
-    }
-
-    /**
-     * 创建MinWidth面板实例或展示内容。
-     * @param layout layout。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createMinWidthPanel(layout: BorderLayout): JPanel {
-        return object : JPanel(layout), Scrollable {
-            /**
-             * 获取MinimumSize。
-             * @return 处理后的结果或当前状态。
-             */
-            override fun getMinimumSize(): Dimension {
-                val size = super.getMinimumSize()
-                return Dimension(contentMinWidth(), size.height)
-            }
-
-            /**
-             * 获取PreferredSize。
-             * @return 处理后的结果或当前状态。
-             */
-            override fun getPreferredSize(): Dimension {
-                val size = super.getPreferredSize()
-                val contentMinWidth = contentMinWidth()
-                return Dimension(size.width.coerceAtLeast(contentMinWidth), size.height)
-            }
-
-            /**
-             * 获取PreferredScrollableViewportSize。
-             * @return 处理后的结果或当前状态。
-             */
-            override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
-
-            /**
-             * 获取ScrollableUnitIncrement。
-             * @param visibleRect visibleRect。
-             * @param orientation orientation。
-             * @param direction direction。
-             * @return 处理后的结果或当前状态。
-             */
-            override fun getScrollableUnitIncrement(
-                visibleRect: Rectangle,
-                orientation: Int,
-                direction: Int,
-            ): Int = JBUI.scale(16)
-
-            /**
-             * 获取ScrollableBlockIncrement。
-             * @param visibleRect visibleRect。
-             * @param orientation orientation。
-             * @param direction direction。
-             * @return 处理后的结果或当前状态。
-             */
-            override fun getScrollableBlockIncrement(
-                visibleRect: Rectangle,
-                orientation: Int,
-                direction: Int,
-            ): Int = JBUI.scale(96)
-
-            /**
-             * 获取ScrollableTracksViewportWidth。
-             * @return 处理后的结果或当前状态。
-             */
-            override fun getScrollableTracksViewportWidth(): Boolean {
-                return (parent?.width ?: 0) >= contentMinWidth()
-            }
-
-            /**
-             * 获取ScrollableTracksViewportHeight。
-             * @return 处理后的结果或当前状态。
-             */
-            override fun getScrollableTracksViewportHeight(): Boolean = true
-        }
-    }
-
-    /**
-     * 处理 wrapMinWidthScrollPane 相关逻辑，并返回调用方需要的结果。
-     * @param content 需要渲染或包装的内容。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun wrapMinWidthScrollPane(content: JComponent): JComponent {
-        return JBScrollPane(content).apply {
-            border = JBUI.Borders.empty()
-            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
-            verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-            viewport.isOpaque = false
-            isOpaque = false
-        }
-    }
-
-    /**
-     * 处理 contentMinWidth 相关逻辑，并返回调用方需要的结果。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun contentMinWidth(): Int {
-        val configuredWidth = callbacks.watchlistService.snapshot()
-            ?.settingsState
-            ?.ui
-            ?.moduleContentMinWidth
-            ?: 500
-        return JBUI.scale(configuredWidth.coerceIn(1, 1600))
     }
 
     /**
@@ -350,11 +244,11 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
             callbacks.eventStatus.text = "已返回$title。"
         }, BorderLayout.EAST)
 
-        val detailPanel = createMinWidthPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
+        val detailPanel = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
         detailPanel.border = JBUI.Borders.empty(8)
         detailPanel.add(header, BorderLayout.NORTH)
         detailPanel.add(JBScrollPane(detailPane), BorderLayout.CENTER)
-        return wrapMinWidthScrollPane(detailPanel)
+        return detailPanel
     }
 
     /**

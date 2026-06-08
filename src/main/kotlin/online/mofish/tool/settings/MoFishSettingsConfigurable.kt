@@ -45,7 +45,6 @@ class MoFishSettingsConfigurable : Configurable {
     private var autoRefreshEndMinuteSpinner: JSpinner? = null
     private var autoRefreshCheckBox: JBCheckBox? = null
     private var autoRefreshModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
-    private var moduleContentMinWidthSpinner: JSpinner? = null
     private var stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox> = emptyMap()
     private var enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
     private var openToolWindowOnStartupCheckBox: JBCheckBox? = null
@@ -92,7 +91,6 @@ class MoFishSettingsConfigurable : Configurable {
                 .addLabeledComponent("自动刷新生效模块：", createAutoRefreshModulesPanel(ui))
                 .addComponent(TitledSeparator("界面"))
                 .addLabeledComponent("启用模块：", createEnabledModulesPanel(ui))
-                .addLabeledComponent("模块内容最小宽度（px）：", ui.moduleContentMinWidthSpinner)
                 .addLabeledComponent("股票表格显示列：", createStockTableColumnsPanel(ui))
                 .addComponent(ui.openToolWindowOnStartupCheckBox)
                 .addComponent(ui.showStatusBarWidgetCheckBox)
@@ -140,7 +138,6 @@ class MoFishSettingsConfigurable : Configurable {
             autoRefreshModuleCheckBoxes = MoFishRefreshModule.defaultAutoRefreshModules.associateWith { module ->
                 JBCheckBox(module.toString())
             },
-            moduleContentMinWidthSpinner = JSpinner(SpinnerNumberModel(500, 1, 1600, 10)),
             stockTableColumnCheckBoxes = MoFishStockTableColumn.entries.associateWith { column ->
                 JBCheckBox(column.toString())
             },
@@ -179,7 +176,6 @@ class MoFishSettingsConfigurable : Configurable {
         autoRefreshEndMinuteSpinner = ui.autoRefreshEndMinuteSpinner
         autoRefreshCheckBox = ui.autoRefreshCheckBox
         autoRefreshModuleCheckBoxes = ui.autoRefreshModuleCheckBoxes
-        moduleContentMinWidthSpinner = ui.moduleContentMinWidthSpinner
         stockTableColumnCheckBoxes = ui.stockTableColumnCheckBoxes
         enabledModuleCheckBoxes = ui.enabledModuleCheckBoxes
         openToolWindowOnStartupCheckBox = ui.openToolWindowOnStartupCheckBox
@@ -239,7 +235,6 @@ class MoFishSettingsConfigurable : Configurable {
         autoRefreshEndMinuteSpinner = null
         autoRefreshCheckBox = null
         autoRefreshModuleCheckBoxes = emptyMap()
-        moduleContentMinWidthSpinner = null
         stockTableColumnCheckBoxes = emptyMap()
         enabledModuleCheckBoxes = emptyMap()
         openToolWindowOnStartupCheckBox = null
@@ -283,7 +278,6 @@ class MoFishSettingsConfigurable : Configurable {
         autoRefreshModuleCheckBoxes.forEach { (module, checkBox) ->
             checkBox.isSelected = module in state.refresh.autoRefreshModules
         }
-        moduleContentMinWidthSpinner?.value = state.ui.moduleContentMinWidth
         stockTableColumnCheckBoxes.forEach { (column, checkBox) ->
             checkBox.isSelected = column in state.ui.stockTableColumns
         }
@@ -351,8 +345,6 @@ class MoFishSettingsConfigurable : Configurable {
                     ?: baseState.refresh.openToolWindowOnStartup,
             ),
             ui = MoFishUiSettings(
-                moduleContentMinWidth = (moduleContentMinWidthSpinner?.value as? Int)
-                    ?: baseState.ui.moduleContentMinWidth,
                 stockTableColumns = readStockTableColumns(baseState.ui.stockTableColumns),
                 enabledModules = readEnabledModules(baseState.ui.enabledModules),
             ),
@@ -630,7 +622,6 @@ private data class SettingsEditorFields(
     val autoRefreshEndMinuteSpinner: JSpinner,
     val autoRefreshCheckBox: JBCheckBox,
     val autoRefreshModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,
-    val moduleContentMinWidthSpinner: JSpinner,
     val stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox>,
     val enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,
     val openToolWindowOnStartupCheckBox: JBCheckBox,

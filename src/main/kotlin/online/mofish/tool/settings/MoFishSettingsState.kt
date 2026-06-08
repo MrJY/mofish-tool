@@ -122,7 +122,6 @@ data class MoFishRefreshSettings(
 )
 
 data class MoFishUiSettings(
-    val moduleContentMinWidth: Int = 500,
     val stockTableColumns: Set<MoFishStockTableColumn> = MoFishStockTableColumn.defaultColumns,
     val enabledModules: Set<MoFishRefreshModule> = MoFishRefreshModule.defaultEnabledModules,
 )
