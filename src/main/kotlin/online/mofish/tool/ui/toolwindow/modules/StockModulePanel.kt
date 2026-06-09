@@ -8,12 +8,17 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
 import online.mofish.tool.data.stock.StockDetailClient
+import online.mofish.tool.data.stock.StockIntradayClient
+import online.mofish.tool.data.stock.StockKLineClient
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.PositionProfitSnapshot
+import online.mofish.tool.domain.StockDailyKLine
 import online.mofish.tool.domain.StockDetailSnapshot
+import online.mofish.tool.domain.StockIntradayPoint
 import online.mofish.tool.domain.StockQuote
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.settings.MoFishStockTableColumn
@@ -23,16 +28,19 @@ import online.mofish.tool.ui.MoFishIcons
 import online.mofish.tool.ui.web.MoFishStockTrend
 import online.mofish.tool.ui.web.MoFishWebEditorService
 import java.awt.BorderLayout
+import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Component
+import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
-import java.awt.GridLayout
 import java.awt.RenderingHints
 import java.math.BigDecimal
+import java.time.Duration
+import java.time.LocalTime
 import java.util.concurrent.ConcurrentHashMap
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JButton
@@ -61,8 +69,15 @@ internal class StockModulePanel(
     override val tableModel: AssetTableModel<StockListItem> = StockTableModel()
     private val detailScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val stockDetailClient = StockDetailClient()
+    private val stockKLineClient = StockKLineClient()
+    private val stockIntradayClient = StockIntradayClient()
     private val detailCache = ConcurrentHashMap<String, StockDetailSnapshot>()
+    private val kLineCache = ConcurrentHashMap<String, List<StockDailyKLine>>()
+    private val kLineLoadingCodes = ConcurrentHashMap.newKeySet<String>()
+    private val intradayCache = ConcurrentHashMap<String, List<StockIntradayPoint>>()
+    private val intradayLoadingCodes = ConcurrentHashMap.newKeySet<String>()
     private var detailState = StockDetailUiState()
+    private val detailKLineChart = StockDailyKLineChartComponent(showEmptyText = true)
     private var visibleTableColumns: List<MoFishStockTableColumn> = MoFishStockTableColumn.defaultColumns.toList()
     private val detailPane = JEditorPane("text/html", "").apply {
         isEditable = false
@@ -171,7 +186,26 @@ internal class StockModulePanel(
      * 创建详情组件实例或展示内容。
      * @return 处理后的结果或当前状态。
      */
-    override fun createDetailComponent(): JComponent = createDetailPage("摸鱼股票详情", detailPane)
+    override fun createDetailComponent(): JComponent {
+        val header = JPanel(BorderLayout())
+        header.add(JLabel("摸鱼股票详情", AllIcons.General.InspectionsOK, JLabel.LEFT), BorderLayout.WEST)
+        header.add(com.intellij.ui.components.ActionLink("返回列表") {
+            setDetailVisible(false)
+            callbacks.eventStatus.text = "已返回摸鱼股票详情。"
+        }, BorderLayout.EAST)
+
+        val content = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(6))).apply {
+            isOpaque = false
+            add(detailKLineChart, BorderLayout.NORTH)
+            add(JBScrollPane(detailPane), BorderLayout.CENTER)
+        }
+
+        return JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(4))).apply {
+            border = JBUI.Borders.empty(4)
+            add(header, BorderLayout.NORTH)
+            add(content, BorderLayout.CENTER)
+        }
+    }
 
     /**
      * 更新详情。
@@ -183,6 +217,7 @@ internal class StockModulePanel(
         val nextCode = row?.quote?.code
         if (nextCode == null) {
             detailState = StockDetailUiState()
+            detailKLineChart.setData(emptyList(), nextLoading = false)
         } else if (!detailState.code.equals(nextCode, ignoreCase = true)) {
             val cached = detailCache[nextCode.lowercase()]
             detailState = StockDetailUiState(code = nextCode, snapshot = cached, loading = cached == null)
@@ -190,6 +225,7 @@ internal class StockModulePanel(
                 loadStockDetail(row.quote)
             }
         }
+        row?.quote?.let { updateDailyKLineChart(it, retryEmpty = false) }
         detailPane.text = StockDetailHtmlRenderer.render(row, reminderRules, detailState)
         detailPane.caretPosition = 0
     }
@@ -220,7 +256,9 @@ internal class StockModulePanel(
         }.filter { row ->
             stockGroupFilter == null || row.groupName?.equals(stockGroupFilter, ignoreCase = true) == true
         }
-        return rows.sortedWith(stockComparator(snapshot))
+        val sortedRows = rows.sortedWith(stockComparator(snapshot))
+        loadIntradayPoints(sortedRows)
+        return sortedRows
     }
 
     /**
@@ -574,6 +612,65 @@ internal class StockModulePanel(
         }
     }
 
+    private fun updateDailyKLineChart(quote: StockQuote, retryEmpty: Boolean) {
+        val codeKey = quote.code.lowercase()
+        val cached = kLineCache[codeKey]
+        val shouldLoad = cached == null || (retryEmpty && cached.isEmpty())
+        if (shouldLoad) {
+            loadDailyKLines(quote, force = retryEmpty)
+        }
+        detailKLineChart.setData(
+            cached.orEmpty(),
+            nextLoading = kLineLoadingCodes.contains(codeKey) || shouldLoad,
+        )
+    }
+
+    private fun loadDailyKLines(quote: StockQuote, force: Boolean = false) {
+        val codeKey = quote.code.lowercase()
+        if ((!force && kLineCache.containsKey(codeKey)) || !kLineLoadingCodes.add(codeKey)) {
+            return
+        }
+        detailKLineChart.setData(emptyList(), nextLoading = true)
+        detailScope.launch(Dispatchers.IO) {
+            val kLines = runCatching {
+                stockKLineClient.fetchDailyKLines(quote, DETAIL_KLINE_LIMIT)
+            }.getOrDefault(emptyList())
+            kLineCache[codeKey] = kLines
+            kLineLoadingCodes.remove(codeKey)
+            ApplicationManager.getApplication().invokeLater(
+                {
+                    if (detailState.code.equals(quote.code, ignoreCase = true)) {
+                        detailKLineChart.setData(kLines, nextLoading = false)
+                    }
+                },
+                ModalityState.any(),
+            )
+        }
+    }
+
+    private fun loadIntradayPoints(rows: List<StockListItem>) {
+        if (currentViewMode() != AssetListViewMode.CARD) {
+            return
+        }
+        rows.forEach { row ->
+            val codeKey = row.quote.code.lowercase()
+            if (intradayCache.containsKey(codeKey) || !intradayLoadingCodes.add(codeKey)) {
+                return@forEach
+            }
+            detailScope.launch(Dispatchers.IO) {
+                val points = runCatching {
+                    stockIntradayClient.fetchIntradayPoints(row.quote).takeLast(CARD_INTRADAY_LIMIT)
+                }.getOrDefault(emptyList())
+                intradayCache[codeKey] = points
+                intradayLoadingCodes.remove(codeKey)
+                ApplicationManager.getApplication().invokeLater(
+                    { list.repaint() },
+                    ModalityState.any(),
+                )
+            }
+        }
+    }
+
     /**
      * 处理 stockChangePercent 相关逻辑，并返回调用方需要的结果。
      * @param quote 当前资产行情数据。
@@ -601,6 +698,7 @@ internal class StockModulePanel(
     private fun openSelectedStockDetail() {
         val selected = selectedRow() ?: return
         setDetailVisible(true)
+        updateDailyKLineChart(selected.quote, retryEmpty = true)
         callbacks.watchlistService.selectView(moduleViewId())
         callbacks.watchlistService.selectAsset(selected.quote.code)
         callbacks.eventStatus.text = "已打开摸鱼股票 ${selected.quote.name} 的详情。"
@@ -651,12 +749,7 @@ internal class StockModulePanel(
                 ""
             }
             val changeColor = marketColor(stockChangePercent(quote))
-            val openPrice = formatDecimal(quote.openPrice)
-            val previousClose = formatDecimal(quote.previousClose)
-            val highPrice = formatDecimal(quote.highPrice)
-            val lowPrice = formatDecimal(quote.lowPrice)
-            val volume = formatTenThousand(quote.volume)
-            val turnover = formatTenThousand(quote.turnover)
+            val codeKey = quote.code.lowercase()
 
             card.setValues(
                 name = quote.name,
@@ -664,14 +757,10 @@ internal class StockModulePanel(
                 price = price,
                 percent = percent,
                 percentColor = changeColor,
-                open = openPrice,
-                prevClose = previousClose,
-                high = highPrice,
-                low = lowPrice,
-                volume = volume,
-                turnover = turnover,
                 profitText = profitText,
-                selected = isSelected
+                selected = isSelected,
+                intradayPoints = intradayCache[codeKey],
+                intradayLoading = intradayLoadingCodes.contains(codeKey),
             )
             return container
         }
@@ -685,14 +774,8 @@ internal class StockModulePanel(
         val priceLabel = JLabel()
         val percentLabel = JLabel()
 
-        val openLabel = JLabel()
-        val prevCloseLabel = JLabel()
-        val highLabel = JLabel()
-        val lowLabel = JLabel()
-        val volumeLabel = JLabel()
-        val turnoverLabel = JLabel()
-
         val profitLabel = JLabel()
+        private val intradayChart = StockIntradayChartComponent()
 
         init {
             isOpaque = false
@@ -748,65 +831,21 @@ internal class StockModulePanel(
             headerPanel.add(metricsPanel, BorderLayout.CENTER)
             add(headerPanel, BorderLayout.NORTH)
 
-            val gridPanel = object : JPanel(GridLayout(3, 2, JBUI.scale(12), JBUI.scale(4))) {
-                init {
-                    isOpaque = false
-                    border = JBUI.Borders.empty(6, 0, 0, 0)
-                }
-
-                override fun paintComponent(g: Graphics) {
-                    super.paintComponent(g)
-                    val g2 = g.create() as Graphics2D
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                    g2.color = MoFishUiStyle.gridLineColor
-
-                    val w = width
-                    val h = height
-
-                    g2.drawLine(0, 0, w, 0)
-
-                    val rowHeight = h / 3
-                    g2.drawLine(0, rowHeight, w, rowHeight)
-                    g2.drawLine(0, rowHeight * 2, w, rowHeight * 2)
-
-                    g2.drawLine(w / 2, 0, w / 2, h)
-
-                    g2.dispose()
-                }
-            }
-
-            fun createGridCell(prefix: String, valueLabel: JLabel): JPanel {
-                return JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-                    isOpaque = false
-                    border = JBUI.Borders.empty(6, 12)
-                    val prefLabel = JLabel(prefix).apply {
-                        font = JBUI.Fonts.smallFont()
-                        foreground = MoFishUiStyle.textMuted
-                        border = JBUI.Borders.emptyRight(4)
-                    }
-                    valueLabel.font = JBUI.Fonts.smallFont()
-                    add(prefLabel)
-                    add(valueLabel)
-                }
-            }
-
-            gridPanel.add(createGridCell("开盘:", openLabel))
-            gridPanel.add(createGridCell("昨收:", prevCloseLabel))
-            gridPanel.add(createGridCell("最高:", highLabel))
-            gridPanel.add(createGridCell("最低:", lowLabel))
-            gridPanel.add(createGridCell("成交量:", volumeLabel))
-            gridPanel.add(createGridCell("成交额:", turnoverLabel))
-
             val contentContainer = JPanel(BorderLayout(0, JBUI.scale(6))).apply {
                 isOpaque = false
-                border = JBUI.Borders.emptyTop(6)
-                add(gridPanel, BorderLayout.CENTER)
+                border = JBUI.Borders.emptyTop(8)
+            }
+
+            val footerPanel = JPanel(BorderLayout(0, JBUI.scale(4))).apply {
+                isOpaque = false
+                add(intradayChart, BorderLayout.CENTER)
             }
 
             profitLabel.font = JBUI.Fonts.smallFont().deriveFont(java.awt.Font.ITALIC)
             profitLabel.foreground = MoFishUiStyle.textMuted
-            profitLabel.border = JBUI.Borders.empty(4, 6, 0, 0)
-            contentContainer.add(profitLabel, BorderLayout.SOUTH)
+            profitLabel.border = JBUI.Borders.empty(0, 6, 0, 0)
+            footerPanel.add(profitLabel, BorderLayout.SOUTH)
+            contentContainer.add(footerPanel, BorderLayout.SOUTH)
 
             add(contentContainer, BorderLayout.CENTER)
         }
@@ -817,14 +856,10 @@ internal class StockModulePanel(
             price: String,
             percent: String,
             percentColor: Color,
-            open: String,
-            prevClose: String,
-            high: String,
-            low: String,
-            volume: String,
-            turnover: String,
             profitText: String,
             selected: Boolean,
+            intradayPoints: List<StockIntradayPoint>?,
+            intradayLoading: Boolean,
         ) {
             this.isSelected = selected
             val defaultFg = JBColor.foreground()
@@ -841,24 +876,6 @@ internal class StockModulePanel(
             percentLabel.text = percent
             percentLabel.foreground = percentColor
 
-            openLabel.text = open
-            openLabel.foreground = defaultFg
-            
-            prevCloseLabel.text = prevClose
-            prevCloseLabel.foreground = defaultFg
-            
-            highLabel.text = high
-            highLabel.foreground = defaultFg
-            
-            lowLabel.text = low
-            lowLabel.foreground = defaultFg
-            
-            volumeLabel.text = volume
-            volumeLabel.foreground = defaultFg
-            
-            turnoverLabel.text = turnover
-            turnoverLabel.foreground = defaultFg
-
             if (profitText.isNotEmpty()) {
                 profitLabel.text = profitText
                 profitLabel.foreground = MoFishUiStyle.textMuted
@@ -866,6 +883,7 @@ internal class StockModulePanel(
             } else {
                 profitLabel.isVisible = false
             }
+            intradayChart.setData(intradayPoints, intradayLoading)
         }
 
         override fun paintComponent(g: Graphics) {
@@ -879,6 +897,311 @@ internal class StockModulePanel(
             g2.drawRoundRect(0, 0, width - 1, height - 1, JBUI.scale(12), JBUI.scale(12))
 
             g2.dispose()
+        }
+    }
+
+    private class StockDailyKLineChartComponent(
+        private val showEmptyText: Boolean,
+    ) : JComponent() {
+        private var kLines: List<StockDailyKLine> = emptyList()
+        private var loading = false
+
+        init {
+            isOpaque = false
+            preferredSize = Dimension(1, JBUI.scale(92))
+            minimumSize = Dimension(1, JBUI.scale(78))
+        }
+
+        fun setData(nextKLines: List<StockDailyKLine>?, nextLoading: Boolean) {
+            kLines = nextKLines.orEmpty().takeLast(DETAIL_KLINE_LIMIT)
+            loading = nextLoading && kLines.isEmpty()
+            repaint()
+        }
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+
+            val arc = JBUI.scale(8)
+            g2.color = MoFishUiStyle.hoverSoftBackground
+            g2.fillRoundRect(0, 0, width - 1, height - 1, arc, arc)
+            g2.color = MoFishUiStyle.gridLineColor
+            g2.drawRoundRect(0, 0, width - 1, height - 1, arc, arc)
+
+            val padding = JBUI.scale(8)
+            val plotLeft = padding
+            val plotTop = padding
+            val plotWidth = width - padding * 2
+            val plotHeight = height - padding * 2
+            if (plotWidth <= 0 || plotHeight <= 0) {
+                g2.dispose()
+                return
+            }
+
+            if (kLines.isEmpty()) {
+                drawEmptyState(g2, plotLeft, plotTop, plotWidth, plotHeight)
+                g2.dispose()
+                return
+            }
+
+            drawGrid(g2, plotLeft, plotTop, plotWidth, plotHeight)
+            drawCandles(g2, plotLeft, plotTop, plotWidth, plotHeight)
+            g2.dispose()
+        }
+
+        private fun drawEmptyState(g2: Graphics2D, x: Int, y: Int, width: Int, height: Int) {
+            val midY = y + height / 2
+            g2.color = MoFishUiStyle.gridLineColor
+            g2.drawLine(x, midY, x + width, midY)
+            g2.font = JBUI.Fonts.smallFont()
+            g2.color = MoFishUiStyle.textMuted
+            val text = if (showEmptyText) {
+                if (loading) "日K 加载中..." else "暂无日K"
+            } else {
+                ""
+            }
+            if (text.isBlank()) {
+                return
+            }
+            val textWidth = g2.fontMetrics.stringWidth(text)
+            g2.drawString(text, x + (width - textWidth) / 2, midY - JBUI.scale(4))
+        }
+
+        private fun drawGrid(g2: Graphics2D, x: Int, y: Int, width: Int, height: Int) {
+            g2.color = MoFishUiStyle.gridLineColor
+            repeat(3) { index ->
+                val lineY = y + height * index / 2
+                g2.drawLine(x, lineY, x + width, lineY)
+            }
+        }
+
+        private fun drawCandles(g2: Graphics2D, x: Int, y: Int, width: Int, height: Int) {
+            val maxHigh = kLines.maxOf { it.high }
+            val minLow = kLines.minOf { it.low }
+            val range = maxHigh.subtract(minLow).takeIf { it > BigDecimal.ZERO } ?: BigDecimal.ONE
+            val step = width.toDouble() / kLines.size.coerceAtLeast(1)
+            val candleWidth = (step * 0.58).toInt().coerceIn(JBUI.scale(3), JBUI.scale(8))
+
+            fun yFor(value: BigDecimal): Int {
+                val ratio = maxHigh.subtract(value).divide(range, 8, java.math.RoundingMode.HALF_UP).toDouble()
+                return y + (ratio * height).toInt().coerceIn(0, height)
+            }
+
+            g2.stroke = BasicStroke(JBUI.scale(1f))
+            kLines.forEachIndexed { index, item ->
+                val centerX = x + (step * index + step / 2).toInt()
+                val highY = yFor(item.high)
+                val lowY = yFor(item.low)
+                val openY = yFor(item.open)
+                val closeY = yFor(item.close)
+                val bodyTop = minOf(openY, closeY)
+                val bodyHeight = kotlin.math.abs(openY - closeY).coerceAtLeast(JBUI.scale(2))
+                val bodyLeft = centerX - candleWidth / 2
+                val change = item.close.subtract(item.open)
+
+                g2.color = marketColor(change)
+                g2.drawLine(centerX, highY, centerX, lowY)
+                g2.fillRoundRect(bodyLeft, bodyTop, candleWidth, bodyHeight, JBUI.scale(2), JBUI.scale(2))
+            }
+        }
+    }
+
+    private class StockIntradayChartComponent : JComponent() {
+        private var points: List<StockIntradayPoint> = emptyList()
+        private var loading = false
+
+        init {
+            isOpaque = false
+            preferredSize = Dimension(1, JBUI.scale(86))
+            minimumSize = Dimension(1, JBUI.scale(76))
+        }
+
+        fun setData(nextPoints: List<StockIntradayPoint>?, nextLoading: Boolean) {
+            points = nextPoints.orEmpty().takeLast(CARD_INTRADAY_LIMIT)
+            loading = nextLoading && points.isEmpty()
+            repaint()
+        }
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+
+            val padding = JBUI.scale(8)
+            val yAxisWidth = JBUI.scale(36)
+            val xAxisHeight = JBUI.scale(14)
+            val plotLeft = padding + yAxisWidth
+            val plotTop = padding
+            val plotWidth = width - padding * 2 - yAxisWidth
+            val plotHeight = height - padding * 2 - xAxisHeight
+            if (plotWidth <= 0 || plotHeight <= 0) {
+                g2.dispose()
+                return
+            }
+
+            if (points.isEmpty()) {
+                drawIntradayEmptyState(g2, plotLeft, plotTop, plotWidth, plotHeight)
+                g2.dispose()
+                return
+            }
+
+            val maxPrice = points.maxOf { it.price }
+            val minPrice = points.minOf { it.price }
+            drawGrid(g2, plotLeft, plotTop, plotWidth, plotHeight)
+            drawAxes(g2, plotLeft, plotTop, plotWidth, plotHeight, maxPrice, minPrice)
+            drawIntradayLine(g2, plotLeft, plotTop, plotWidth, plotHeight, maxPrice, minPrice)
+            g2.dispose()
+        }
+
+        private fun drawIntradayEmptyState(g2: Graphics2D, x: Int, y: Int, width: Int, height: Int) {
+            val midY = y + height / 2
+            g2.color = MoFishUiStyle.gridLineColor
+            g2.drawLine(x, midY, x + width, midY)
+            g2.font = JBUI.Fonts.smallFont()
+            g2.color = MoFishUiStyle.textMuted
+            val text = if (loading) "分时加载中..." else "暂无分时"
+            val textWidth = g2.fontMetrics.stringWidth(text)
+            g2.drawString(text, x + (width - textWidth) / 2, midY - JBUI.scale(4))
+        }
+
+        private fun drawGrid(g2: Graphics2D, x: Int, y: Int, width: Int, height: Int) {
+            g2.color = MoFishUiStyle.gridLineColor
+            repeat(3) { index ->
+                val lineY = y + height * index / 2
+                g2.drawLine(x, lineY, x + width, lineY)
+            }
+        }
+
+        private fun drawAxes(
+            g2: Graphics2D,
+            x: Int,
+            y: Int,
+            width: Int,
+            height: Int,
+            maxPrice: BigDecimal,
+            minPrice: BigDecimal,
+        ) {
+            g2.font = JBUI.Fonts.smallFont()
+            val metrics = g2.fontMetrics
+
+            g2.color = MoFishUiStyle.cardBorder
+            g2.stroke = BasicStroke(JBUI.scale(1f))
+            g2.drawLine(x, y, x, y + height)
+            g2.drawLine(x, y + height, x + width, y + height)
+
+            g2.color = MoFishUiStyle.textMuted
+            val maxText = axisPriceText(maxPrice)
+            val minText = axisPriceText(minPrice)
+            g2.drawString(maxText, x - metrics.stringWidth(maxText) - JBUI.scale(5), y + metrics.ascent)
+            g2.drawString(minText, x - metrics.stringWidth(minText) - JBUI.scale(5), y + height)
+
+            drawCenteredAxisLabel(g2, "09:30", x, y + height + metrics.ascent + JBUI.scale(2))
+            drawCenteredAxisLabel(g2, "11:30", x + width / 2, y + height + metrics.ascent + JBUI.scale(2))
+            val closeText = "15:00"
+            g2.drawString(closeText, x + width - metrics.stringWidth(closeText), y + height + metrics.ascent + JBUI.scale(2))
+        }
+
+        private fun drawCenteredAxisLabel(g2: Graphics2D, text: String, centerX: Int, baseline: Int) {
+            g2.drawString(text, centerX - g2.fontMetrics.stringWidth(text) / 2, baseline)
+        }
+
+        private fun drawIntradayLine(
+            g2: Graphics2D,
+            x: Int,
+            y: Int,
+            width: Int,
+            height: Int,
+            maxPrice: BigDecimal,
+            minPrice: BigDecimal,
+        ) {
+            val range = maxPrice.subtract(minPrice).takeIf { it > BigDecimal.ZERO } ?: BigDecimal.ONE
+
+            fun yFor(value: BigDecimal): Int {
+                val ratio = maxPrice.subtract(value).divide(range, 8, java.math.RoundingMode.HALF_UP).toDouble()
+                return y + (ratio * height).toInt().coerceIn(0, height)
+            }
+
+            val plotPoints = buildPlotPoints(x, width)
+            if (plotPoints.isEmpty()) {
+                return
+            }
+
+            val color = marketColor(points.last().price.subtract(points.first().price))
+            g2.color = color
+            g2.stroke = BasicStroke(JBUI.scale(1.4f))
+            plotPoints.zipWithNext().forEach { (prev, next) ->
+                g2.drawLine(
+                    prev.x,
+                    yFor(prev.point.price),
+                    next.x,
+                    yFor(next.point.price),
+                )
+            }
+
+            val last = plotPoints.last()
+            val lastY = yFor(last.point.price)
+            g2.fillOval(last.x - JBUI.scale(2), lastY - JBUI.scale(2), JBUI.scale(4), JBUI.scale(4))
+
+            val averagePoints = plotPoints.mapNotNull { point ->
+                point.point.averagePrice?.let { point.x to it }
+            }
+            if (averagePoints.size > 1) {
+                g2.color = MoFishUiStyle.textMuted
+                g2.stroke = BasicStroke(JBUI.scale(1f))
+                averagePoints.zipWithNext().forEach { (prev, next) ->
+                    g2.drawLine(prev.first, yFor(prev.second), next.first, yFor(next.second))
+                }
+            }
+        }
+
+        private fun buildPlotPoints(x: Int, width: Int): List<IntradayPlotPoint> {
+            val timedPoints = points.mapNotNull { point ->
+                tradingMinuteOffset(point.time.toLocalTime())?.let { minute ->
+                    IntradayPlotPoint(point, x + (width.toDouble() * minute / A_SHARE_TRADING_MINUTES).toInt())
+                }
+            }
+            if (timedPoints.size >= 2) {
+                return timedPoints
+            }
+            return points.mapIndexed { index, point ->
+                val pointX = if (points.size <= 1) {
+                    x + width / 2
+                } else {
+                    x + (width.toDouble() * index / (points.size - 1)).toInt()
+                }
+                IntradayPlotPoint(point, pointX)
+            }
+        }
+
+        private fun tradingMinuteOffset(time: LocalTime): Int? {
+            return when {
+                !time.isBefore(MORNING_OPEN) && !time.isAfter(MORNING_CLOSE) ->
+                    Duration.between(MORNING_OPEN, time).toMinutes().toInt()
+                time.isAfter(MORNING_CLOSE) && time.isBefore(AFTERNOON_OPEN) ->
+                    MORNING_TRADING_MINUTES
+                !time.isBefore(AFTERNOON_OPEN) && !time.isAfter(AFTERNOON_CLOSE) ->
+                    MORNING_TRADING_MINUTES + Duration.between(AFTERNOON_OPEN, time).toMinutes().toInt()
+                time.isBefore(MORNING_OPEN) -> 0
+                time.isAfter(AFTERNOON_CLOSE) -> A_SHARE_TRADING_MINUTES
+                else -> null
+            }?.coerceIn(0, A_SHARE_TRADING_MINUTES)
+        }
+
+        private fun axisPriceText(value: BigDecimal): String {
+            return value.setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+        }
+
+        private data class IntradayPlotPoint(
+            val point: StockIntradayPoint,
+            val x: Int,
+        )
+
+        companion object {
+            private val MORNING_OPEN: LocalTime = LocalTime.of(9, 30)
+            private val MORNING_CLOSE: LocalTime = LocalTime.of(11, 30)
+            private val AFTERNOON_OPEN: LocalTime = LocalTime.of(13, 0)
+            private val AFTERNOON_CLOSE: LocalTime = LocalTime.of(15, 0)
+            private const val MORNING_TRADING_MINUTES = 120
+            private const val A_SHARE_TRADING_MINUTES = 240
         }
     }
 
@@ -1240,6 +1563,7 @@ internal class StockModulePanel(
         override fun actionPerformed(event: AnActionEvent) {
             val nextModeName = nextViewMode().displayName
             toggleViewMode()
+            callbacks.watchlistService.snapshot()?.let(::render)
             callbacks.eventStatus.text = "摸鱼股票列表已切换为$nextModeName。"
         }
     }
@@ -1263,6 +1587,9 @@ internal class StockModulePanel(
         }
     }
 }
+
+private const val DETAIL_KLINE_LIMIT = 32
+private const val CARD_INTRADAY_LIMIT = 260
 
 private fun MoFishStockTableColumn.isNumericStockColumn(): Boolean {
     return when (this) {
