@@ -9,11 +9,18 @@ import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.geom.RoundRectangle2D
 import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.JMenuItem
+import javax.swing.JPopupMenu
+import javax.swing.JWindow
 import javax.swing.SwingConstants
+import javax.swing.SwingUtilities
 
 internal object MoFishUiStyle {
     val surface = JBColor(Color(0xFFFFFF), Color(0x25272B))
@@ -22,7 +29,7 @@ internal object MoFishUiStyle {
     val selectionBackground = JBColor(Color(0xE9EEFD), Color(0x3A4254))
     val activeSoftBackground = JBColor(Color(0xF1F5FF), Color(0x2E3544))
     val hoverSoftBackground = JBColor(Color(0xF6F8FC), Color(0x30343D))
-    val popupHoverBackground = JBColor(Color(0xF6F8FC), Color(0x30343D))
+    val popupHoverBackground = selectionBackground
     val linkForeground = JBColor.namedColor("Link.activeForeground", JBColor(Color(0x2F6BFF), Color(0x86A9FF)))
     
     // 卡片专属样式定义
@@ -159,19 +166,94 @@ internal object MoFishUiStyle {
      * @return 处理后的结果或当前状态。
      */
     fun menuItem(text: String, selected: Boolean = false, onClick: () -> Unit): JMenuItem {
-        return JMenuItem(text, if (selected) AllIcons.Actions.Checked else null).apply {
-            isOpaque = true
-            background = if (selected) activeSoftBackground else surface
-            foreground = JBColor.foreground()
-            border = JBUI.Borders.empty(4, 10)
-            addChangeListener {
-                background = when {
-                    selected -> activeSoftBackground
+        return object : JMenuItem(text, if (selected) AllIcons.Actions.Checked else null) {
+            init {
+                isOpaque = false
+                isContentAreaFilled = false
+                isBorderPainted = false
+                background = surface
+                foreground = JBColor.foreground()
+                border = JBUI.Borders.empty(5, 10)
+                addChangeListener { repaint() }
+                addActionListener { onClick() }
+            }
+
+            override fun paintComponent(g: Graphics) {
+                val graphics = g.create() as Graphics2D
+                graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                val itemBackground = when {
                     model.isArmed -> popupHoverBackground
-                    else -> surface
+                    selected -> activeSoftBackground
+                    else -> null
+                }
+                if (itemBackground != null) {
+                    graphics.color = itemBackground
+                    graphics.fillRoundRect(
+                        JBUI.scale(2),
+                        JBUI.scale(1),
+                        width - JBUI.scale(4),
+                        height - JBUI.scale(2),
+                        JBUI.scale(8),
+                        JBUI.scale(8),
+                    )
+                }
+                graphics.dispose()
+                super.paintComponent(g)
+            }
+        }
+    }
+
+    fun popupMenu(): JPopupMenu {
+        return object : JPopupMenu() {
+            init {
+                isOpaque = false
+                border = JBUI.Borders.empty(5)
+                addComponentListener(
+                    object : ComponentAdapter() {
+                        override fun componentShown(e: ComponentEvent?) {
+                            updatePopupWindowShape()
+                        }
+
+                        override fun componentResized(e: ComponentEvent?) {
+                            updatePopupWindowShape()
+                        }
+                    }
+                )
+            }
+
+            override fun addNotify() {
+                super.addNotify()
+                SwingUtilities.invokeLater { updatePopupWindowShape() }
+            }
+
+            override fun paintComponent(g: Graphics) {
+                val graphics = g.create() as Graphics2D
+                graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                graphics.color = surface
+                graphics.fillRoundRect(0, 0, width - 1, height - 1, JBUI.scale(10), JBUI.scale(10))
+                graphics.color = cardBorder
+                graphics.drawRoundRect(0, 0, width - 1, height - 1, JBUI.scale(10), JBUI.scale(10))
+                graphics.dispose()
+                super.paintComponent(g)
+            }
+
+            private fun updatePopupWindowShape() {
+                val window = SwingUtilities.getWindowAncestor(this) as? JWindow ?: return
+                val arc = JBUI.scale(12).toDouble()
+                window.background = Color(0, 0, 0, 0)
+                window.rootPane.isOpaque = false
+                (window.contentPane as? JComponent)?.isOpaque = false
+                if (window.width > 0 && window.height > 0) {
+                    window.shape = RoundRectangle2D.Double(
+                        0.0,
+                        0.0,
+                        window.width.toDouble(),
+                        window.height.toDouble(),
+                        arc,
+                        arc,
+                    )
                 }
             }
-            addActionListener { onClick() }
         }
     }
 }

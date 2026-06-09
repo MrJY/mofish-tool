@@ -19,6 +19,7 @@ import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.settings.MoFishStockTableColumn
 import online.mofish.tool.settings.normalizeStockGroupValue
 import online.mofish.tool.state.MoFishWatchlistState
+import online.mofish.tool.ui.MoFishIcons
 import online.mofish.tool.ui.web.MoFishStockTrend
 import online.mofish.tool.ui.web.MoFishWebEditorService
 import java.awt.BorderLayout
@@ -469,7 +470,7 @@ internal class StockModulePanel(
      * @return 处理后的结果或当前状态。
      */
     private fun createStockGroupFilterPopup(snapshot: MoFishWatchlistState): JPopupMenu {
-        val popup = JPopupMenu()
+        val popup = MoFishUiStyle.popupMenu()
         val groups = availableStockGroups(snapshot)
         val counts = stockGroupCounts(snapshot)
         popup.add(
@@ -1058,7 +1059,7 @@ internal class StockModulePanel(
     private fun createStockAssignmentPopup(selected: StockListItem): JPopupMenu {
         val snapshot = callbacks.watchlistService.snapshot()
         val groups = snapshot?.let(::availableStockGroups).orEmpty()
-        val popup = JPopupMenu()
+        val popup = MoFishUiStyle.popupMenu()
         popup.add(
             MoFishUiStyle.menuItem("无分组", selected = selected.groupName.isNullOrBlank()) {
                 moveSelectedStockToGroup(selected, "")
@@ -1130,7 +1131,7 @@ internal class StockModulePanel(
     private inner class EditSelectedStockHoldingAction : DumbAwareAction(
         "添加持仓",
         "为当前摸鱼股票追加持仓",
-        AllIcons.Nodes.DataTables,
+        MoFishIcons.AddHolding,
     ) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
@@ -1161,7 +1162,7 @@ internal class StockModulePanel(
     private inner class EditSelectedStockReminderAction : DumbAwareAction(
         "添加提醒",
         "为当前摸鱼股票添加提醒规则",
-        AllIcons.General.Balloon,
+        MoFishIcons.AddReminder,
     ) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
@@ -1226,7 +1227,7 @@ internal class StockModulePanel(
         override fun update(event: AnActionEvent) {
             event.presentation.text = nextViewMode().displayName
             event.presentation.icon = when (nextViewMode()) {
-                AssetListViewMode.CARD -> AllIcons.Nodes.ModuleGroup
+                AssetListViewMode.CARD -> MoFishIcons.CardView
                 AssetListViewMode.TABLE -> AllIcons.Nodes.DataTables
             }
             event.presentation.description = "切换为摸鱼股票${nextViewMode().displayName}"

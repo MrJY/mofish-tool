@@ -253,8 +253,8 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
             callbacks.eventStatus.text = "已返回$title。"
         }, BorderLayout.EAST)
 
-        val detailPanel = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
-        detailPanel.border = JBUI.Borders.empty(8)
+        val detailPanel = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(4)))
+        detailPanel.border = JBUI.Borders.empty(4)
         detailPanel.add(header, BorderLayout.NORTH)
         detailPanel.add(JBScrollPane(detailPane), BorderLayout.CENTER)
         return detailPanel

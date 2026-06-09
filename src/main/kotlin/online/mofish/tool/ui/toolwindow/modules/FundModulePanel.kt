@@ -19,6 +19,7 @@ import online.mofish.tool.settings.MoFishHoldingsDialog
 import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
+import online.mofish.tool.ui.MoFishIcons
 import online.mofish.tool.ui.web.MoFishFundTrend
 import online.mofish.tool.ui.web.MoFishWebEditorService
 import java.awt.Component
@@ -273,7 +274,7 @@ internal class FundModulePanel(
     private inner class AddSelectedFundHoldingAction : DumbAwareAction(
         "添加持仓",
         "为当前摸鱼基金追加持仓",
-        AllIcons.Nodes.DataTables,
+        MoFishIcons.AddHolding,
     ) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
@@ -317,7 +318,7 @@ internal class FundModulePanel(
     private inner class AddSelectedFundReminderAction : DumbAwareAction(
         "添加提醒",
         "为当前摸鱼基金添加提醒规则",
-        AllIcons.General.Balloon,
+        MoFishIcons.AddReminder,
     ) {
         /**
          * 根据当前选择和上下文更新动作可用状态。

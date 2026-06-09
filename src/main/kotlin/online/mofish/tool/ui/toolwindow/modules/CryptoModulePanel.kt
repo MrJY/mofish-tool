@@ -19,6 +19,7 @@ import online.mofish.tool.settings.MoFishHoldingsDialog
 import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
+import online.mofish.tool.ui.MoFishIcons
 import java.awt.Component
 import java.math.BigDecimal
 import java.util.UUID
@@ -243,7 +244,7 @@ internal class CryptoModulePanel(
     private inner class AddSelectedCryptoHoldingAction : DumbAwareAction(
         "添加持仓",
         "为当前摸鱼虚拟币追加持仓",
-        AllIcons.Nodes.DataTables,
+        MoFishIcons.AddHolding,
     ) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
@@ -286,7 +287,7 @@ internal class CryptoModulePanel(
     private inner class AddSelectedCryptoReminderAction : DumbAwareAction(
         "添加提醒",
         "为当前摸鱼虚拟币添加提醒规则",
-        AllIcons.General.Balloon,
+        MoFishIcons.AddReminder,
     ) {
         /**
          * 根据当前选择和上下文更新动作可用状态。

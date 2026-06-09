@@ -19,6 +19,7 @@ import online.mofish.tool.domain.StockQuote
 import online.mofish.tool.settings.MoFishRemindersDialog
 import online.mofish.tool.settings.MoFishSortDirection
 import online.mofish.tool.state.MoFishWatchlistState
+import online.mofish.tool.ui.MoFishIcons
 import java.awt.Component
 import java.math.BigDecimal
 import java.util.UUID
@@ -237,7 +238,7 @@ internal class IndexModulePanel(
     private inner class AddSelectedIndexReminderAction : DumbAwareAction(
         "添加提醒",
         "为当前摸鱼指数添加提醒规则",
-        AllIcons.General.Balloon,
+        MoFishIcons.AddReminder,
     ) {
         /**
          * 根据当前选择和上下文更新动作可用状态。

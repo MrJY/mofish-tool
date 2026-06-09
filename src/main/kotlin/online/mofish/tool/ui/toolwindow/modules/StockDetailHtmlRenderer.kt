@@ -102,10 +102,10 @@ internal object StockDetailHtmlRenderer {
                   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
                   color: $foreground; 
                   background-color: $contentSurface; 
-                  padding-top: 10px; 
-                  padding-bottom: 10px; 
-                  padding-left: 10px; 
-                  padding-right: 10px; 
+                  padding-top: 4px; 
+                  padding-bottom: 4px; 
+                  padding-left: 4px; 
+                  padding-right: 4px; 
                   margin-top: 0;
                   margin-bottom: 0;
                   margin-left: 0;
@@ -129,11 +129,11 @@ internal object StockDetailHtmlRenderer {
                   border-style: solid;
                   border-color: $border;
                   background-color: $surface; 
-                  padding-top: 16px; 
-                  padding-bottom: 16px; 
-                  padding-left: 16px; 
-                  padding-right: 16px; 
-                  margin-bottom: 12px; 
+                  padding-top: 12px; 
+                  padding-bottom: 12px; 
+                  padding-left: 12px; 
+                  padding-right: 12px; 
+                  margin-bottom: 8px; 
                 }
                 .hero-title { 
                   font-size: 20px; 
@@ -191,11 +191,11 @@ internal object StockDetailHtmlRenderer {
                   border-style: solid;
                   border-color: $border;
                   background-color: $soft; 
-                  padding-top: 10px; 
-                  padding-bottom: 10px; 
-                  padding-left: 14px; 
-                  padding-right: 14px; 
-                  margin-bottom: 12px; 
+                  padding-top: 8px; 
+                  padding-bottom: 8px; 
+                  padding-left: 10px; 
+                  padding-right: 10px; 
+                  margin-bottom: 8px; 
                   font-size: 12px;
                 }
                 
@@ -204,11 +204,11 @@ internal object StockDetailHtmlRenderer {
                   border-style: solid;
                   border-color: $border;
                   background-color: $surface; 
-                  padding-top: 14px; 
-                  padding-bottom: 14px; 
-                  padding-left: 16px; 
-                  padding-right: 16px; 
-                  margin-bottom: 12px; 
+                  padding-top: 10px; 
+                  padding-bottom: 10px; 
+                  padding-left: 12px; 
+                  padding-right: 12px; 
+                  margin-bottom: 8px; 
                 }
                 .card h3 { 
                   font-size: 14px; 
@@ -264,10 +264,10 @@ internal object StockDetailHtmlRenderer {
                   border-style: solid;
                   border-color: $border;
                   background-color: $surface; 
-                  padding-top: 20px; 
-                  padding-bottom: 20px; 
-                  padding-left: 20px; 
-                  padding-right: 20px; 
+                  padding-top: 14px; 
+                  padding-bottom: 14px; 
+                  padding-left: 14px; 
+                  padding-right: 14px; 
                   text-align: center;
                 }
                 .empty h2 {
