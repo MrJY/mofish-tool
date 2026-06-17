@@ -9,18 +9,35 @@ import online.mofish.tool.domain.HoldingConfig
 import java.awt.BorderLayout
 import java.math.BigDecimal
 import java.util.UUID
+import javax.swing.DefaultCellEditor
+import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.table.TableCellEditor
 import javax.swing.table.AbstractTableModel
 
-class MoFishHoldingsDialog(
+internal class MoFishHoldingsDialog(
     initialHoldings: List<HoldingConfig>,
+    availableAssets: List<SettingsAssetItem> = emptyList(),
     private val newRowTemplate: HoldingConfig? = null,
     dialogTitle: String = "编辑持仓",
 ) : DialogWrapper(true) {
+    private val assetItems = mergeAssetItems(availableAssets, initialHoldings, newRowTemplate)
     private val rows = initialHoldings.map { EditableHoldingRow.from(it) }.toMutableList()
-    private val tableModel = HoldingsTableModel(rows)
-    private val table = JBTable(tableModel)
+    private val tableModel = HoldingsTableModel(rows, assetItems)
+    private val table = object : JBTable(tableModel) {
+        override fun getCellEditor(row: Int, column: Int): TableCellEditor {
+            return when (convertColumnIndexToModel(column)) {
+                0 -> DefaultCellEditor(JComboBox(holdingAssetTypes(assetItems).toTypedArray()))
+                1 -> {
+                    val modelRow = convertRowIndexToModel(row)
+                    val assetType = tableModel.assetTypeAt(modelRow)
+                    DefaultCellEditor(JComboBox(tableModel.assetsFor(assetType).toTypedArray()))
+                }
+                else -> super.getCellEditor(row, column)
+            }
+        }
+    }
 
     var result: List<HoldingConfig> = initialHoldings
         private set
@@ -61,12 +78,18 @@ class MoFishHoldingsDialog(
                     modelRows.forEach(tableModel::removeRow)
                 }
                 .disableUpDownActions()
-        val toolbar = if (newRowTemplate == null) {
+        val toolbar = if (assetItems.isEmpty()) {
             decorator.disableAddAction()
         } else {
             decorator.setAddAction {
                 stopEditing()
-                tableModel.addRow(newEditableHoldingRow())
+                val newRow = newEditableHoldingRow()
+                if (newRow == null) {
+                    setErrorText("可选资产已全部配置持仓。")
+                    return@setAddAction
+                }
+                setErrorText(null)
+                tableModel.addRow(newRow)
             }
         }
         panel.add(toolbar.createPanel(), BorderLayout.CENTER)
@@ -79,8 +102,18 @@ class MoFishHoldingsDialog(
     override fun doOKAction() {
         stopEditing()
 
+        val parsedHoldings = mutableListOf<HoldingConfig>()
         val validationError = rows
-            .mapIndexedNotNull { index, row -> row.toHoldingConfigOrError(index + 1).exceptionOrNull()?.message }
+            .mapIndexedNotNull { index, row ->
+                row.toHoldingConfigOrError(index + 1)
+                    .fold(
+                        onSuccess = {
+                            parsedHoldings.add(it)
+                            null
+                        },
+                        onFailure = { it.message },
+                    )
+            }
             .firstOrNull()
 
         if (validationError != null) {
@@ -88,9 +121,13 @@ class MoFishHoldingsDialog(
             return
         }
 
-        result = rows.mapIndexed { index, row ->
-            row.toHoldingConfigOrError(index + 1).getOrThrow()
+        val duplicateError = duplicateHoldingError(parsedHoldings)
+        if (duplicateError != null) {
+            setErrorText(duplicateError)
+            return
         }
+
+        result = parsedHoldings
         super.doOKAction()
     }
 
@@ -110,31 +147,25 @@ class MoFishHoldingsDialog(
      * 处理 newEditableHoldingRow 相关逻辑，并返回调用方需要的结果。
      * @return 处理后的结果或当前状态。
      */
-    private fun newEditableHoldingRow(): EditableHoldingRow {
+    private fun newEditableHoldingRow(): EditableHoldingRow? {
         return newRowTemplate
+            ?.takeUnless { tableModel.hasAsset(it.assetType, it.code) }
             ?.let(EditableHoldingRow::from)
-            ?: EditableHoldingRow(
-                assetType = AssetType.FUND,
-                code = "",
-                displayName = "",
-                investedAmount = "",
-                quantity = "",
-                costPrice = "",
-                currency = "CNY",
-                isSellOut = false,
-            )
+            ?: tableModel.firstUnusedAsset()
+                ?.toHoldingTemplate()
+                ?.let(EditableHoldingRow::from)
     }
 
     private class HoldingsTableModel(
         private val rows: MutableList<EditableHoldingRow>,
+        private val assetItems: List<SettingsAssetItem>,
     ) : AbstractTableModel() {
         private val columns = listOf(
             "资产类型",
-            "代码",
-            "名称",
-            "持有金额",
+            "资产项",
             "持有份额",
-            "持有成本",
+            "购入成本",
+            "资产价值",
         )
 
         /**
@@ -163,11 +194,7 @@ class MoFishHoldingsDialog(
          * @return 处理后的结果或当前状态。
          */
         override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean {
-            if (columnIndex < 3) {
-                return false
-            }
-            val row = rows.getOrNull(rowIndex) ?: return false
-            return columnIndex != 3 || row.assetType != AssetType.STOCK
+            return columnIndex in 0..3
         }
 
         /**
@@ -178,6 +205,7 @@ class MoFishHoldingsDialog(
         override fun getColumnClass(columnIndex: Int): Class<*> {
             return when (columnIndex) {
                 0 -> AssetType::class.java
+                1 -> SettingsAssetItem::class.java
                 else -> String::class.java
             }
         }
@@ -192,11 +220,10 @@ class MoFishHoldingsDialog(
             val row = rows[rowIndex]
             return when (columnIndex) {
                 0 -> row.assetType
-                1 -> row.code
-                2 -> row.displayName
-                3 -> row.investedAmount
-                4 -> row.quantity
-                5 -> row.costPrice
+                1 -> assetItemFor(row)
+                2 -> row.quantity
+                3 -> row.costPrice
+                4 -> row.assetValue()
                 else -> ""
             }
         }
@@ -213,12 +240,44 @@ class MoFishHoldingsDialog(
             }
             val current = rows[rowIndex]
             rows[rowIndex] = when (columnIndex) {
-                3 -> current.copy(investedAmount = value?.toString().orEmpty())
-                4 -> current.copy(quantity = value?.toString().orEmpty()).withCalculatedStockAmount()
-                5 -> current.copy(costPrice = value?.toString().orEmpty()).withCalculatedStockAmount()
+                0 -> {
+                    val nextType = value as? AssetType ?: current.assetType
+                    val nextAsset = assetsFor(nextType).firstOrNull()
+                    if (nextAsset == null) {
+                        current.copy(assetType = nextType)
+                    } else {
+                        current.withAsset(nextAsset)
+                    }
+                }
+                1 -> (value as? SettingsAssetItem)?.let(current::withAsset) ?: current
+                2 -> current.copy(quantity = value?.toString().orEmpty())
+                3 -> current.copy(costPrice = value?.toString().orEmpty())
                 else -> current
             }
             fireTableRowsUpdated(rowIndex, rowIndex)
+        }
+
+        fun assetTypeAt(index: Int): AssetType {
+            return rows.getOrNull(index)?.assetType ?: holdingAssetTypes(assetItems).firstOrNull() ?: AssetType.FUND
+        }
+
+        fun assetsFor(assetType: AssetType): List<SettingsAssetItem> {
+            return assetItems.filter { it.assetType == assetType }
+        }
+
+        fun hasAsset(assetType: AssetType, code: String): Boolean {
+            val key = assetType.key(code)
+            return rows.any { it.assetType.key(it.code) == key }
+        }
+
+        fun firstUnusedAsset(): SettingsAssetItem? {
+            return assetItems.firstOrNull { !hasAsset(it.assetType, it.code) }
+        }
+
+        private fun assetItemFor(row: EditableHoldingRow): SettingsAssetItem {
+            return assetItems.firstOrNull {
+                it.assetType == row.assetType && it.code.equals(row.code, ignoreCase = true)
+            } ?: SettingsAssetItem(row.assetType, row.code, row.displayName)
         }
 
         /**
@@ -248,7 +307,6 @@ class MoFishHoldingsDialog(
         val assetType: AssetType,
         val code: String,
         val displayName: String,
-        val investedAmount: String,
         val quantity: String,
         val costPrice: String,
         val currency: String,
@@ -266,16 +324,20 @@ class MoFishHoldingsDialog(
                 val normalizedName = displayName.trim()
                 require(normalizedCode.isNotEmpty()) { "第 $rowNumber 行缺少代码。" }
                 require(normalizedName.isNotEmpty()) { "第 $rowNumber 行缺少名称。" }
-                require(costPrice.trim().isNotEmpty()) { "第 $rowNumber 行缺少持有成本。" }
+                require(quantity.trim().isNotEmpty()) { "第 $rowNumber 行缺少持有份额。" }
+                require(costPrice.trim().isNotEmpty()) { "第 $rowNumber 行缺少购入成本。" }
+                val quantityValue = parseRequiredDecimal(quantity, "持有份额", rowNumber)
+                val costPriceValue = parseRequiredDecimal(costPrice, "购入成本", rowNumber)
+                val investedAmountValue = (quantityValue * costPriceValue).stripTrailingZeros()
 
                 HoldingConfig(
                     id = originalId ?: "${assetType.name.lowercase()}:${normalizedCode.ifBlank { UUID.randomUUID().toString() }}",
                     assetType = assetType,
                     code = normalizedCode,
                     displayName = normalizedName,
-                    investedAmount = parseOptionalDecimal(resolvedInvestedAmount(), "持有金额", rowNumber),
-                    quantity = parseOptionalDecimal(quantity, "持有份额", rowNumber),
-                    costPrice = parseRequiredDecimal(costPrice, "持有成本", rowNumber),
+                    investedAmount = investedAmountValue,
+                    quantity = quantityValue,
+                    costPrice = costPriceValue,
                     todayCostPrice = null,
                     currency = currency.trim().ifBlank { "CNY" },
                     isSellOut = isSellOut,
@@ -283,28 +345,17 @@ class MoFishHoldingsDialog(
             }
         }
 
-        /**
-         * 处理 withCalculatedStockAmount 相关逻辑，并返回调用方需要的结果。
-         * @return 处理后的结果或当前状态。
-         */
-        fun withCalculatedStockAmount(): EditableHoldingRow {
-            if (assetType != AssetType.STOCK) {
-                return this
-            }
-            val calculatedAmount = calculateStockAmount(quantity, costPrice) ?: return this
-            return copy(investedAmount = calculatedAmount)
+        fun withAsset(asset: SettingsAssetItem): EditableHoldingRow {
+            return copy(
+                assetType = asset.assetType,
+                code = asset.code,
+                displayName = asset.displayName.ifBlank { asset.code },
+                currency = if (asset.assetType == AssetType.CRYPTO) "USD" else "CNY",
+            )
         }
 
-        /**
-         * 解析并确定dInvested金额。
-         * @return 处理后的结果或当前状态。
-         */
-        private fun resolvedInvestedAmount(): String {
-            return if (assetType == AssetType.STOCK) {
-                calculateStockAmount(quantity, costPrice) ?: investedAmount
-            } else {
-                investedAmount
-            }
+        fun assetValue(): String {
+            return calculateAssetValue(quantity, costPrice).orEmpty()
         }
 
         companion object {
@@ -318,28 +369,12 @@ class MoFishHoldingsDialog(
                     assetType = value.assetType,
                     code = value.code,
                     displayName = value.displayName,
-                    investedAmount = value.investedAmount?.toPlainString().orEmpty(),
                     quantity = value.quantity?.toPlainString().orEmpty(),
                     costPrice = value.costPrice.toPlainString(),
                     currency = value.currency,
                     isSellOut = value.isSellOut,
                     originalId = value.id,
-                ).withCalculatedStockAmount()
-            }
-
-            /**
-             * 解析OptionalDecimal数据，并转换为项目内部可用的结构。
-             * @param raw 用户输入或接口返回的原始文本。
-             * @param label label。
-             * @param rowNumber 用于错误提示的用户可见行号。
-             * @return 处理后的结果或当前状态。
-             */
-            private fun parseOptionalDecimal(raw: String, label: String, rowNumber: Int): BigDecimal? {
-                val value = raw.trim()
-                if (value.isEmpty()) {
-                    return null
-                }
-                return parseDecimal(value, label, rowNumber)
+                )
             }
 
             /**
@@ -373,11 +408,40 @@ class MoFishHoldingsDialog(
              * @param costPrice costPrice。
              * @return 处理后的结果或当前状态。
              */
-            private fun calculateStockAmount(quantity: String, costPrice: String): String? {
+            private fun calculateAssetValue(quantity: String, costPrice: String): String? {
                 val quantityValue = quantity.trim().toBigDecimalOrNull() ?: return null
                 val costPriceValue = costPrice.trim().toBigDecimalOrNull() ?: return null
                 return (quantityValue * costPriceValue).stripTrailingZeros().toPlainString()
             }
         }
     }
+}
+
+private fun mergeAssetItems(
+    availableAssets: List<SettingsAssetItem>,
+    initialHoldings: List<HoldingConfig>,
+    newRowTemplate: HoldingConfig?,
+): List<SettingsAssetItem> {
+    return (availableAssets +
+        initialHoldings.map(SettingsAssetItem::from) +
+        listOfNotNull(newRowTemplate?.let(SettingsAssetItem::from)))
+        .filter { it.assetType != AssetType.FOREX && it.assetType != AssetType.INDEX && it.code.isNotBlank() }
+        .distinctBy { it.key }
+}
+
+private fun duplicateHoldingError(holdings: List<HoldingConfig>): String? {
+    val seenRows = linkedMapOf<String, Int>()
+    holdings.forEachIndexed { index, holding ->
+        val key = holding.assetType.key(holding.code)
+        val previousRow = seenRows.putIfAbsent(key, index + 1)
+        if (previousRow != null) {
+            return "第 ${index + 1} 行与第 $previousRow 行是同一资产，持仓不能重复。"
+        }
+    }
+    return null
+}
+
+private fun holdingAssetTypes(assetItems: List<SettingsAssetItem>): List<AssetType> {
+    val configuredTypes = assetItems.map { it.assetType }.distinct()
+    return configuredTypes.ifEmpty { listOf(AssetType.FUND, AssetType.STOCK, AssetType.CRYPTO) }
 }

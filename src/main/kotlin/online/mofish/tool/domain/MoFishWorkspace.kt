@@ -13,8 +13,6 @@ data class MoFishWorkspace(
     val holdings: List<HoldingConfig>,
     /** 用户配置的价格或涨跌幅提醒规则列表。 */
     val reminderRules: List<ReminderRule>,
-    /** AI 功能配置。 */
-    val aiConfig: AiConfig,
     /** 当前工作区展示或计算使用的外汇牌价列表。 */
     val forexRates: List<ForexRate>,
     /** 当前工作区的市场指数行情列表。 */

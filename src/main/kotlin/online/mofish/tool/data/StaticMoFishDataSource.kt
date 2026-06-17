@@ -34,7 +34,6 @@ class StaticMoFishDataSource : MoFishDataSource {
             cryptoQuotes = settings.watchlist.cryptoIds.map { placeholderCryptoQuote(it, settings) },
             holdings = settings.holdings,
             reminderRules = settings.reminders,
-            aiConfig = settings.aiConfig,
             forexRates = emptyList(),
             indexQuotes = settings.watchlist.indexCodes.map { placeholderIndexQuote(it, settings) },
         )
@@ -57,7 +56,6 @@ class StaticMoFishDataSource : MoFishDataSource {
             cryptoQuotes = buildStaticCryptoQuotes(settings.watchlist, settings),
             holdings = settings.holdings,
             reminderRules = settings.reminders,
-            aiConfig = settings.aiConfig,
             forexRates = sampleForexRates(),
             indexQuotes = buildStaticIndexQuotes(settings),
         )
@@ -89,7 +87,6 @@ class StaticMoFishDataSource : MoFishDataSource {
             indexQuotes = if (MoFishRefreshModule.INDICES in modules) fallbackWorkspace.indexQuotes else currentWorkspace.indexQuotes,
             holdings = settings.holdings,
             reminderRules = settings.reminders,
-            aiConfig = settings.aiConfig,
         )
     }
 }

@@ -32,6 +32,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
 
 @Service(Service.Level.PROJECT)
 class MoFishWatchlistService(
@@ -52,6 +54,7 @@ class MoFishWatchlistService(
 
     @Volatile
     private var activated = false
+    private var lastAutoRefreshAtByModule: Map<MoFishRefreshModule, Instant> = emptyMap()
 
     val states: StateFlow<MoFishWatchlistState?> = stateFlow.asStateFlow()
     val events: SharedFlow<MoFishProjectEvent> = projectService.events
@@ -89,8 +92,8 @@ class MoFishWatchlistService(
         }
         activated = true
         projectService.ensureState(project.name)
-        refreshSchedulerService.registerProject(project.name) {
-            refreshConfiguredModules(force = true)
+        refreshSchedulerService.registerProject(project.name) { force ->
+            refreshConfiguredModules(force = force)
         }
     }
 
@@ -152,12 +155,36 @@ class MoFishWatchlistService(
      * @return 处理后的结果或当前状态。
      */
     private fun refreshConfiguredModules(force: Boolean = true) {
-        val modules = settingsService.snapshot().refresh.autoRefreshModules
-            .intersect(MoFishRefreshModule.visibleModules)
+        val now = Instant.now()
+        val currentMinuteOfDay = now.atZone(ZoneId.systemDefault()).let { time ->
+            time.hour * 60 + time.minute
+        }
+        val modules = settingsService.snapshot().refresh.effectiveModuleSettings()
+            .filter { (module, config) ->
+                module in MoFishRefreshModule.visibleModules &&
+                    config.enabled &&
+                    isWithinAutoRefreshWindow(
+                        currentMinuteOfDay = currentMinuteOfDay,
+                        startMinuteOfDay = config.startMinuteOfDay,
+                        endMinuteOfDay = config.endMinuteOfDay,
+                    ) &&
+                    (force || shouldRefreshModule(module, config.intervalSeconds, now))
+            }
+            .keys
         if (modules.isEmpty()) {
             return
         }
+        lastAutoRefreshAtByModule = lastAutoRefreshAtByModule + modules.associateWith { now }
         projectService.refreshModules(project.name, modules, force = force)
+    }
+
+    private fun shouldRefreshModule(
+        module: MoFishRefreshModule,
+        intervalSeconds: Int,
+        now: Instant,
+    ): Boolean {
+        val lastRefreshAt = lastAutoRefreshAtByModule[module] ?: return true
+        return java.time.Duration.between(lastRefreshAt, now).seconds >= intervalSeconds.coerceAtLeast(1)
     }
 
     /**

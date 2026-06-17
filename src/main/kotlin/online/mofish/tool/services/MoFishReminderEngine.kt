@@ -64,6 +64,14 @@ class MoFishReminderEngine {
                 }
             }
 
+            AssetType.INDEX -> {
+                val quote = workspace.indexQuotes.firstOrNull { it.code.equals(rule.code, ignoreCase = true) } ?: return null
+                when (rule.metric) {
+                    ReminderMetric.PRICE -> quote.currentPrice ?: quote.afterHoursPrice
+                    ReminderMetric.CHANGE_PERCENT -> quote.changePercent ?: quote.afterHoursChangePercent
+                }
+            }
+
             AssetType.CRYPTO -> {
                 val quote = workspace.cryptoQuotes.firstOrNull { it.code.equals(rule.code, ignoreCase = true) } ?: return null
                 when (rule.metric) {

@@ -1,8 +1,6 @@
 package online.mofish.tool.settings
 
 import online.mofish.tool.data.index.defaultMarketIndexCodes
-import online.mofish.tool.domain.AiConfig
-import online.mofish.tool.domain.AiStockHistoryRange
 import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.ReminderRule
@@ -114,14 +112,35 @@ data class MoFishSortSettings(
     val reminderDirection: MoFishSortDirection = MoFishSortDirection.ASC,
 )
 
+data class MoFishModuleRefreshSettings(
+    val enabled: Boolean = true,
+    val intervalSeconds: Int = 300,
+    val startMinuteOfDay: Int = 9 * 60 + 30,
+    val endMinuteOfDay: Int = 15 * 60,
+)
+
 data class MoFishRefreshSettings(
     val intervalSeconds: Int = 300,
     val autoRefreshEnabled: Boolean = true,
     val autoRefreshStartMinuteOfDay: Int = 9 * 60 + 30,
     val autoRefreshEndMinuteOfDay: Int = 15 * 60,
     val autoRefreshModules: Set<MoFishRefreshModule> = MoFishRefreshModule.defaultAutoRefreshModules,
+    val moduleSettings: Map<MoFishRefreshModule, MoFishModuleRefreshSettings> = emptyMap(),
     val openToolWindowOnStartup: Boolean = false,
-)
+) {
+    fun settingsFor(module: MoFishRefreshModule): MoFishModuleRefreshSettings {
+        return moduleSettings[module] ?: MoFishModuleRefreshSettings(
+            enabled = autoRefreshEnabled && module in autoRefreshModules,
+            intervalSeconds = intervalSeconds,
+            startMinuteOfDay = autoRefreshStartMinuteOfDay,
+            endMinuteOfDay = autoRefreshEndMinuteOfDay,
+        )
+    }
+
+    fun effectiveModuleSettings(): Map<MoFishRefreshModule, MoFishModuleRefreshSettings> {
+        return MoFishRefreshModule.visibleModules.associateWith(::settingsFor)
+    }
+}
 
 data class MoFishUiSettings(
     val stockTableColumns: Set<MoFishStockTableColumn> = MoFishStockTableColumn.defaultColumns,
@@ -132,12 +151,6 @@ data class MoFishSettingsState(
     val watchlist: MoFishWatchlistSettings = MoFishWatchlistSettings(),
     val holdings: List<HoldingConfig> = emptyList(),
     val reminders: List<ReminderRule> = emptyList(),
-    val aiConfig: AiConfig = AiConfig(
-        apiKey = "",
-        baseUrl = "https://api.openai.com/v1",
-        model = "gpt-4.1-mini",
-        stockHistoryRange = AiStockHistoryRange.THREE_MONTHS,
-    ),
     val sortSettings: MoFishSortSettings = MoFishSortSettings(),
     val refresh: MoFishRefreshSettings = MoFishRefreshSettings(),
     val ui: MoFishUiSettings = MoFishUiSettings(),

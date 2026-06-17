@@ -98,7 +98,6 @@ class RemoteMoFishDataSource(
         var nextWorkspace = currentWorkspace.copy(
             holdings = settings.holdings,
             reminderRules = settings.reminders,
-            aiConfig = settings.aiConfig,
         )
 
         if (MoFishRefreshModule.FUNDS in modules) {

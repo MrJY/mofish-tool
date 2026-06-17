@@ -256,7 +256,7 @@ internal class IndexModulePanel(
             val selected = selectedRow() ?: return
             val template = ReminderRule(
                 id = "rule-${UUID.randomUUID()}",
-                assetType = AssetType.STOCK,
+                assetType = AssetType.INDEX,
                 code = selected.quote.code,
                 displayName = selected.quote.name,
                 metric = ReminderMetric.PRICE,

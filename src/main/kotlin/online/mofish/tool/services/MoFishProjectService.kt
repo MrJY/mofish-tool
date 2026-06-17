@@ -87,8 +87,7 @@ class MoFishProjectService(
 
         val previous = stateFlow.value
         // Cache entries are only reusable while they still mirror the user's settings. This keeps
-        // edits to watchlists, holdings, reminders, or AI config from showing stale rows until the
-        // next manual refresh.
+        // edits to watchlists, holdings, or reminders from showing stale rows until the next manual refresh.
         val cachedEntry = if (force) {
             cacheService.invalidateWorkspace(projectName)
             null
@@ -239,8 +238,7 @@ class MoFishProjectService(
                 indexQuotes.map { it.code } == settingsState.watchlist.indexCodes &&
                 cryptoQuotes.map { it.code } == settingsState.watchlist.cryptoIds &&
                 holdings == settingsState.holdings &&
-                reminderRules == settingsState.reminders &&
-                aiConfig == settingsState.aiConfig
+                reminderRules == settingsState.reminders
     }
 
     /**

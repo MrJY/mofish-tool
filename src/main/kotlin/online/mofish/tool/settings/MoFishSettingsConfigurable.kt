@@ -3,20 +3,28 @@ package online.mofish.tool.settings
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBPasswordField
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
-import online.mofish.tool.domain.AiStockHistoryRange
+import online.mofish.tool.data.index.marketIndexDefinitionFor
+import online.mofish.tool.domain.AssetType
 import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.ReminderRule
+import online.mofish.tool.services.MoFishProjectService
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
+import javax.swing.Box
+import javax.swing.BoxLayout
 import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JComponent
@@ -31,20 +39,10 @@ class MoFishSettingsConfigurable : Configurable {
     private var fundCodesField: JBTextField? = null
     private var stockCodesField: JBTextField? = null
     private var cryptoCodesField: JBTextField? = null
-    private var aiBaseUrlField: JBTextField? = null
-    private var aiModelField: JBTextField? = null
-    private var aiApiKeyField: JBPasswordField? = null
-    private var aiHistoryRangeCombo: JComboBox<AiStockHistoryRange>? = null
     private var quoteSortDirectionCombo: JComboBox<MoFishSortDirection>? = null
     private var reminderSortFieldCombo: JComboBox<MoFishReminderSortField>? = null
     private var reminderSortDirectionCombo: JComboBox<MoFishSortDirection>? = null
-    private var refreshIntervalSpinner: JSpinner? = null
-    private var autoRefreshStartHourSpinner: JSpinner? = null
-    private var autoRefreshStartMinuteSpinner: JSpinner? = null
-    private var autoRefreshEndHourSpinner: JSpinner? = null
-    private var autoRefreshEndMinuteSpinner: JSpinner? = null
-    private var autoRefreshCheckBox: JBCheckBox? = null
-    private var autoRefreshModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
+    private var moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor> = emptyMap()
     private var stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox> = emptyMap()
     private var enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
     private var openToolWindowOnStartupCheckBox: JBCheckBox? = null
@@ -58,48 +56,35 @@ class MoFishSettingsConfigurable : Configurable {
     private var draftHoldings: List<HoldingConfig> = emptyList()
     private var draftReminders: List<ReminderRule> = emptyList()
 
-    /**
-     * 获取Display名称。
-     * @return 处理后的结果或当前状态。
-     */
     override fun getDisplayName(): String = "摸鱼工具"
 
-    /**
-     * 创建 IntelliJ 配置页或编辑器的根组件。
-     * @return 处理后的结果或当前状态。
-     */
     override fun createComponent(): JComponent {
         if (rootPanel == null) {
             val ui = createEditorFields()
             bindEditorFields(ui)
 
-            ui.aiApiKeyField.preferredSize = Dimension(320, ui.aiApiKeyField.preferredSize?.height ?: 28)
+            ui.editHoldingsButton.addActionListener { openHoldingsDialog() }
+            ui.editRemindersButton.addActionListener { openRemindersDialog() }
 
-            ui.editHoldingsButton.addActionListener {
-                openHoldingsDialog()
-            }
-            ui.editRemindersButton.addActionListener {
-                openRemindersDialog()
+            val content = JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                border = JBUI.Borders.empty(8, 10, 12, 10)
+                add(createSection("界面", "优先控制工具窗口显示方式和可见模块。", createInterfacePanel(ui)))
+                add(Box.createVerticalStrut(JBUI.scale(10)))
+                add(createSection("刷新", "每个模块可以独立设置自动刷新、间隔和时间范围。", createRefreshPanel(ui)))
+                add(Box.createVerticalStrut(JBUI.scale(10)))
+                add(createSection("持仓与提醒", "集中维护已添加标的的持仓和提醒规则。", createAssetRulesPanel(ui)))
+                add(Box.createVerticalGlue())
             }
 
-            rootPanel = FormBuilder.createFormBuilder()
-                .addComponent(TitledSeparator("刷新"))
-                .addLabeledComponent("数据刷新间隔（秒）：", ui.refreshIntervalSpinner)
-                .addComponent(ui.autoRefreshCheckBox)
-                .addLabeledComponent("自动刷新时间范围：", createTimeRangePanel(ui))
-                .addComponent(JBLabel("支持跨天时段；开始时间与结束时间相同表示全天允许自动刷新。"))
-                .addLabeledComponent("自动刷新生效模块：", createAutoRefreshModulesPanel(ui))
-                .addComponent(TitledSeparator("界面"))
-                .addLabeledComponent("启用模块：", createEnabledModulesPanel(ui))
-                .addLabeledComponent("股票表格显示列：", createStockTableColumnsPanel(ui))
-                .addComponent(ui.openToolWindowOnStartupCheckBox)
-                .addComponent(ui.showStatusBarWidgetCheckBox)
-                .addComponent(ui.showHoldingProfitCheckBox)
-                .addComponent(TitledSeparator("持仓与提醒"))
-                .addLabeledComponent("持仓：", createSummaryRow(ui.holdingsSummaryLabel, ui.editHoldingsButton))
-                .addLabeledComponent("提醒：", createSummaryRow(ui.remindersSummaryLabel, ui.editRemindersButton))
-                .addComponentFillVertically(JPanel(), 0)
-                .panel
+            rootPanel = JPanel(BorderLayout()).apply {
+                add(
+                    JBScrollPane(content).apply {
+                        border = JBUI.Borders.empty()
+                    },
+                    BorderLayout.CENTER,
+                )
+            }
 
             reset()
         }
@@ -107,31 +92,15 @@ class MoFishSettingsConfigurable : Configurable {
         return requireNotNull(rootPanel)
     }
 
-    /**
-     * 创建编辑器Fields实例或展示内容。
-     * @return 处理后的结果或当前状态。
-     */
     private fun createEditorFields(): SettingsEditorFields {
         return SettingsEditorFields(
             fundCodesField = JBTextField(),
             stockCodesField = JBTextField(),
             cryptoCodesField = JBTextField(),
-            aiBaseUrlField = JBTextField(),
-            aiModelField = JBTextField(),
-            aiApiKeyField = JBPasswordField(),
-            aiHistoryRangeCombo = JComboBox(AiStockHistoryRange.entries.toTypedArray()),
             quoteSortDirectionCombo = JComboBox(MoFishSortDirection.entries.toTypedArray()),
             reminderSortFieldCombo = JComboBox(MoFishReminderSortField.entries.toTypedArray()),
             reminderSortDirectionCombo = JComboBox(MoFishSortDirection.entries.toTypedArray()),
-            refreshIntervalSpinner = JSpinner(SpinnerNumberModel(300, 1, 86_400, 1)),
-            autoRefreshStartHourSpinner = createTimeSpinner(initialValue = 9, maxValue = 23),
-            autoRefreshStartMinuteSpinner = createTimeSpinner(initialValue = 30, maxValue = 59),
-            autoRefreshEndHourSpinner = createTimeSpinner(initialValue = 15, maxValue = 23),
-            autoRefreshEndMinuteSpinner = createTimeSpinner(initialValue = 0, maxValue = 59),
-            autoRefreshCheckBox = JBCheckBox("启用定时刷新"),
-            autoRefreshModuleCheckBoxes = MoFishRefreshModule.defaultAutoRefreshModules.associateWith { module ->
-                JBCheckBox(module.toString())
-            },
+            moduleRefreshEditors = MoFishRefreshModule.visibleModules.associateWith(::createModuleRefreshEditor),
             stockTableColumnCheckBoxes = MoFishStockTableColumn.entries.associateWith { column ->
                 JBCheckBox(column.toString())
             },
@@ -148,28 +117,27 @@ class MoFishSettingsConfigurable : Configurable {
         )
     }
 
-    /**
-     * 处理 bindEditorFields 相关逻辑，并返回调用方需要的结果。
-     * @param ui ui。
-     */
+    private fun createModuleRefreshEditor(module: MoFishRefreshModule): ModuleRefreshEditor {
+        return ModuleRefreshEditor(
+            enabledCheckBox = JBCheckBox(module.toString()),
+            intervalSpinner = JSpinner(SpinnerNumberModel(300, 1, 86_400, 1)).apply {
+                preferredSize = Dimension(JBUI.scale(86), preferredSize.height)
+            },
+            startHourSpinner = createTimeSpinner(initialValue = 9, maxValue = 23),
+            startMinuteSpinner = createTimeSpinner(initialValue = 30, maxValue = 59),
+            endHourSpinner = createTimeSpinner(initialValue = 15, maxValue = 23),
+            endMinuteSpinner = createTimeSpinner(initialValue = 0, maxValue = 59),
+        )
+    }
+
     private fun bindEditorFields(ui: SettingsEditorFields) {
         fundCodesField = ui.fundCodesField
         stockCodesField = ui.stockCodesField
         cryptoCodesField = ui.cryptoCodesField
-        aiBaseUrlField = ui.aiBaseUrlField
-        aiModelField = ui.aiModelField
-        aiApiKeyField = ui.aiApiKeyField
-        aiHistoryRangeCombo = ui.aiHistoryRangeCombo
         quoteSortDirectionCombo = ui.quoteSortDirectionCombo
         reminderSortFieldCombo = ui.reminderSortFieldCombo
         reminderSortDirectionCombo = ui.reminderSortDirectionCombo
-        refreshIntervalSpinner = ui.refreshIntervalSpinner
-        autoRefreshStartHourSpinner = ui.autoRefreshStartHourSpinner
-        autoRefreshStartMinuteSpinner = ui.autoRefreshStartMinuteSpinner
-        autoRefreshEndHourSpinner = ui.autoRefreshEndHourSpinner
-        autoRefreshEndMinuteSpinner = ui.autoRefreshEndMinuteSpinner
-        autoRefreshCheckBox = ui.autoRefreshCheckBox
-        autoRefreshModuleCheckBoxes = ui.autoRefreshModuleCheckBoxes
+        moduleRefreshEditors = ui.moduleRefreshEditors
         stockTableColumnCheckBoxes = ui.stockTableColumnCheckBoxes
         enabledModuleCheckBoxes = ui.enabledModuleCheckBoxes
         openToolWindowOnStartupCheckBox = ui.openToolWindowOnStartupCheckBox
@@ -181,25 +149,15 @@ class MoFishSettingsConfigurable : Configurable {
         editRemindersButton = ui.editRemindersButton
     }
 
-    /**
-     * 判断当前配置页内容是否相对持久化状态发生变化。
-     * @return 处理后的结果或当前状态。
-     */
     override fun isModified(): Boolean {
         return readEditorState() != settingsService.snapshot()
     }
 
-    /**
-     * 把配置页中的编辑内容写入持久化设置。
-     */
     @Throws(ConfigurationException::class)
     override fun apply() {
         settingsService.replaceState(readEditorState())
     }
 
-    /**
-     * 使用持久化设置重置配置页展示内容。
-     */
     override fun reset() {
         val state = settingsService.snapshot()
         draftHoldings = state.holdings.map { it.copy() }
@@ -207,28 +165,15 @@ class MoFishSettingsConfigurable : Configurable {
         writeEditorState(state)
     }
 
-    /**
-     * 处理 disposeUIResources 相关逻辑，并返回调用方需要的结果。
-     */
     override fun disposeUIResources() {
         rootPanel = null
         fundCodesField = null
         stockCodesField = null
         cryptoCodesField = null
-        aiBaseUrlField = null
-        aiModelField = null
-        aiApiKeyField = null
-        aiHistoryRangeCombo = null
         quoteSortDirectionCombo = null
         reminderSortFieldCombo = null
         reminderSortDirectionCombo = null
-        refreshIntervalSpinner = null
-        autoRefreshStartHourSpinner = null
-        autoRefreshStartMinuteSpinner = null
-        autoRefreshEndHourSpinner = null
-        autoRefreshEndMinuteSpinner = null
-        autoRefreshCheckBox = null
-        autoRefreshModuleCheckBoxes = emptyMap()
+        moduleRefreshEditors = emptyMap()
         stockTableColumnCheckBoxes = emptyMap()
         enabledModuleCheckBoxes = emptyMap()
         openToolWindowOnStartupCheckBox = null
@@ -242,35 +187,145 @@ class MoFishSettingsConfigurable : Configurable {
         draftReminders = emptyList()
     }
 
-    /**
-     * 处理 writeEditorState 相关逻辑，并返回调用方需要的结果。
-     * @param state 状态。
-     */
+    private fun createInterfacePanel(ui: SettingsEditorFields): JComponent {
+        return FormBuilder.createFormBuilder()
+            .addLabeledComponent("启用模块：", createFlowPanel(ui.enabledModuleCheckBoxes.values.toList()))
+            .addLabeledComponent("股票表格列：", createFlowPanel(ui.stockTableColumnCheckBoxes.values.toList()))
+            .addLabeledComponent("行情排序：", ui.quoteSortDirectionCombo)
+            .addLabeledComponent("提醒排序：", createReminderSortPanel(ui))
+            .addComponent(ui.openToolWindowOnStartupCheckBox)
+            .addComponent(ui.showStatusBarWidgetCheckBox)
+            .addComponent(ui.showHoldingProfitCheckBox)
+            .panel
+    }
+
+    private fun createRefreshPanel(ui: SettingsEditorFields): JComponent {
+        val panel = JPanel(GridBagLayout())
+        panel.isOpaque = false
+        addRefreshHeader(panel)
+        ui.moduleRefreshEditors.values.forEachIndexed { index, editor ->
+            addRefreshRow(panel, editor, index + 1)
+        }
+        return panel
+    }
+
+    private fun createAssetRulesPanel(ui: SettingsEditorFields): JComponent {
+        return FormBuilder.createFormBuilder()
+            .addLabeledComponent("持仓：", createSummaryRow(ui.holdingsSummaryLabel, ui.editHoldingsButton))
+            .addLabeledComponent("提醒：", createSummaryRow(ui.remindersSummaryLabel, ui.editRemindersButton))
+            .panel
+    }
+
+    private fun createSection(
+        title: String,
+        description: String,
+        content: JComponent,
+    ): JComponent {
+        val section = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(8)))
+        section.isOpaque = false
+        section.border = JBUI.Borders.empty(0, 0, 2, 0)
+        val header = JPanel(BorderLayout())
+        header.isOpaque = false
+        header.add(TitledSeparator(title), BorderLayout.NORTH)
+        header.add(JBLabel(description).apply {
+            border = JBUI.Borders.empty(2, 2, 2, 0)
+        }, BorderLayout.SOUTH)
+        section.add(header, BorderLayout.NORTH)
+        section.add(content, BorderLayout.CENTER)
+        return section
+    }
+
+    private fun addRefreshHeader(panel: JPanel) {
+        val headers = listOf("模块", "间隔（秒）", "自动刷新时间")
+        headers.forEachIndexed { index, title ->
+            panel.add(
+                JBLabel(title),
+                GridBagConstraints().apply {
+                    gridx = index
+                    gridy = 0
+                    weightx = if (index == 2) 1.0 else 0.0
+                    fill = GridBagConstraints.HORIZONTAL
+                    insets = JBUI.insets(0, 0, 6, 10)
+                    anchor = GridBagConstraints.WEST
+                },
+            )
+        }
+    }
+
+    private fun addRefreshRow(
+        panel: JPanel,
+        editor: ModuleRefreshEditor,
+        row: Int,
+    ) {
+        panel.add(
+            editor.enabledCheckBox,
+            GridBagConstraints().apply {
+                gridx = 0
+                gridy = row
+                fill = GridBagConstraints.HORIZONTAL
+                insets = JBUI.insets(0, 0, 6, 10)
+                anchor = GridBagConstraints.WEST
+            },
+        )
+        panel.add(
+            editor.intervalSpinner,
+            GridBagConstraints().apply {
+                gridx = 1
+                gridy = row
+                insets = JBUI.insets(0, 0, 6, 10)
+                anchor = GridBagConstraints.WEST
+            },
+        )
+        panel.add(
+            createTimeRangePanel(
+                editor.startHourSpinner,
+                editor.startMinuteSpinner,
+                editor.endHourSpinner,
+                editor.endMinuteSpinner,
+            ),
+            GridBagConstraints().apply {
+                gridx = 2
+                gridy = row
+                weightx = 1.0
+                fill = GridBagConstraints.HORIZONTAL
+                insets = JBUI.insets(0, 0, 6, 0)
+                anchor = GridBagConstraints.WEST
+            },
+        )
+    }
+
+    private fun createReminderSortPanel(ui: SettingsEditorFields): JPanel {
+        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0))
+        panel.isOpaque = false
+        panel.add(ui.reminderSortFieldCombo)
+        panel.add(ui.reminderSortDirectionCombo)
+        return panel
+    }
+
+    private fun createSummaryRow(summaryLabel: JBLabel, button: JButton): JPanel {
+        val panel = JPanel(BorderLayout(JBUI.scale(8), 0))
+        panel.isOpaque = false
+        panel.add(summaryLabel, BorderLayout.CENTER)
+        panel.add(button, BorderLayout.EAST)
+        return panel
+    }
+
+    private fun createFlowPanel(components: List<JComponent>): JPanel {
+        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
+        panel.isOpaque = false
+        components.forEach(panel::add)
+        return panel
+    }
+
     private fun writeEditorState(state: MoFishSettingsState) {
         fundCodesField?.text = joinCodes(state.watchlist.fundCodes)
         stockCodesField?.text = joinCodes(state.watchlist.stockCodes)
         cryptoCodesField?.text = joinCodes(state.watchlist.cryptoIds)
-        aiBaseUrlField?.text = state.aiConfig.baseUrl
-        aiModelField?.text = state.aiConfig.model
-        aiApiKeyField?.text = state.aiConfig.apiKey
-        aiHistoryRangeCombo?.selectedItem = state.aiConfig.stockHistoryRange
         quoteSortDirectionCombo?.selectedItem = state.sortSettings.quoteDirection
         reminderSortFieldCombo?.selectedItem = state.sortSettings.reminderField
         reminderSortDirectionCombo?.selectedItem = state.sortSettings.reminderDirection
-        refreshIntervalSpinner?.value = state.refresh.intervalSeconds
-        writeMinuteOfDayToEditor(
-            minuteOfDay = state.refresh.autoRefreshStartMinuteOfDay,
-            hourSpinner = autoRefreshStartHourSpinner,
-            minuteSpinner = autoRefreshStartMinuteSpinner,
-        )
-        writeMinuteOfDayToEditor(
-            minuteOfDay = state.refresh.autoRefreshEndMinuteOfDay,
-            hourSpinner = autoRefreshEndHourSpinner,
-            minuteSpinner = autoRefreshEndMinuteSpinner,
-        )
-        autoRefreshCheckBox?.isSelected = state.refresh.autoRefreshEnabled
-        autoRefreshModuleCheckBoxes.forEach { (module, checkBox) ->
-            checkBox.isSelected = module in state.refresh.autoRefreshModules
+        moduleRefreshEditors.forEach { (module, editor) ->
+            editor.write(state.refresh.settingsFor(module))
         }
         stockTableColumnCheckBoxes.forEach { (column, checkBox) ->
             checkBox.isSelected = column in state.ui.stockTableColumns
@@ -284,10 +339,6 @@ class MoFishSettingsConfigurable : Configurable {
         updateDraftSummaries()
     }
 
-    /**
-     * 处理 readEditorState 相关逻辑，并返回调用方需要的结果。
-     * @return 处理后的结果或当前状态。
-     */
     private fun readEditorState(): MoFishSettingsState {
         val baseState = settingsService.snapshot()
         val stockCodes = parseLowercaseCodes(stockCodesField?.text.orEmpty())
@@ -296,6 +347,14 @@ class MoFishSettingsConfigurable : Configurable {
         val stockGroupAssignments = baseState.watchlist.stockGroupAssignments
             .filterKeys { it.lowercase() in stockCodeSet }
             .filterValues { group -> stockGroups.any { it.equals(group, ignoreCase = true) } }
+        val moduleRefreshSettings = readModuleRefreshSettings(baseState.refresh.effectiveModuleSettings())
+        val enabledRefreshModules = moduleRefreshSettings.filterValues { it.enabled }.keys
+        val shortestIntervalSeconds = moduleRefreshSettings.values
+            .filter { it.enabled }
+            .minOfOrNull { it.intervalSeconds }
+            ?: baseState.refresh.intervalSeconds
+        val firstRefreshWindow = moduleRefreshSettings.values.firstOrNull { it.enabled }
+            ?: baseState.refresh.settingsFor(MoFishRefreshModule.STOCKS)
         return baseState.copy(
             watchlist = MoFishWatchlistSettings(
                 fundCodes = parseFundCodes(fundCodesField?.text.orEmpty()),
@@ -307,13 +366,6 @@ class MoFishSettingsConfigurable : Configurable {
             ),
             holdings = draftHoldings,
             reminders = draftReminders,
-            aiConfig = baseState.aiConfig.copy(
-                apiKey = aiApiKeyField?.password?.concatToString().orEmpty().trim(),
-                baseUrl = aiBaseUrlField?.text.orEmpty().trim(),
-                model = aiModelField?.text.orEmpty().trim(),
-                stockHistoryRange = aiHistoryRangeCombo?.selectedItem as? AiStockHistoryRange
-                    ?: baseState.aiConfig.stockHistoryRange,
-            ),
             sortSettings = MoFishSortSettings(
                 quoteDirection = quoteSortDirectionCombo?.selectedItem as? MoFishSortDirection
                     ?: baseState.sortSettings.quoteDirection,
@@ -323,19 +375,12 @@ class MoFishSettingsConfigurable : Configurable {
                     ?: baseState.sortSettings.reminderDirection,
             ),
             refresh = MoFishRefreshSettings(
-                intervalSeconds = (refreshIntervalSpinner?.value as? Int) ?: baseState.refresh.intervalSeconds,
-                autoRefreshEnabled = autoRefreshCheckBox?.isSelected ?: baseState.refresh.autoRefreshEnabled,
-                autoRefreshStartMinuteOfDay = readMinuteOfDayFromEditor(
-                    hourSpinner = autoRefreshStartHourSpinner,
-                    minuteSpinner = autoRefreshStartMinuteSpinner,
-                    fallbackMinuteOfDay = baseState.refresh.autoRefreshStartMinuteOfDay,
-                ),
-                autoRefreshEndMinuteOfDay = readMinuteOfDayFromEditor(
-                    hourSpinner = autoRefreshEndHourSpinner,
-                    minuteSpinner = autoRefreshEndMinuteSpinner,
-                    fallbackMinuteOfDay = baseState.refresh.autoRefreshEndMinuteOfDay,
-                ),
-                autoRefreshModules = readAutoRefreshModules(baseState.refresh.autoRefreshModules),
+                intervalSeconds = shortestIntervalSeconds,
+                autoRefreshEnabled = enabledRefreshModules.isNotEmpty(),
+                autoRefreshStartMinuteOfDay = firstRefreshWindow.startMinuteOfDay,
+                autoRefreshEndMinuteOfDay = firstRefreshWindow.endMinuteOfDay,
+                autoRefreshModules = enabledRefreshModules,
+                moduleSettings = moduleRefreshSettings,
                 openToolWindowOnStartup = openToolWindowOnStartupCheckBox?.isSelected
                     ?: baseState.refresh.openToolWindowOnStartup,
             ),
@@ -348,150 +393,178 @@ class MoFishSettingsConfigurable : Configurable {
         )
     }
 
-    /**
-     * 打开持仓弹窗相关界面或详情。
-     */
+    private fun readModuleRefreshSettings(
+        fallbackSettings: Map<MoFishRefreshModule, MoFishModuleRefreshSettings>,
+    ): Map<MoFishRefreshModule, MoFishModuleRefreshSettings> {
+        if (moduleRefreshEditors.isEmpty()) {
+            return fallbackSettings
+        }
+        return MoFishRefreshModule.visibleModules.associateWith { module ->
+            val fallback = fallbackSettings[module] ?: MoFishModuleRefreshSettings()
+            moduleRefreshEditors[module]?.read(fallback) ?: fallback
+        }
+    }
+
     private fun openHoldingsDialog() {
-        val dialog = MoFishHoldingsDialog(draftHoldings)
-        if (dialog.showAndGet()) {
-            draftHoldings = dialog.result
-            updateDraftSummaries()
+        val availableAssets = buildAssetSelectionItems(includeIndexes = false)
+            .filter { it.assetType != AssetType.FOREX && it.assetType != AssetType.INDEX }
+        if (availableAssets.isEmpty() && draftHoldings.isEmpty()) {
+            Messages.showInfoMessage("请先在工具窗口添加自选标的。", "编辑持仓")
+            return
         }
+        val dialog = MoFishHoldingsDialog(
+            initialHoldings = draftHoldings,
+            availableAssets = availableAssets,
+            dialogTitle = "编辑持仓",
+        )
+        if (!dialog.showAndGet()) {
+            return
+        }
+        draftHoldings = dialog.result
+        updateDraftSummaries()
     }
 
-    /**
-     * 打开提醒弹窗相关界面或详情。
-     */
     private fun openRemindersDialog() {
-        val dialog = MoFishRemindersDialog(draftReminders)
-        if (dialog.showAndGet()) {
-            draftReminders = dialog.result
-            updateDraftSummaries()
+        val availableAssets = buildAssetSelectionItems(includeIndexes = true)
+        val initialReminders = normalizeIndexReminderAssetTypes(draftReminders)
+        if (availableAssets.isEmpty() && initialReminders.isEmpty()) {
+            Messages.showInfoMessage("请先在工具窗口添加自选标的。", "编辑提醒")
+            return
+        }
+        val dialog = MoFishRemindersDialog(
+            initialReminders = initialReminders,
+            availableAssets = availableAssets,
+            dialogTitle = "编辑提醒",
+        )
+        if (!dialog.showAndGet()) {
+            return
+        }
+        draftReminders = dialog.result
+        updateDraftSummaries()
+    }
+
+    private fun updateDraftSummaries() {
+        val fundCount = draftHoldings.count { it.assetType == AssetType.FUND }
+        val stockCount = draftHoldings.count { it.assetType == AssetType.STOCK }
+        val cryptoCount = draftHoldings.count { it.assetType == AssetType.CRYPTO }
+        val enabledReminderCount = draftReminders.count { it.enabled }
+        holdingsSummaryLabel?.text = "${draftHoldings.size} 条持仓，基金 $fundCount 条，股票 $stockCount 条，虚拟币 $cryptoCount 条"
+        remindersSummaryLabel?.text = "${draftReminders.size} 条提醒规则，已启用 $enabledReminderCount 条"
+    }
+
+    private fun buildAssetSelectionItems(includeIndexes: Boolean): List<SettingsAssetItem> {
+        val displayNames = buildKnownAssetDisplayNames()
+        val items = linkedMapOf<String, SettingsAssetItem>()
+
+        fun add(type: AssetType, code: String, fallbackName: String = code) {
+            val normalizedCode = code.trim()
+            if (normalizedCode.isEmpty()) {
+                return
+            }
+            val key = type.key(normalizedCode)
+            val displayName = displayNames[key]?.takeIf { it.isNotBlank() } ?: fallbackName
+            items.putIfAbsent(key, SettingsAssetItem(type, normalizedCode, displayName))
+        }
+
+        parseLowercaseCodes(stockCodesField?.text.orEmpty()).forEach { add(AssetType.STOCK, it) }
+        if (includeIndexes) {
+            settingsService.snapshot().watchlist.indexCodes.forEach { code ->
+                add(AssetType.INDEX, code, marketIndexDefinitionFor(code)?.displayName ?: code)
+            }
+        }
+        parseFundCodes(fundCodesField?.text.orEmpty()).forEach { add(AssetType.FUND, it) }
+        parseLowercaseCodes(cryptoCodesField?.text.orEmpty()).forEach { add(AssetType.CRYPTO, it) }
+        draftHoldings.forEach { add(it.assetType, it.code, it.displayName) }
+        if (includeIndexes) {
+            normalizeIndexReminderAssetTypes(draftReminders).forEach { add(it.assetType, it.code, it.displayName) }
+        }
+        return items.values.toList()
+    }
+
+    private fun buildKnownAssetDisplayNames(): Map<String, String> {
+        val displayNames = linkedMapOf<String, String>()
+
+        fun putIfMeaningful(type: AssetType, code: String, name: String, overrideExisting: Boolean = false) {
+            val normalizedCode = code.trim()
+            val normalizedName = name.trim()
+            if (!isMeaningfulAssetName(normalizedName, normalizedCode)) {
+                return
+            }
+            val key = type.key(normalizedCode)
+            if (overrideExisting || key !in displayNames) {
+                displayNames[key] = normalizedName
+            }
+        }
+
+        ProjectManager.getInstance().openProjects.forEach { project ->
+            val workspace = project.service<MoFishProjectService>().states.value?.workspace ?: return@forEach
+            workspace.stockQuotes.forEach { quote -> putIfMeaningful(AssetType.STOCK, quote.code, quote.name) }
+            workspace.indexQuotes.forEach { quote -> putIfMeaningful(AssetType.INDEX, quote.code, quote.name) }
+            workspace.fundQuotes.forEach { quote -> putIfMeaningful(AssetType.FUND, quote.code, quote.name) }
+            workspace.cryptoQuotes.forEach { quote -> putIfMeaningful(AssetType.CRYPTO, quote.code, quote.name) }
+        }
+
+        draftHoldings.forEach { holding ->
+            putIfMeaningful(holding.assetType, holding.code, holding.displayName, overrideExisting = true)
+        }
+        normalizeIndexReminderAssetTypes(draftReminders).forEach { reminder ->
+            putIfMeaningful(reminder.assetType, reminder.code, reminder.displayName, overrideExisting = true)
+        }
+        return displayNames
+    }
+
+    private fun normalizeIndexReminderAssetTypes(reminders: List<ReminderRule>): List<ReminderRule> {
+        return reminders.map { reminder ->
+            val assetType = normalizedReminderAssetType(reminder.assetType, reminder.code)
+            if (assetType == reminder.assetType) reminder else reminder.copy(assetType = assetType)
         }
     }
 
-    /**
-     * 更新DraftSummaries。
-     */
-    private fun updateDraftSummaries() {
-        holdingsSummaryLabel?.text = buildHoldingsSummary()
-        remindersSummaryLabel?.text = buildRemindersSummary()
+    private fun normalizedReminderAssetType(assetType: AssetType, code: String): AssetType {
+        return if (assetType == AssetType.STOCK && isIndexCode(code)) AssetType.INDEX else assetType
     }
 
-    /**
-     * 构建持仓汇总，供后续界面展示或数据处理使用。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun buildHoldingsSummary(): String {
-        val fundCount = draftHoldings.count { it.assetType.name == "FUND" }
-        val stockCount = draftHoldings.count { it.assetType.name == "STOCK" }
-        val cryptoCount = draftHoldings.count { it.assetType.name == "CRYPTO" }
-        return "${draftHoldings.size} 条持仓，摸鱼基金 $fundCount 条，摸鱼股票 $stockCount 条，摸鱼虚拟币 $cryptoCount 条"
+    private fun isIndexCode(code: String): Boolean {
+        val normalizedCode = code.trim()
+        return settingsService.snapshot().watchlist.indexCodes.any { it.equals(normalizedCode, ignoreCase = true) } ||
+            marketIndexDefinitionFor(normalizedCode) != null
     }
 
-    /**
-     * 构建提醒汇总，供后续界面展示或数据处理使用。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun buildRemindersSummary(): String {
-        val enabledCount = draftReminders.count { it.enabled }
-        return "${draftReminders.size} 条提醒规则，已启用 $enabledCount 条"
+    private fun isMeaningfulAssetName(name: String, code: String): Boolean {
+        return name.isNotBlank() &&
+            !name.equals(code, ignoreCase = true) &&
+            !name.endsWith("暂无数据")
     }
 
-    /**
-     * 创建汇总行实例或展示内容。
-     * @param summaryLabel 汇总Label。
-     * @param actionButton 动作Button。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createSummaryRow(summaryLabel: JBLabel, actionButton: JButton): JPanel {
-        val panel = JPanel(BorderLayout(JBUI.scale(8), 0))
-        panel.add(summaryLabel, BorderLayout.CENTER)
-        panel.add(actionButton, BorderLayout.EAST)
-        return panel
-    }
-
-    /**
-     * 创建时间Spinner实例或展示内容。
-     * @param initialValue initial值。
-     * @param maxValue max值。
-     * @return 处理后的结果或当前状态。
-     */
     private fun createTimeSpinner(initialValue: Int, maxValue: Int): JSpinner {
         return JSpinner(SpinnerNumberModel(initialValue, 0, maxValue, 1)).apply {
-            preferredSize = Dimension(JBUI.scale(68), preferredSize.height)
+            preferredSize = Dimension(JBUI.scale(58), preferredSize.height)
         }
     }
 
-    /**
-     * 创建时间Range面板实例或展示内容。
-     * @param ui ui。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createTimeRangePanel(ui: SettingsEditorFields): JPanel {
+    private fun createTimeRangePanel(
+        startHourSpinner: JSpinner,
+        startMinuteSpinner: JSpinner,
+        endHourSpinner: JSpinner,
+        endMinuteSpinner: JSpinner,
+    ): JPanel {
         val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0))
         panel.isOpaque = false
-        panel.add(createTimeEditor(ui.autoRefreshStartHourSpinner, ui.autoRefreshStartMinuteSpinner))
+        panel.add(createTimeEditor(startHourSpinner, startMinuteSpinner))
         panel.add(JBLabel("至"))
-        panel.add(createTimeEditor(ui.autoRefreshEndHourSpinner, ui.autoRefreshEndMinuteSpinner))
+        panel.add(createTimeEditor(endHourSpinner, endMinuteSpinner))
         return panel
     }
 
-    /**
-     * 创建Auto刷新模块面板实例或展示内容。
-     * @param ui ui。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createAutoRefreshModulesPanel(ui: SettingsEditorFields): JPanel {
-        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
+    private fun createTimeEditor(hourSpinner: JSpinner, minuteSpinner: JSpinner): JPanel {
+        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(2), 0))
         panel.isOpaque = false
-        ui.autoRefreshModuleCheckBoxes.values.forEach(panel::add)
+        panel.add(hourSpinner)
+        panel.add(JBLabel(":"))
+        panel.add(minuteSpinner)
         return panel
     }
 
-    /**
-     * 创建股票表格Columns面板实例或展示内容。
-     * @param ui ui。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createStockTableColumnsPanel(ui: SettingsEditorFields): JPanel {
-        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
-        panel.isOpaque = false
-        ui.stockTableColumnCheckBoxes.values.forEach(panel::add)
-        return panel
-    }
-
-    /**
-     * 创建Enabled模块面板实例或展示内容。
-     * @param ui ui。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createEnabledModulesPanel(ui: SettingsEditorFields): JPanel {
-        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0))
-        panel.isOpaque = false
-        ui.enabledModuleCheckBoxes.values.forEach(panel::add)
-        return panel
-    }
-
-    /**
-     * 处理 readAutoRefreshModules 相关逻辑，并返回调用方需要的结果。
-     * @param fallbackModules fallback模块。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun readAutoRefreshModules(fallbackModules: Set<MoFishRefreshModule>): Set<MoFishRefreshModule> {
-        if (autoRefreshModuleCheckBoxes.isEmpty()) {
-            return fallbackModules
-        }
-        return autoRefreshModuleCheckBoxes
-            .filterValues { it.isSelected }
-            .keys
-    }
-
-    /**
-     * 处理 readStockTableColumns 相关逻辑，并返回调用方需要的结果。
-     * @param fallbackColumns fallbackColumns。
-     * @return 处理后的结果或当前状态。
-     */
     private fun readStockTableColumns(fallbackColumns: Set<MoFishStockTableColumn>): Set<MoFishStockTableColumn> {
         if (stockTableColumnCheckBoxes.isEmpty()) {
             return fallbackColumns
@@ -502,11 +575,6 @@ class MoFishSettingsConfigurable : Configurable {
             .ifEmpty { MoFishStockTableColumn.defaultColumns }
     }
 
-    /**
-     * 处理 readEnabledModules 相关逻辑，并返回调用方需要的结果。
-     * @param fallbackModules fallback模块。
-     * @return 处理后的结果或当前状态。
-     */
     private fun readEnabledModules(fallbackModules: Set<MoFishRefreshModule>): Set<MoFishRefreshModule> {
         if (enabledModuleCheckBoxes.isEmpty()) {
             return fallbackModules
@@ -517,59 +585,6 @@ class MoFishSettingsConfigurable : Configurable {
             .ifEmpty { MoFishRefreshModule.defaultEnabledModules }
     }
 
-    /**
-     * 创建时间编辑器实例或展示内容。
-     * @param hourSpinner hourSpinner。
-     * @param minuteSpinner minuteSpinner。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun createTimeEditor(hourSpinner: JSpinner, minuteSpinner: JSpinner): JPanel {
-        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(2), 0))
-        panel.isOpaque = false
-        panel.add(hourSpinner)
-        panel.add(JBLabel(":"))
-        panel.add(minuteSpinner)
-        return panel
-    }
-
-    /**
-     * 处理 writeMinuteOfDayToEditor 相关逻辑，并返回调用方需要的结果。
-     * @param minuteOfDay minuteOfDay。
-     * @param hourSpinner hourSpinner。
-     * @param minuteSpinner minuteSpinner。
-     */
-    private fun writeMinuteOfDayToEditor(
-        minuteOfDay: Int,
-        hourSpinner: JSpinner?,
-        minuteSpinner: JSpinner?,
-    ) {
-        val normalizedMinuteOfDay = normalizeMinuteOfDay(minuteOfDay)
-        hourSpinner?.value = normalizedMinuteOfDay / 60
-        minuteSpinner?.value = normalizedMinuteOfDay % 60
-    }
-
-    /**
-     * 处理 readMinuteOfDayFromEditor 相关逻辑，并返回调用方需要的结果。
-     * @param hourSpinner hourSpinner。
-     * @param minuteSpinner minuteSpinner。
-     * @param fallbackMinuteOfDay fallbackMinuteOfDay。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun readMinuteOfDayFromEditor(
-        hourSpinner: JSpinner?,
-        minuteSpinner: JSpinner?,
-        fallbackMinuteOfDay: Int,
-    ): Int {
-        val hour = hourSpinner?.value as? Int ?: return fallbackMinuteOfDay
-        val minute = minuteSpinner?.value as? Int ?: return fallbackMinuteOfDay
-        return minuteOfDay(hour, minute)
-    }
-
-    /**
-     * 解析基金Codes数据，并转换为项目内部可用的结构。
-     * @param raw 用户输入或接口返回的原始文本。
-     * @return 处理后的结果或当前状态。
-     */
     private fun parseFundCodes(raw: String): List<String> {
         return raw
             .split(',', '\n', '\r', '\t', ' ')
@@ -578,11 +593,6 @@ class MoFishSettingsConfigurable : Configurable {
             .distinct()
     }
 
-    /**
-     * 解析LowercaseCodes数据，并转换为项目内部可用的结构。
-     * @param raw 用户输入或接口返回的原始文本。
-     * @return 处理后的结果或当前状态。
-     */
     private fun parseLowercaseCodes(raw: String): List<String> {
         return raw
             .split(',', '\n', '\r', '\t', ' ')
@@ -591,11 +601,6 @@ class MoFishSettingsConfigurable : Configurable {
             .distinct()
     }
 
-    /**
-     * 处理 joinCodes 相关逻辑，并返回调用方需要的结果。
-     * @param codes codes。
-     * @return 处理后的结果或当前状态。
-     */
     private fun joinCodes(codes: List<String>): String = codes.joinToString(", ")
 }
 
@@ -603,20 +608,10 @@ private data class SettingsEditorFields(
     val fundCodesField: JBTextField,
     val stockCodesField: JBTextField,
     val cryptoCodesField: JBTextField,
-    val aiBaseUrlField: JBTextField,
-    val aiModelField: JBTextField,
-    val aiApiKeyField: JBPasswordField,
-    val aiHistoryRangeCombo: JComboBox<AiStockHistoryRange>,
     val quoteSortDirectionCombo: JComboBox<MoFishSortDirection>,
     val reminderSortFieldCombo: JComboBox<MoFishReminderSortField>,
     val reminderSortDirectionCombo: JComboBox<MoFishSortDirection>,
-    val refreshIntervalSpinner: JSpinner,
-    val autoRefreshStartHourSpinner: JSpinner,
-    val autoRefreshStartMinuteSpinner: JSpinner,
-    val autoRefreshEndHourSpinner: JSpinner,
-    val autoRefreshEndMinuteSpinner: JSpinner,
-    val autoRefreshCheckBox: JBCheckBox,
-    val autoRefreshModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,
+    val moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor>,
     val stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox>,
     val enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,
     val openToolWindowOnStartupCheckBox: JBCheckBox,
@@ -627,3 +622,42 @@ private data class SettingsEditorFields(
     val editHoldingsButton: JButton,
     val editRemindersButton: JButton,
 )
+
+private data class ModuleRefreshEditor(
+    val enabledCheckBox: JBCheckBox,
+    val intervalSpinner: JSpinner,
+    val startHourSpinner: JSpinner,
+    val startMinuteSpinner: JSpinner,
+    val endHourSpinner: JSpinner,
+    val endMinuteSpinner: JSpinner,
+) {
+    fun write(settings: MoFishModuleRefreshSettings) {
+        enabledCheckBox.isSelected = settings.enabled
+        intervalSpinner.value = settings.intervalSeconds.coerceAtLeast(1)
+        val startMinute = normalizeMinuteOfDay(settings.startMinuteOfDay)
+        startHourSpinner.value = startMinute / 60
+        startMinuteSpinner.value = startMinute % 60
+        val endMinute = normalizeMinuteOfDay(settings.endMinuteOfDay)
+        endHourSpinner.value = endMinute / 60
+        endMinuteSpinner.value = endMinute % 60
+    }
+
+    fun read(fallback: MoFishModuleRefreshSettings): MoFishModuleRefreshSettings {
+        return fallback.copy(
+            enabled = enabledCheckBox.isSelected,
+            intervalSeconds = (intervalSpinner.value as? Int)?.coerceAtLeast(1) ?: fallback.intervalSeconds,
+            startMinuteOfDay = readEditorMinute(startHourSpinner, startMinuteSpinner, fallback.startMinuteOfDay),
+            endMinuteOfDay = readEditorMinute(endHourSpinner, endMinuteSpinner, fallback.endMinuteOfDay),
+        )
+    }
+
+    private fun readEditorMinute(
+        hourSpinner: JSpinner,
+        minuteSpinner: JSpinner,
+        fallback: Int,
+    ): Int {
+        val hour = hourSpinner.value as? Int ?: return fallback
+        val minute = minuteSpinner.value as? Int ?: return fallback
+        return minuteOfDay(hour, minute)
+    }
+}

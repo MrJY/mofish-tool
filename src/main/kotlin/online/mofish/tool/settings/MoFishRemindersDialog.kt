@@ -16,15 +16,32 @@ import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.table.AbstractTableModel
+import javax.swing.table.TableCellEditor
 
-class MoFishRemindersDialog(
+internal class MoFishRemindersDialog(
     initialReminders: List<ReminderRule>,
+    availableAssets: List<SettingsAssetItem> = emptyList(),
     private val newRowTemplate: ReminderRule? = null,
     dialogTitle: String = "编辑提醒",
 ) : DialogWrapper(true) {
+    private val assetItems = mergeAssetItems(availableAssets, initialReminders, newRowTemplate)
     private val rows = initialReminders.map { EditableReminderRow.from(it) }.toMutableList()
-    private val tableModel = RemindersTableModel(rows)
-    private val table = JBTable(tableModel)
+    private val tableModel = RemindersTableModel(rows, assetItems)
+    private val table = object : JBTable(tableModel) {
+        override fun getCellEditor(row: Int, column: Int): TableCellEditor {
+            return when (convertColumnIndexToModel(column)) {
+                0 -> DefaultCellEditor(JComboBox(reminderAssetTypes(assetItems).toTypedArray()))
+                1 -> {
+                    val modelRow = convertRowIndexToModel(row)
+                    val assetType = tableModel.assetTypeAt(modelRow)
+                    DefaultCellEditor(JComboBox(tableModel.assetsFor(assetType).toTypedArray()))
+                }
+                2 -> DefaultCellEditor(JComboBox(ReminderMetric.entries.toTypedArray()))
+                3 -> DefaultCellEditor(JComboBox(ReminderDirection.entries.toTypedArray()))
+                else -> super.getCellEditor(row, column)
+            }
+        }
+    }
 
     var result: List<ReminderRule> = initialReminders
         private set
@@ -39,9 +56,6 @@ class MoFishRemindersDialog(
         table.rowHeight = JBUI.scale(28)
         table.putClientProperty("terminateEditOnFocusLost", true)
         table.autoCreateRowSorter = false
-        table.columnModel.getColumn(0).cellEditor = DefaultCellEditor(JComboBox(AssetType.entries.toTypedArray()))
-        table.columnModel.getColumn(3).cellEditor = DefaultCellEditor(JComboBox(ReminderMetric.entries.toTypedArray()))
-        table.columnModel.getColumn(4).cellEditor = DefaultCellEditor(JComboBox(ReminderDirection.entries.toTypedArray()))
     }
 
     /**
@@ -52,14 +66,9 @@ class MoFishRemindersDialog(
         val panel = JPanel(BorderLayout())
         panel.preferredSize = JBUI.size(900, 300)
         panel.border = JBUI.Borders.empty(8)
-        panel.add(
-            ToolbarDecorator.createDecorator(table)
+        val decorator = ToolbarDecorator.createDecorator(table)
                 .setAddActionName("新增提醒")
                 .setRemoveActionName("删除所选提醒")
-                .setAddAction {
-                    stopEditing()
-                    tableModel.addRow(newEditableReminderRow())
-                }
                 .setRemoveAction {
                     stopEditing()
                     val selectedRows = table.selectedRows
@@ -73,9 +82,15 @@ class MoFishRemindersDialog(
                     modelRows.forEach(tableModel::removeRow)
                 }
                 .disableUpDownActions()
-                .createPanel(),
-            BorderLayout.CENTER,
-        )
+        val toolbar = if (assetItems.isEmpty()) {
+            decorator.disableAddAction()
+        } else {
+            decorator.setAddAction {
+                stopEditing()
+                tableModel.addRow(newEditableReminderRow())
+            }
+        }
+        panel.add(toolbar.createPanel(), BorderLayout.CENTER)
         return panel
     }
 
@@ -119,24 +134,16 @@ class MoFishRemindersDialog(
     private fun newEditableReminderRow(): EditableReminderRow {
         return newRowTemplate
             ?.let(EditableReminderRow::from)
-            ?: EditableReminderRow(
-                assetType = AssetType.STOCK,
-                code = "",
-                displayName = "",
-                metric = ReminderMetric.PRICE,
-                direction = ReminderDirection.ABOVE,
-                threshold = "",
-                enabled = true,
-            )
+            ?: assetItems.first().toReminderTemplate().let(EditableReminderRow::from)
     }
 
     private class RemindersTableModel(
         private val rows: MutableList<EditableReminderRow>,
+        private val assetItems: List<SettingsAssetItem>,
     ) : AbstractTableModel() {
         private val columns = listOf(
             "资产类型",
-            "代码",
-            "名称",
+            "资产项",
             "指标",
             "方向",
             "阈值",
@@ -178,9 +185,10 @@ class MoFishRemindersDialog(
         override fun getColumnClass(columnIndex: Int): Class<*> {
             return when (columnIndex) {
                 0 -> AssetType::class.java
-                3 -> ReminderMetric::class.java
-                4 -> ReminderDirection::class.java
-                6 -> java.lang.Boolean::class.java
+                1 -> SettingsAssetItem::class.java
+                2 -> ReminderMetric::class.java
+                3 -> ReminderDirection::class.java
+                5 -> java.lang.Boolean::class.java
                 else -> String::class.java
             }
         }
@@ -195,12 +203,11 @@ class MoFishRemindersDialog(
             val row = rows[rowIndex]
             return when (columnIndex) {
                 0 -> row.assetType
-                1 -> row.code
-                2 -> row.displayName
-                3 -> row.metric
-                4 -> row.direction
-                5 -> row.threshold
-                6 -> row.enabled
+                1 -> assetItemFor(row)
+                2 -> row.metric
+                3 -> row.direction
+                4 -> row.threshold
+                5 -> row.enabled
                 else -> ""
             }
         }
@@ -217,16 +224,37 @@ class MoFishRemindersDialog(
             }
             val current = rows[rowIndex]
             rows[rowIndex] = when (columnIndex) {
-                0 -> current.copy(assetType = value as? AssetType ?: current.assetType)
-                1 -> current.copy(code = value?.toString().orEmpty())
-                2 -> current.copy(displayName = value?.toString().orEmpty())
-                3 -> current.copy(metric = value as? ReminderMetric ?: current.metric)
-                4 -> current.copy(direction = value as? ReminderDirection ?: current.direction)
-                5 -> current.copy(threshold = value?.toString().orEmpty())
-                6 -> current.copy(enabled = value as? Boolean ?: false)
+                0 -> {
+                    val nextType = value as? AssetType ?: current.assetType
+                    val nextAsset = assetsFor(nextType).firstOrNull()
+                    if (nextAsset == null) {
+                        current.copy(assetType = nextType)
+                    } else {
+                        current.withAsset(nextAsset)
+                    }
+                }
+                1 -> (value as? SettingsAssetItem)?.let(current::withAsset) ?: current
+                2 -> current.copy(metric = value as? ReminderMetric ?: current.metric)
+                3 -> current.copy(direction = value as? ReminderDirection ?: current.direction)
+                4 -> current.copy(threshold = value?.toString().orEmpty())
+                5 -> current.copy(enabled = value as? Boolean ?: false)
                 else -> current
             }
-            fireTableCellUpdated(rowIndex, columnIndex)
+            fireTableRowsUpdated(rowIndex, rowIndex)
+        }
+
+        fun assetTypeAt(index: Int): AssetType {
+            return rows.getOrNull(index)?.assetType ?: reminderAssetTypes(assetItems).firstOrNull() ?: AssetType.STOCK
+        }
+
+        fun assetsFor(assetType: AssetType): List<SettingsAssetItem> {
+            return assetItems.filter { it.assetType == assetType }
+        }
+
+        private fun assetItemFor(row: EditableReminderRow): SettingsAssetItem {
+            return assetItems.firstOrNull {
+                it.assetType == row.assetType && it.code.equals(row.code, ignoreCase = true)
+            } ?: SettingsAssetItem(row.assetType, row.code, row.displayName)
         }
 
         /**
@@ -288,6 +316,14 @@ class MoFishRemindersDialog(
             }
         }
 
+        fun withAsset(asset: SettingsAssetItem): EditableReminderRow {
+            return copy(
+                assetType = asset.assetType,
+                code = asset.code,
+                displayName = asset.displayName.ifBlank { asset.code },
+            )
+        }
+
         companion object {
             /**
              * 处理 from 相关逻辑，并返回调用方需要的结果。
@@ -319,4 +355,20 @@ class MoFishRemindersDialog(
             }
         }
     }
+}
+
+private fun mergeAssetItems(
+    availableAssets: List<SettingsAssetItem>,
+    initialReminders: List<ReminderRule>,
+    newRowTemplate: ReminderRule?,
+): List<SettingsAssetItem> {
+    return (availableAssets +
+        initialReminders.map(SettingsAssetItem::from) +
+        listOfNotNull(newRowTemplate?.let(SettingsAssetItem::from)))
+        .filter { it.code.isNotBlank() }
+        .distinctBy { it.key }
+}
+
+private fun reminderAssetTypes(assetItems: List<SettingsAssetItem>): List<AssetType> {
+    return assetItems.map { it.assetType }.distinct().ifEmpty { AssetType.entries }
 }

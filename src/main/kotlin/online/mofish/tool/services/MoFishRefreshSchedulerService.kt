@@ -104,10 +104,16 @@ class MoFishRefreshSchedulerService : Disposable {
 }
 
 private fun MoFishSettingsState.toRefreshSchedulerConfig(): MoFishRefreshSchedulerConfig {
+    val enabledModuleSettings = refresh.effectiveModuleSettings()
+        .values
+        .filter { it.enabled }
+    val shortestIntervalSeconds = enabledModuleSettings
+        .minOfOrNull { it.intervalSeconds }
+        ?: refresh.intervalSeconds
     return MoFishRefreshSchedulerConfig(
-        autoRefreshEnabled = refresh.autoRefreshEnabled,
-        intervalSeconds = refresh.intervalSeconds,
-        autoRefreshStartMinuteOfDay = normalizeMinuteOfDay(refresh.autoRefreshStartMinuteOfDay),
-        autoRefreshEndMinuteOfDay = normalizeMinuteOfDay(refresh.autoRefreshEndMinuteOfDay),
+        autoRefreshEnabled = refresh.autoRefreshEnabled && enabledModuleSettings.isNotEmpty(),
+        intervalSeconds = shortestIntervalSeconds,
+        autoRefreshStartMinuteOfDay = normalizeMinuteOfDay(0),
+        autoRefreshEndMinuteOfDay = normalizeMinuteOfDay(0),
     )
 }

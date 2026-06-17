@@ -8,6 +8,8 @@ enum class AssetType(
     FUND("基金"),
     /** 股票资产。 */
     STOCK("股票"),
+    /** 市场指数资产。 */
+    INDEX("指数"),
     /** 外汇资产。 */
     FOREX("外汇"),
     /** 虚拟币资产。 */
@@ -83,40 +85,4 @@ enum class ReminderDirection(
      * @return 处理后的结果或当前状态。
      */
     override fun toString(): String = displayName
-}
-
-enum class AiStockHistoryRange(
-    /** 写入配置或请求参数时使用的短字符串值。 */
-    val wireValue: String,
-    /** 展示给用户看的时间范围名称。 */
-    val label: String,
-) {
-    /** 最近一年。 */
-    ONE_YEAR("1y", "1年"),
-    /** 最近六个月。 */
-    SIX_MONTHS("6m", "6个月"),
-    /** 最近三个月。 */
-    THREE_MONTHS("3m", "3个月"),
-    /** 最近一个月。 */
-    ONE_MONTH("1m", "1个月"),
-    /** 最近一周。 */
-    ONE_WEEK("1w", "1周"),
-    ;
-
-    companion object {
-        /**
-         * 从Wire值创建当前模型。
-         * @param value 待解析、格式化或写入的原始值。
-         * @return 处理后的结果或当前状态。
-         */
-        fun fromWireValue(value: String): AiStockHistoryRange {
-            return entries.firstOrNull { it.wireValue == value } ?: THREE_MONTHS
-        }
-    }
-
-    /**
-     * 转换为String表示。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun toString(): String = label
 }
