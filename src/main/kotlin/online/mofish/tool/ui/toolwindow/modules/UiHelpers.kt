@@ -27,6 +27,12 @@ internal fun escape(value: String): String {
         .replace(">", "&gt;")
 }
 
+internal fun escapeAttribute(value: String): String {
+    return escape(value)
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
+}
+
 /**
  * 根据涨跌方向返回行情展示颜色。
  * @param value 待解析、格式化或写入的原始值。

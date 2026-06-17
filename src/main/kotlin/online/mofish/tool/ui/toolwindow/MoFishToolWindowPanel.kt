@@ -528,7 +528,8 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
 
             val visibleIndices = visibleIndicesFrom(firstVisibleIndex, tabsWidth)
             val visibleGap = visibleTabGap(visibleIndices, tabsWidth)
-            var x = tabsX
+            val visibleWidth = visibleTabsWidth(visibleIndices, visibleGap)
+            var x = tabsX + (tabsWidth - visibleWidth).coerceAtLeast(0) / 2
             visibleIndices.forEachIndexed { visibleOrder, index ->
                 val button = buttons[index]
                 if (visibleOrder > 0) {
@@ -540,7 +541,6 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
                 x += buttonWidth
             }
 
-            val lastVisibleIndex = visibleIndices.lastOrNull() ?: firstVisibleIndex
             previousButton.isEnabled = needsNavigation && selectedIndex > 0
             nextButton.isEnabled = needsNavigation && selectedIndex < buttons.lastIndex
         }
@@ -570,6 +570,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             }
             firstVisibleIndex = firstVisibleIndex.coerceAtMost(buttons.lastIndex.coerceAtLeast(0))
             revealSelectedOnLayout = true
+            updateTabButtonStates()
             revalidate()
             repaint()
         }
@@ -579,6 +580,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             if (index >= 0) {
                 selectedIndex = index
                 revealSelectedOnLayout = true
+                updateTabButtonStates()
                 revalidate()
                 repaint()
             }
@@ -591,6 +593,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             }
             selectedIndex = nextIndex
             revealSelectedOnLayout = true
+            updateTabButtonStates()
             revalidate()
             repaint()
             onSelected(items[nextIndex])
@@ -657,10 +660,19 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             }
             val tabWidth = visibleIndices.sumOf { buttons[it].preferredSize.width }
             val expandedGap = (tabsWidth - tabWidth) / (visibleIndices.size - 1)
-            return expandedGap.coerceAtLeast(minTabGap())
+            return expandedGap.coerceIn(minTabGap(), maxTabGap())
+        }
+
+        private fun visibleTabsWidth(visibleIndices: List<Int>, gap: Int): Int {
+            if (visibleIndices.isEmpty()) {
+                return 0
+            }
+            return visibleIndices.sumOf { buttons[it].preferredSize.width } + gap * (visibleIndices.size - 1)
         }
 
         private fun minTabGap(): Int = JBUI.scale(12)
+
+        private fun maxTabGap(): Int = JBUI.scale(28)
 
         private fun createNavigationButton(icon: Icon, tooltip: String, onClick: () -> Unit): JButton {
             return JButton(icon).apply {
@@ -668,6 +680,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
                 isBorderPainted = false
                 isOpaque = false
                 isFocusable = false
+                isRolloverEnabled = false
                 toolTipText = tooltip
                 cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
                 margin = JBUI.emptyInsets()
@@ -678,40 +691,44 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         private fun createTabButton(index: Int, item: ModuleNavItem): JButton {
             val cleanName = item.displayName.removePrefix("摸鱼")
             return object : JButton(cleanName) {
-                private var hovered = false
                 init {
                     isContentAreaFilled = false
                     isBorderPainted = false
                     isOpaque = false
                     isFocusable = false
+                    isRolloverEnabled = false
                     cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
                     margin = JBUI.emptyInsets()
-                    addMouseListener(object : java.awt.event.MouseAdapter() {
-                        override fun mouseEntered(e: java.awt.event.MouseEvent) { hovered = true; repaint() }
-                        override fun mouseExited(e: java.awt.event.MouseEvent) { hovered = false; repaint() }
-                    })
                     addActionListener { 
                         if (selectedIndex != index) {
                             selectedIndex = index
                             revealSelectedOnLayout = true
+                            updateTabButtonStates()
                             repaint()
                             onSelected(item) 
                         }
                     }
                 }
 
-                override fun paintComponent(g: Graphics) {
-                    val isCurrent = selectedIndex == index
-                    font = JBUI.Fonts.label().deriveFont(if (isCurrent) java.awt.Font.BOLD else java.awt.Font.PLAIN, JBUI.scale(13f))
-                    foreground = if (isCurrent) JBColor.foreground() else MoFishUiStyle.textMuted
-                    super.paintComponent(g)
-                }
-
                 override fun getPreferredSize(): Dimension {
-                    val textWidth = getFontMetrics(font).stringWidth(text)
+                    val preferredFont = tabFont(selected = true)
+                    val textWidth = getFontMetrics(preferredFont).stringWidth(text)
                     return Dimension(textWidth + JBUI.scale(8), JBUI.scale(26))
                 }
             }
+        }
+
+        private fun updateTabButtonStates() {
+            buttons.forEachIndexed { index, button ->
+                val selected = index == selectedIndex
+                button.font = tabFont(selected)
+                button.foreground = if (selected) JBColor.foreground() else MoFishUiStyle.textMuted
+            }
+        }
+
+        private fun tabFont(selected: Boolean): Font {
+            val style = if (selected) Font.BOLD else Font.PLAIN
+            return JBUI.Fonts.label().deriveFont(style, JBUI.scale(13).toFloat())
         }
     }
 

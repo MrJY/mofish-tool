@@ -103,14 +103,19 @@ internal class EastmoneyStockNewsProvider(
             .takeIf { it.isNotBlank() }
             ?: return emptyList()
         val payload = httpClient.parseJson(jsonPayload).jsonObject
-        val rows = payload["result"]
-            ?.jsonObject
-            ?.get("cmsArticleWebOld")
-            ?.jsonObject
-            ?.get("list")
-            ?.jsonArray
-            ?: return emptyList()
+        val rows = eastmoneyNewsRows(payload) ?: return emptyList()
         return rows.mapNotNull(::toNewsItem).take(maxItems)
+    }
+}
+
+internal fun eastmoneyNewsRows(payload: JsonObject): JsonArray? {
+    val newsNode = runCatching {
+        payload["result"]?.jsonObject?.get("cmsArticleWebOld")
+    }.getOrNull() ?: return null
+    return when (newsNode) {
+        is JsonArray -> newsNode
+        is JsonObject -> newsNode["list"] as? JsonArray
+        else -> null
     }
 }
 

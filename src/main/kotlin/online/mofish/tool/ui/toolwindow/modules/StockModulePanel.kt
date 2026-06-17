@@ -73,6 +73,7 @@ internal class StockModulePanel(
     private val stockIntradayClient = StockIntradayClient()
     private val detailCache = ConcurrentHashMap<String, StockDetailSnapshot>()
     private val kLineCache = ConcurrentHashMap<String, List<StockDailyKLine>>()
+    private val kLineErrorMessages = ConcurrentHashMap<String, String>()
     private val kLineLoadingCodes = ConcurrentHashMap.newKeySet<String>()
     private val intradayCache = ConcurrentHashMap<String, List<StockIntradayPoint>>()
     private val intradayLoadingCodes = ConcurrentHashMap.newKeySet<String>()
@@ -100,6 +101,27 @@ internal class StockModulePanel(
                             callbacks.project,
                             online.mofish.tool.ui.web.MoFishWebRequest.Url(title = tabTitle, url = cleanUrl)
                         )
+                    } else if (rawUrl.startsWith("mofish-news://open")) {
+                        val query = java.net.URI(rawUrl).rawQuery.orEmpty()
+                        val params = query.split("&")
+                            .mapNotNull { part ->
+                                val key = part.substringBefore("=", missingDelimiterValue = "")
+                                val value = part.substringAfter("=", missingDelimiterValue = "")
+                                if (key.isBlank()) {
+                                    null
+                                } else {
+                                    key to java.net.URLDecoder.decode(value, "UTF-8")
+                                }
+                            }
+                            .toMap()
+                        val newsUrl = params["url"]
+                        if (!newsUrl.isNullOrBlank()) {
+                            val tabTitle = params["title"]?.takeIf { it.isNotBlank() }?.let { "新闻 - $it" } ?: "新闻详情"
+                            MoFishWebEditorService.open(
+                                callbacks.project,
+                                online.mofish.tool.ui.web.MoFishWebRequest.Url(title = tabTitle, url = newsUrl)
+                            )
+                        }
                     } else {
                         com.intellij.ide.BrowserUtil.browse(rawUrl)
                     }
@@ -217,7 +239,7 @@ internal class StockModulePanel(
         val nextCode = row?.quote?.code
         if (nextCode == null) {
             detailState = StockDetailUiState()
-            detailKLineChart.setData(emptyList(), nextLoading = false)
+            detailKLineChart.setData(emptyList(), nextLoading = false, errorMessage = null)
         } else if (!detailState.code.equals(nextCode, ignoreCase = true)) {
             val cached = detailCache[nextCode.lowercase()]
             detailState = StockDetailUiState(code = nextCode, snapshot = cached, loading = cached == null)
@@ -622,6 +644,7 @@ internal class StockModulePanel(
         detailKLineChart.setData(
             cached.orEmpty(),
             nextLoading = kLineLoadingCodes.contains(codeKey) || shouldLoad,
+            errorMessage = kLineErrorMessages[codeKey],
         )
     }
 
@@ -632,15 +655,26 @@ internal class StockModulePanel(
         }
         detailKLineChart.setData(emptyList(), nextLoading = true)
         detailScope.launch(Dispatchers.IO) {
-            val kLines = runCatching {
+            val result = runCatching {
                 stockKLineClient.fetchDailyKLines(quote, DETAIL_KLINE_LIMIT)
-            }.getOrDefault(emptyList())
-            kLineCache[codeKey] = kLines
+            }
+            val kLines = result.getOrNull()
+            val errorMessage = result.exceptionOrNull()?.let { "日K加载失败，稍后重试" }
+            if (kLines != null) {
+                kLineCache[codeKey] = kLines
+                kLineErrorMessages.remove(codeKey)
+            } else if (errorMessage != null) {
+                kLineErrorMessages[codeKey] = errorMessage
+            }
             kLineLoadingCodes.remove(codeKey)
             ApplicationManager.getApplication().invokeLater(
                 {
-                    if (detailState.code.equals(quote.code, ignoreCase = true)) {
-                        detailKLineChart.setData(kLines, nextLoading = false)
+                    if (detailState.code.equals(quote.code, ignoreCase = true) || selectedRow()?.quote?.code.equals(quote.code, ignoreCase = true)) {
+                        detailKLineChart.setData(
+                            kLines.orEmpty(),
+                            nextLoading = false,
+                            errorMessage = errorMessage,
+                        )
                     }
                 },
                 ModalityState.any(),
@@ -905,6 +939,7 @@ internal class StockModulePanel(
     ) : JComponent() {
         private var kLines: List<StockDailyKLine> = emptyList()
         private var loading = false
+        private var errorMessage: String? = null
 
         init {
             isOpaque = false
@@ -912,9 +947,10 @@ internal class StockModulePanel(
             minimumSize = Dimension(1, JBUI.scale(78))
         }
 
-        fun setData(nextKLines: List<StockDailyKLine>?, nextLoading: Boolean) {
+        fun setData(nextKLines: List<StockDailyKLine>?, nextLoading: Boolean, errorMessage: String? = null) {
             kLines = nextKLines.orEmpty().takeLast(DETAIL_KLINE_LIMIT)
             loading = nextLoading && kLines.isEmpty()
+            this.errorMessage = errorMessage?.takeIf { kLines.isEmpty() && !loading }
             repaint()
         }
 
@@ -956,7 +992,7 @@ internal class StockModulePanel(
             g2.font = JBUI.Fonts.smallFont()
             g2.color = MoFishUiStyle.textMuted
             val text = if (showEmptyText) {
-                if (loading) "日K 加载中..." else "暂无日K"
+                errorMessage ?: if (loading) "日K 加载中..." else "暂无日K"
             } else {
                 ""
             }

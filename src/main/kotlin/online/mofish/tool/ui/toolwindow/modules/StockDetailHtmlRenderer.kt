@@ -474,9 +474,18 @@ internal object StockDetailHtmlRenderer {
             news.mapIndexed { index, item ->
                 val isLast = index == news.size - 1
                 val separator = if (isLast) "" else "<hr size='1' color='$subtleBorderColor' style='margin: 8px 0; border: none;' />"
+                val titleHtml = item.url
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { url ->
+                        val encodedTitle = java.net.URLEncoder.encode(item.title, "UTF-8")
+                        val encodedUrl = java.net.URLEncoder.encode(url, "UTF-8")
+                        val href = escapeAttribute("mofish-news://open?title=$encodedTitle&url=$encodedUrl")
+                        "<a href='$href' class='link'>${escape(item.title)}</a>"
+                    }
+                    ?: escape(item.title)
                 """
                 <div>
-                  <div class='item-title'><b>${escape(item.title)}</b></div>
+                  <div class='item-title'><b>$titleHtml</b></div>
                   <div class='item-meta'>${escape(listOfNotNull(item.time, item.source).joinToString(" · ").ifBlank { "--" })}</div>
                   ${item.content?.takeIf { it.isNotBlank() }?.let { "<div class='item-desc'>${escape(it)}</div>" } ?: ""}
                 </div>
