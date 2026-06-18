@@ -40,7 +40,14 @@ enum class MoFishRefreshModule(
         /** 默认启用的模块集合，包含所有可见刷新模块。 */
         val defaultEnabledModules: Set<MoFishRefreshModule> = visibleModules
 
+        /** 支持自动刷新的模块集合；基金和外汇仅保留手动刷新。 */
+        val autoRefreshModules: Set<MoFishRefreshModule> = setOf(
+            STOCKS,
+            INDICES,
+            CRYPTO,
+        )
+
         /** 默认参与自动刷新的模块集合。 */
-        val defaultAutoRefreshModules: Set<MoFishRefreshModule> = visibleModules
+        val defaultAutoRefreshModules: Set<MoFishRefreshModule> = autoRefreshModules
     }
 }

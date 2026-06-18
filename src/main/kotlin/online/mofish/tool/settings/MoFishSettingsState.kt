@@ -12,24 +12,6 @@ enum class MoFishSortDirection(
     DESC("降序"),
     ;
 
-    /**
-     * 转换为String表示。
-     * @return 处理后的结果或当前状态。
-     */
-    override fun toString(): String = displayName
-}
-
-enum class MoFishReminderSortField(
-    private val displayName: String,
-) {
-    DISPLAY_NAME("名称"),
-    THRESHOLD("阈值"),
-    ;
-
-    /**
-     * 转换为String表示。
-     * @return 处理后的结果或当前状态。
-     */
     override fun toString(): String = displayName
 }
 
@@ -108,19 +90,17 @@ internal fun normalizeStockGroupValue(rawGroupName: String): String = rawGroupNa
 
 data class MoFishSortSettings(
     val quoteDirection: MoFishSortDirection = MoFishSortDirection.DESC,
-    val reminderField: MoFishReminderSortField = MoFishReminderSortField.DISPLAY_NAME,
-    val reminderDirection: MoFishSortDirection = MoFishSortDirection.ASC,
 )
 
 data class MoFishModuleRefreshSettings(
     val enabled: Boolean = true,
-    val intervalSeconds: Int = 300,
+    val intervalSeconds: Int = 10,
     val startMinuteOfDay: Int = 9 * 60 + 30,
     val endMinuteOfDay: Int = 15 * 60,
 )
 
 data class MoFishRefreshSettings(
-    val intervalSeconds: Int = 300,
+    val intervalSeconds: Int = 10,
     val autoRefreshEnabled: Boolean = true,
     val autoRefreshStartMinuteOfDay: Int = 9 * 60 + 30,
     val autoRefreshEndMinuteOfDay: Int = 15 * 60,
@@ -129,16 +109,21 @@ data class MoFishRefreshSettings(
     val openToolWindowOnStartup: Boolean = false,
 ) {
     fun settingsFor(module: MoFishRefreshModule): MoFishModuleRefreshSettings {
-        return moduleSettings[module] ?: MoFishModuleRefreshSettings(
+        val settings = moduleSettings[module] ?: MoFishModuleRefreshSettings(
             enabled = autoRefreshEnabled && module in autoRefreshModules,
             intervalSeconds = intervalSeconds,
             startMinuteOfDay = autoRefreshStartMinuteOfDay,
             endMinuteOfDay = autoRefreshEndMinuteOfDay,
         )
+        return if (module in MoFishRefreshModule.autoRefreshModules) {
+            settings
+        } else {
+            settings.copy(enabled = false)
+        }
     }
 
     fun effectiveModuleSettings(): Map<MoFishRefreshModule, MoFishModuleRefreshSettings> {
-        return MoFishRefreshModule.visibleModules.associateWith(::settingsFor)
+        return MoFishRefreshModule.autoRefreshModules.associateWith(::settingsFor)
     }
 }
 

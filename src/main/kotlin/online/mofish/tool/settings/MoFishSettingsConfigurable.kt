@@ -18,19 +18,8 @@ import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.ReminderRule
 import online.mofish.tool.services.MoFishProjectService
-import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.FlowLayout
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
-import javax.swing.Box
-import javax.swing.BoxLayout
-import javax.swing.JButton
-import javax.swing.JComboBox
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.JSpinner
-import javax.swing.SpinnerNumberModel
+import java.awt.*
+import javax.swing.*
 
 class MoFishSettingsConfigurable : Configurable {
     private val settingsService = service<MoFishSettingsService>()
@@ -39,9 +28,6 @@ class MoFishSettingsConfigurable : Configurable {
     private var fundCodesField: JBTextField? = null
     private var stockCodesField: JBTextField? = null
     private var cryptoCodesField: JBTextField? = null
-    private var quoteSortDirectionCombo: JComboBox<MoFishSortDirection>? = null
-    private var reminderSortFieldCombo: JComboBox<MoFishReminderSortField>? = null
-    private var reminderSortDirectionCombo: JComboBox<MoFishSortDirection>? = null
     private var moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor> = emptyMap()
     private var stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox> = emptyMap()
     private var enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
@@ -71,7 +57,13 @@ class MoFishSettingsConfigurable : Configurable {
                 border = JBUI.Borders.empty(8, 10, 12, 10)
                 add(createSection("界面", "优先控制工具窗口显示方式和可见模块。", createInterfacePanel(ui)))
                 add(Box.createVerticalStrut(JBUI.scale(10)))
-                add(createSection("刷新", "每个模块可以独立设置自动刷新、间隔和时间范围。", createRefreshPanel(ui)))
+                add(
+                    createSection(
+                        "刷新",
+                        "股票、指数和虚拟币支持自动刷新；基金和外汇仅保留手动刷新。",
+                        createRefreshPanel(ui)
+                    )
+                )
                 add(Box.createVerticalStrut(JBUI.scale(10)))
                 add(createSection("持仓与提醒", "集中维护已添加标的的持仓和提醒规则。", createAssetRulesPanel(ui)))
                 add(Box.createVerticalGlue())
@@ -97,10 +89,7 @@ class MoFishSettingsConfigurable : Configurable {
             fundCodesField = JBTextField(),
             stockCodesField = JBTextField(),
             cryptoCodesField = JBTextField(),
-            quoteSortDirectionCombo = JComboBox(MoFishSortDirection.entries.toTypedArray()),
-            reminderSortFieldCombo = JComboBox(MoFishReminderSortField.entries.toTypedArray()),
-            reminderSortDirectionCombo = JComboBox(MoFishSortDirection.entries.toTypedArray()),
-            moduleRefreshEditors = MoFishRefreshModule.visibleModules.associateWith(::createModuleRefreshEditor),
+            moduleRefreshEditors = MoFishRefreshModule.autoRefreshModules.associateWith(::createModuleRefreshEditor),
             stockTableColumnCheckBoxes = MoFishStockTableColumn.entries.associateWith { column ->
                 JBCheckBox(column.toString())
             },
@@ -120,7 +109,7 @@ class MoFishSettingsConfigurable : Configurable {
     private fun createModuleRefreshEditor(module: MoFishRefreshModule): ModuleRefreshEditor {
         return ModuleRefreshEditor(
             enabledCheckBox = JBCheckBox(module.toString()),
-            intervalSpinner = JSpinner(SpinnerNumberModel(300, 1, 86_400, 1)).apply {
+            intervalSpinner = JSpinner(SpinnerNumberModel(10, 1, 86_400, 1)).apply {
                 preferredSize = Dimension(JBUI.scale(86), preferredSize.height)
             },
             startHourSpinner = createTimeSpinner(initialValue = 9, maxValue = 23),
@@ -134,9 +123,6 @@ class MoFishSettingsConfigurable : Configurable {
         fundCodesField = ui.fundCodesField
         stockCodesField = ui.stockCodesField
         cryptoCodesField = ui.cryptoCodesField
-        quoteSortDirectionCombo = ui.quoteSortDirectionCombo
-        reminderSortFieldCombo = ui.reminderSortFieldCombo
-        reminderSortDirectionCombo = ui.reminderSortDirectionCombo
         moduleRefreshEditors = ui.moduleRefreshEditors
         stockTableColumnCheckBoxes = ui.stockTableColumnCheckBoxes
         enabledModuleCheckBoxes = ui.enabledModuleCheckBoxes
@@ -170,9 +156,6 @@ class MoFishSettingsConfigurable : Configurable {
         fundCodesField = null
         stockCodesField = null
         cryptoCodesField = null
-        quoteSortDirectionCombo = null
-        reminderSortFieldCombo = null
-        reminderSortDirectionCombo = null
         moduleRefreshEditors = emptyMap()
         stockTableColumnCheckBoxes = emptyMap()
         enabledModuleCheckBoxes = emptyMap()
@@ -191,8 +174,6 @@ class MoFishSettingsConfigurable : Configurable {
         return FormBuilder.createFormBuilder()
             .addLabeledComponent("启用模块：", createFlowPanel(ui.enabledModuleCheckBoxes.values.toList()))
             .addLabeledComponent("股票表格列：", createFlowPanel(ui.stockTableColumnCheckBoxes.values.toList()))
-            .addLabeledComponent("行情排序：", ui.quoteSortDirectionCombo)
-            .addLabeledComponent("提醒排序：", createReminderSortPanel(ui))
             .addComponent(ui.openToolWindowOnStartupCheckBox)
             .addComponent(ui.showStatusBarWidgetCheckBox)
             .addComponent(ui.showHoldingProfitCheckBox)
@@ -294,14 +275,6 @@ class MoFishSettingsConfigurable : Configurable {
         )
     }
 
-    private fun createReminderSortPanel(ui: SettingsEditorFields): JPanel {
-        val panel = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0))
-        panel.isOpaque = false
-        panel.add(ui.reminderSortFieldCombo)
-        panel.add(ui.reminderSortDirectionCombo)
-        return panel
-    }
-
     private fun createSummaryRow(summaryLabel: JBLabel, button: JButton): JPanel {
         val panel = JPanel(BorderLayout(JBUI.scale(8), 0))
         panel.isOpaque = false
@@ -321,9 +294,6 @@ class MoFishSettingsConfigurable : Configurable {
         fundCodesField?.text = joinCodes(state.watchlist.fundCodes)
         stockCodesField?.text = joinCodes(state.watchlist.stockCodes)
         cryptoCodesField?.text = joinCodes(state.watchlist.cryptoIds)
-        quoteSortDirectionCombo?.selectedItem = state.sortSettings.quoteDirection
-        reminderSortFieldCombo?.selectedItem = state.sortSettings.reminderField
-        reminderSortDirectionCombo?.selectedItem = state.sortSettings.reminderDirection
         moduleRefreshEditors.forEach { (module, editor) ->
             editor.write(state.refresh.settingsFor(module))
         }
@@ -366,14 +336,6 @@ class MoFishSettingsConfigurable : Configurable {
             ),
             holdings = draftHoldings,
             reminders = draftReminders,
-            sortSettings = MoFishSortSettings(
-                quoteDirection = quoteSortDirectionCombo?.selectedItem as? MoFishSortDirection
-                    ?: baseState.sortSettings.quoteDirection,
-                reminderField = reminderSortFieldCombo?.selectedItem as? MoFishReminderSortField
-                    ?: baseState.sortSettings.reminderField,
-                reminderDirection = reminderSortDirectionCombo?.selectedItem as? MoFishSortDirection
-                    ?: baseState.sortSettings.reminderDirection,
-            ),
             refresh = MoFishRefreshSettings(
                 intervalSeconds = shortestIntervalSeconds,
                 autoRefreshEnabled = enabledRefreshModules.isNotEmpty(),
@@ -399,7 +361,7 @@ class MoFishSettingsConfigurable : Configurable {
         if (moduleRefreshEditors.isEmpty()) {
             return fallbackSettings
         }
-        return MoFishRefreshModule.visibleModules.associateWith { module ->
+        return MoFishRefreshModule.autoRefreshModules.associateWith { module ->
             val fallback = fallbackSettings[module] ?: MoFishModuleRefreshSettings()
             moduleRefreshEditors[module]?.read(fallback) ?: fallback
         }
@@ -448,7 +410,8 @@ class MoFishSettingsConfigurable : Configurable {
         val stockCount = draftHoldings.count { it.assetType == AssetType.STOCK }
         val cryptoCount = draftHoldings.count { it.assetType == AssetType.CRYPTO }
         val enabledReminderCount = draftReminders.count { it.enabled }
-        holdingsSummaryLabel?.text = "${draftHoldings.size} 条持仓，基金 $fundCount 条，股票 $stockCount 条，虚拟币 $cryptoCount 条"
+        holdingsSummaryLabel?.text =
+            "${draftHoldings.size} 条持仓，基金 $fundCount 条，股票 $stockCount 条，虚拟币 $cryptoCount 条"
         remindersSummaryLabel?.text = "${draftReminders.size} 条提醒规则，已启用 $enabledReminderCount 条"
     }
 
@@ -527,18 +490,18 @@ class MoFishSettingsConfigurable : Configurable {
     private fun isIndexCode(code: String): Boolean {
         val normalizedCode = code.trim()
         return settingsService.snapshot().watchlist.indexCodes.any { it.equals(normalizedCode, ignoreCase = true) } ||
-            marketIndexDefinitionFor(normalizedCode) != null
+                marketIndexDefinitionFor(normalizedCode) != null
     }
 
     private fun isMeaningfulAssetName(name: String, code: String): Boolean {
         return name.isNotBlank() &&
-            !name.equals(code, ignoreCase = true) &&
-            !name.endsWith("暂无数据")
+                !name.equals(code, ignoreCase = true) &&
+                !name.endsWith("暂无数据")
     }
 
     private fun createTimeSpinner(initialValue: Int, maxValue: Int): JSpinner {
         return JSpinner(SpinnerNumberModel(initialValue, 0, maxValue, 1)).apply {
-            preferredSize = Dimension(JBUI.scale(58), preferredSize.height)
+            preferredSize = Dimension(JBUI.scale(72), preferredSize.height)
         }
     }
 
@@ -608,9 +571,6 @@ private data class SettingsEditorFields(
     val fundCodesField: JBTextField,
     val stockCodesField: JBTextField,
     val cryptoCodesField: JBTextField,
-    val quoteSortDirectionCombo: JComboBox<MoFishSortDirection>,
-    val reminderSortFieldCombo: JComboBox<MoFishReminderSortField>,
-    val reminderSortDirectionCombo: JComboBox<MoFishSortDirection>,
     val moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor>,
     val stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox>,
     val enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,
