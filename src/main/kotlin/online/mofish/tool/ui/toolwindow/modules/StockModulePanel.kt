@@ -658,20 +658,25 @@ internal class StockModulePanel(
             val result = runCatching {
                 stockKLineClient.fetchDailyKLines(quote, DETAIL_KLINE_LIMIT)
             }
-            val kLines = result.getOrNull()
-            val errorMessage = result.exceptionOrNull()?.let { "日K加载失败，稍后重试" }
-            if (kLines != null) {
+            val kLines = result.getOrNull().orEmpty()
+            val errorMessage = when {
+                result.isFailure -> "日K加载失败，稍后重试"
+                kLines.isEmpty() -> "暂无可用日K数据"
+                else -> null
+            }
+            if (kLines.isNotEmpty()) {
                 kLineCache[codeKey] = kLines
                 kLineErrorMessages.remove(codeKey)
-            } else if (errorMessage != null) {
-                kLineErrorMessages[codeKey] = errorMessage
+            } else {
+                kLineCache.remove(codeKey)
+                kLineErrorMessages[codeKey] = requireNotNull(errorMessage)
             }
             kLineLoadingCodes.remove(codeKey)
             ApplicationManager.getApplication().invokeLater(
                 {
                     if (detailState.code.equals(quote.code, ignoreCase = true) || selectedRow()?.quote?.code.equals(quote.code, ignoreCase = true)) {
                         detailKLineChart.setData(
-                            kLines.orEmpty(),
+                            kLines,
                             nextLoading = false,
                             errorMessage = errorMessage,
                         )

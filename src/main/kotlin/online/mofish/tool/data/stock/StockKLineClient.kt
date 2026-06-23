@@ -8,6 +8,7 @@ import java.math.BigDecimal
 import java.net.URLEncoder
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -15,6 +16,7 @@ import kotlinx.serialization.json.jsonPrimitive
 class StockKLineClient(
     private val httpClient: MoFishHttpClient = MoFishHttpClient(),
     private val kLineUrlProvider: (String, Int) -> String = ::defaultEastmoneyDailyKLineUrl,
+    private val tencentKLineUrlProvider: (String, Int) -> String = ::defaultTencentDailyKLineUrl,
 ) {
     /**
      * 获取最近一段日 K 线数据。
@@ -23,8 +25,22 @@ class StockKLineClient(
      * @return 处理后的结果或当前状态。
      */
     fun fetchDailyKLines(quote: StockQuote, limit: Int = 24): List<StockDailyKLine> {
+        val normalizedLimit = limit.coerceAtLeast(1)
+        val requested = normalizeRequestedStock(quote.code)
+        if (requested?.market == RequestedMarket.A) {
+            val tencentKLines = runCatching {
+                val payload = httpClient.getJson(
+                    tencentKLineUrlProvider(requested.vendorCode, normalizedLimit)
+                ).jsonObject
+                parseTencentDailyKLines(payload, requested.vendorCode)
+            }.getOrDefault(emptyList())
+            if (tencentKLines.isNotEmpty()) {
+                return tencentKLines.takeLast(normalizedLimit)
+            }
+        }
+
         val secId = eastmoneySecIdForQuote(quote) ?: return emptyList()
-        val payload = httpClient.getJson(kLineUrlProvider(secId, limit.coerceAtLeast(1))).jsonObject
+        val payload = httpClient.getJson(kLineUrlProvider(secId, normalizedLimit)).jsonObject
         val rows = payload["data"]
             ?.jsonObject
             ?.get("klines")
@@ -35,6 +51,11 @@ class StockKLineClient(
             parseKLineRow(row.jsonPrimitive.content)
         }
     }
+}
+
+private fun defaultTencentDailyKLineUrl(vendorCode: String, limit: Int): String {
+    return "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get" +
+        "?param=$vendorCode,day,,,${limit.coerceAtLeast(1)},qfq"
 }
 
 internal fun eastmoneySecIdForQuote(quote: StockQuote): String? {
@@ -80,10 +101,43 @@ private fun parseKLineRow(row: String): StockDailyKLine? {
     )
 }
 
+internal fun parseTencentDailyKLines(
+    payload: JsonObject,
+    vendorCode: String,
+): List<StockDailyKLine> {
+    val stockData = payload["data"]
+        ?.jsonObject
+        ?.get(vendorCode)
+        ?.jsonObject
+        ?: return emptyList()
+    val rows = stockData["qfqday"]?.jsonArray
+        ?: stockData["day"]?.jsonArray
+        ?: return emptyList()
+
+    return rows.mapNotNull { row ->
+        val fields = row.jsonArray
+        if (fields.size < 6) {
+            return@mapNotNull null
+        }
+        StockDailyKLine(
+            date = fields[0].jsonPrimitive.content.toDateValue() ?: return@mapNotNull null,
+            open = fields[1].jsonPrimitive.content.decimalValue() ?: return@mapNotNull null,
+            close = fields[2].jsonPrimitive.content.decimalValue() ?: return@mapNotNull null,
+            high = fields[3].jsonPrimitive.content.decimalValue() ?: return@mapNotNull null,
+            low = fields[4].jsonPrimitive.content.decimalValue() ?: return@mapNotNull null,
+            volume = fields[5].jsonPrimitive.content.decimalValue(),
+        )
+    }
+}
+
 private fun String.decimalValue(): BigDecimal? {
     return trim()
         .takeIf { it.isNotEmpty() && it != "-" && it != "--" }
         ?.toBigDecimalOrNull()
+}
+
+private fun String.toDateValue(): LocalDate? {
+    return runCatching { LocalDate.parse(this, DATE_FORMATTER) }.getOrNull()
 }
 
 private val DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd")
