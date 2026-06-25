@@ -1,24 +1,17 @@
-# Mofish-tool
+# MoFish Tool
 
-摸鱼工具是一个基于 IntelliJ Platform 的 IDE 插件，使用 Kotlin 与 Swing/JB UI 构建。插件在 IDE 内提供“摸鱼工具”工具窗口和状态栏收益组件，内置多个独立行情模块：
-
-- 摸鱼股票
-- 摸鱼指数
-- 摸鱼基金
-- 摸鱼虚拟币
-- 摸鱼外汇
-
-各模块在界面和产品概念上独立展示，底层共享行情拉取、缓存、自动刷新、持仓收益计算、提醒通知和设置持久化能力。
+MoFish Tool 是一个基于 IntelliJ Platform 的行情助手插件，使用 Kotlin 与 Swing/JB UI 构建。插件在 IDE 内提供“摸鱼工具”工具窗口、状态栏行情轮播、持仓收益计算和价格提醒能力，适合在不离开 IDE 的情况下查看常用市场数据。
 
 - **插件 ID**：`online.mofish.tool`
-- **版本**：`1.0.0`
+- **当前版本**：`1.0.0`
 - **支持平台**：IntelliJ IDEA `2025.3+`
 - **主要语言**：Kotlin
 - **UI 技术**：IntelliJ Swing/JB UI
+- **构建系统**：Gradle Kotlin DSL + IntelliJ Platform Gradle Plugin
 
 ## 快速开始
 
-**运行插件（沙箱模式）**
+**运行插件（沙箱 IDE）**
 
 ```bash
 ./gradlew runIde
@@ -36,7 +29,7 @@
 ./gradlew verifyPlugin
 ```
 
-**打包构建**
+**打包插件**
 
 ```bash
 ./gradlew buildPlugin
@@ -44,11 +37,49 @@
 
 构建产物位于 `build/distributions/`。
 
+## 功能现状
+
+插件当前内置五个可见行情模块：
+
+- 摸鱼股票
+- 摸鱼指数
+- 摸鱼基金
+- 摸鱼虚拟币
+- 摸鱼外汇
+
+核心能力包括：
+
+- 自选标的添加、删除、搜索建议和股票分组管理
+- 股票、指数、基金、虚拟币、外汇行情查看
+- 卡片视图与表格视图切换，股票表格列可配置
+- 股票、基金、虚拟币持仓配置和收益计算
+- 价格与涨跌幅提醒，通过 IDE 通知触发
+- 工具窗口模块显隐配置
+- 状态栏行情与收益轮播
+- 股票与基金趋势详情页，通过 IDE 自定义 Web 编辑器打开
+- 股票、指数、虚拟币自动刷新；基金和外汇保留手动刷新
+- 行情数据失败时按模块回落到静态或占位数据，避免整个 UI 空白
+
+`NEWS` 刷新模块只保留为旧配置兼容项，不再作为可见模块展示或刷新。
+
+## 架构主线
+
+项目的主链路可以按“数据源 -> 服务状态 -> UI 渲染”理解：
+
+1. `MoFishHttpClient` 封装 OkHttp、JSON 解析和 HTML 解析。
+2. 各市场 provider/client 拉取并解析远程行情数据。
+3. `RemoteMoFishDataSource` 汇总远程数据，并在单个模块失败时回落到 `StaticMoFishDataSource`。
+4. `MoFishProjectService` 维护项目级工作区状态、缓存命中信息、当前视图和刷新事件。
+5. `MoFishWatchlistService` 聚合项目状态、设置、内存缓存、自动刷新调度器状态，并负责触发提醒检查。
+6. `MoFishToolWindowPanel` 和各模块面板订阅聚合状态并渲染工具窗口。
+7. `MoFishStatusBarWidget` 基于同一份聚合状态展示收益和行情轮播。
+
+自动刷新分为两层：`MoFishRefreshSchedulerService` 负责注册项目并按最短启用间隔唤醒；`MoFishWatchlistService` 再根据模块配置、刷新窗口和各模块间隔决定实际刷新哪些模块。
+
 ## 项目结构
 
 ```text
 .
-├── .run/                          IntelliJ IDEA 运行/测试/验证配置
 ├── docs/
 │   └── tree_file.json             项目目录说明索引
 ├── gradle/
@@ -61,33 +92,53 @@
 │   ├── services/                  项目状态、缓存、刷新、提醒、收益计算服务
 │   ├── settings/                  设置页、持仓/提醒编辑弹窗和持久化状态
 │   ├── state/                     UI 聚合状态、缓存状态和事件模型
-│   └── ui/                        工具窗口、状态栏和通用选择弹窗
+│   └── ui/                        工具窗口、状态栏、搜索弹窗和 Web 编辑器
 ├── src/main/resources/
 │   ├── META-INF/plugin.xml        插件声明和扩展注册
-│   └── icons/mofishToolWindow.svg 工具窗口图标
+│   └── icons/                     插件和工具窗口图标
+├── src/test/kotlin/               数据解析和静态数据源测试
 ├── build.gradle.kts               Gradle 构建脚本
 ├── gradle.properties              项目属性
 └── settings.gradle.kts            Gradle 项目与仓库配置
 ```
 
-## 核心能力
-
-- 摸鱼股票、摸鱼指数、摸鱼基金、摸鱼虚拟币、摸鱼外汇行情查看
-- 卡片视图与表格视图切换
-- 自选标的添加、删除和搜索建议
-- 持仓配置与收益计算
-- 价格和涨跌幅提醒
-- 自动刷新窗口与刷新间隔设置
-- 工具窗口与状态栏收益展示
-
 ## 数据来源
 
-- 基金行情：东方财富
-- A 股/港股/美股行情：腾讯、新浪
-- 虚拟币行情：CoinGecko
+- 股票、指数行情：腾讯、新浪
+- 股票分时、K 线和部分详情数据：腾讯、东方财富
+- 基金行情和基金搜索：东方财富
+- 虚拟币行情和搜索：CoinGecko、Binance
 - 外汇牌价：中国银行
 
-网络请求统一通过 `MoFishHttpClient` 封装，远程数据不可用时会回落到静态占位数据，保证 UI 仍可展示。
+网络请求统一通过 `MoFishHttpClient` 封装。远程数据不可用时，数据源会保留工作区结构并用静态样例或占位数据兜底。
+
+## 设置与持久化
+
+应用级设置由 `MoFishSettingsService` 持久化到 `mofish.xml`，主要包括：
+
+- 自选股票、指数、基金、虚拟币
+- 股票分组和分组归属
+- 持仓和提醒规则
+- 工具窗口可见模块
+- 股票表格列配置
+- 状态栏显示内容和轮播间隔
+- 各自动刷新模块的启用状态、间隔和时间窗口
+
+注意：设置页中的某个控件不一定等同于运行时能力本身。调整设置项时需要同时检查设置 UI、持久化状态、服务层消费者和工具窗口/状态栏使用点。
+
+## 测试
+
+当前测试主要覆盖：
+
+- 静态数据源的默认和空自选行为
+- 股票搜索、分时、K 线、资讯 payload 解析
+- Binance 虚拟币 ticker payload 解析
+
+常用验证命令：
+
+```bash
+./gradlew test
+```
 
 ## 发布
 
