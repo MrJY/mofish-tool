@@ -132,6 +132,11 @@ data class MoFishUiSettings(
     val enabledModules: Set<MoFishRefreshModule> = MoFishRefreshModule.defaultEnabledModules,
 )
 
+data class MoFishStatusBarSettings(
+    val enabledModules: Set<MoFishRefreshModule> = MoFishRefreshModule.visibleModules,
+    val rotationIntervalSeconds: Int = 3,
+)
+
 data class MoFishSettingsState(
     val watchlist: MoFishWatchlistSettings = MoFishWatchlistSettings(),
     val holdings: List<HoldingConfig> = emptyList(),
@@ -139,6 +144,7 @@ data class MoFishSettingsState(
     val sortSettings: MoFishSortSettings = MoFishSortSettings(),
     val refresh: MoFishRefreshSettings = MoFishRefreshSettings(),
     val ui: MoFishUiSettings = MoFishUiSettings(),
+    val statusBar: MoFishStatusBarSettings = MoFishStatusBarSettings(),
     val showStatusBarWidget: Boolean = true,
     val showHoldingProfit: Boolean = false,
 ) {

@@ -31,6 +31,8 @@ class MoFishSettingsConfigurable : Configurable {
     private var moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor> = emptyMap()
     private var stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox> = emptyMap()
     private var enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
+    private var statusBarModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
+    private var statusBarRotationIntervalSpinner: JSpinner? = null
     private var openToolWindowOnStartupCheckBox: JBCheckBox? = null
     private var showStatusBarWidgetCheckBox: JBCheckBox? = null
     private var showHoldingProfitCheckBox: JBCheckBox? = null
@@ -96,8 +98,14 @@ class MoFishSettingsConfigurable : Configurable {
             enabledModuleCheckBoxes = MoFishRefreshModule.visibleModules.associateWith { module ->
                 JBCheckBox(module.toString())
             },
+            statusBarModuleCheckBoxes = MoFishRefreshModule.visibleModules.associateWith { module ->
+                JBCheckBox(module.toString())
+            },
+            statusBarRotationIntervalSpinner = JSpinner(SpinnerNumberModel(3, 1, 300, 1)).apply {
+                preferredSize = Dimension(JBUI.scale(86), preferredSize.height)
+            },
             openToolWindowOnStartupCheckBox = JBCheckBox("IDE 启动时自动打开摸鱼工具窗口"),
-            showStatusBarWidgetCheckBox = JBCheckBox("在状态栏显示今日收益"),
+            showStatusBarWidgetCheckBox = JBCheckBox("在状态栏滚动显示行情"),
             showHoldingProfitCheckBox = JBCheckBox("在行情列表显示持仓收益"),
             holdingsSummaryLabel = JBLabel(),
             remindersSummaryLabel = JBLabel(),
@@ -126,6 +134,8 @@ class MoFishSettingsConfigurable : Configurable {
         moduleRefreshEditors = ui.moduleRefreshEditors
         stockTableColumnCheckBoxes = ui.stockTableColumnCheckBoxes
         enabledModuleCheckBoxes = ui.enabledModuleCheckBoxes
+        statusBarModuleCheckBoxes = ui.statusBarModuleCheckBoxes
+        statusBarRotationIntervalSpinner = ui.statusBarRotationIntervalSpinner
         openToolWindowOnStartupCheckBox = ui.openToolWindowOnStartupCheckBox
         showStatusBarWidgetCheckBox = ui.showStatusBarWidgetCheckBox
         showHoldingProfitCheckBox = ui.showHoldingProfitCheckBox
@@ -133,6 +143,9 @@ class MoFishSettingsConfigurable : Configurable {
         remindersSummaryLabel = ui.remindersSummaryLabel
         editHoldingsButton = ui.editHoldingsButton
         editRemindersButton = ui.editRemindersButton
+        ui.showStatusBarWidgetCheckBox.addActionListener {
+            updateStatusBarControlsEnabled()
+        }
     }
 
     override fun isModified(): Boolean {
@@ -159,6 +172,8 @@ class MoFishSettingsConfigurable : Configurable {
         moduleRefreshEditors = emptyMap()
         stockTableColumnCheckBoxes = emptyMap()
         enabledModuleCheckBoxes = emptyMap()
+        statusBarModuleCheckBoxes = emptyMap()
+        statusBarRotationIntervalSpinner = null
         openToolWindowOnStartupCheckBox = null
         showStatusBarWidgetCheckBox = null
         showHoldingProfitCheckBox = null
@@ -176,6 +191,8 @@ class MoFishSettingsConfigurable : Configurable {
             .addLabeledComponent("股票表格列：", createFlowPanel(ui.stockTableColumnCheckBoxes.values.toList()))
             .addComponent(ui.openToolWindowOnStartupCheckBox)
             .addComponent(ui.showStatusBarWidgetCheckBox)
+            .addLabeledComponent("状态栏内容：", createFlowPanel(ui.statusBarModuleCheckBoxes.values.toList()))
+            .addLabeledComponent("滚动间隔：", createSecondsEditor(ui.statusBarRotationIntervalSpinner))
             .addComponent(ui.showHoldingProfitCheckBox)
             .panel
     }
@@ -303,9 +320,14 @@ class MoFishSettingsConfigurable : Configurable {
         enabledModuleCheckBoxes.forEach { (module, checkBox) ->
             checkBox.isSelected = module in state.ui.enabledModules
         }
+        statusBarModuleCheckBoxes.forEach { (module, checkBox) ->
+            checkBox.isSelected = module in state.statusBar.enabledModules
+        }
+        statusBarRotationIntervalSpinner?.value = state.statusBar.rotationIntervalSeconds
         openToolWindowOnStartupCheckBox?.isSelected = state.refresh.openToolWindowOnStartup
         showStatusBarWidgetCheckBox?.isSelected = state.showStatusBarWidget
         showHoldingProfitCheckBox?.isSelected = state.showHoldingProfit
+        updateStatusBarControlsEnabled()
         updateDraftSummaries()
     }
 
@@ -349,6 +371,13 @@ class MoFishSettingsConfigurable : Configurable {
             ui = MoFishUiSettings(
                 stockTableColumns = readStockTableColumns(baseState.ui.stockTableColumns),
                 enabledModules = readEnabledModules(baseState.ui.enabledModules),
+            ),
+            statusBar = MoFishStatusBarSettings(
+                enabledModules = readStatusBarModules(baseState.statusBar.enabledModules),
+                rotationIntervalSeconds = (statusBarRotationIntervalSpinner?.value as? Number)
+                    ?.toInt()
+                    ?.coerceIn(1, 300)
+                    ?: baseState.statusBar.rotationIntervalSeconds,
             ),
             showStatusBarWidget = showStatusBarWidgetCheckBox?.isSelected ?: baseState.showStatusBarWidget,
             showHoldingProfit = showHoldingProfitCheckBox?.isSelected ?: baseState.showHoldingProfit,
@@ -528,6 +557,22 @@ class MoFishSettingsConfigurable : Configurable {
         return panel
     }
 
+    private fun createSecondsEditor(spinner: JSpinner): JPanel {
+        val panel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
+        panel.isOpaque = false
+        panel.add(spinner)
+        panel.add(JBLabel("秒").apply {
+            border = JBUI.Borders.emptyLeft(6)
+        })
+        return panel
+    }
+
+    private fun updateStatusBarControlsEnabled() {
+        val enabled = showStatusBarWidgetCheckBox?.isSelected == true
+        statusBarModuleCheckBoxes.values.forEach { it.isEnabled = enabled }
+        statusBarRotationIntervalSpinner?.isEnabled = enabled
+    }
+
     private fun readStockTableColumns(fallbackColumns: Set<MoFishStockTableColumn>): Set<MoFishStockTableColumn> {
         if (stockTableColumnCheckBoxes.isEmpty()) {
             return fallbackColumns
@@ -546,6 +591,15 @@ class MoFishSettingsConfigurable : Configurable {
             .filterValues { it.isSelected }
             .keys
             .ifEmpty { MoFishRefreshModule.defaultEnabledModules }
+    }
+
+    private fun readStatusBarModules(fallbackModules: Set<MoFishRefreshModule>): Set<MoFishRefreshModule> {
+        if (statusBarModuleCheckBoxes.isEmpty()) {
+            return fallbackModules
+        }
+        return statusBarModuleCheckBoxes
+            .filterValues { it.isSelected }
+            .keys
     }
 
     private fun parseFundCodes(raw: String): List<String> {
@@ -574,6 +628,8 @@ private data class SettingsEditorFields(
     val moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor>,
     val stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox>,
     val enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,
+    val statusBarModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,
+    val statusBarRotationIntervalSpinner: JSpinner,
     val openToolWindowOnStartupCheckBox: JBCheckBox,
     val showStatusBarWidgetCheckBox: JBCheckBox,
     val showHoldingProfitCheckBox: JBCheckBox,
