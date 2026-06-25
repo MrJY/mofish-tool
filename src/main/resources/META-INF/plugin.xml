@@ -3,10 +3,23 @@
     <name>MoFish Tool</name>
     <vendor url="https://github.com/MrJY/mofish-tool">MrJY</vendor>
     <description><![CDATA[
-        <p>MoFish Tool is a lightweight IntelliJ IDEA plugin for tracking market data without leaving the IDE.</p>
-        <p>It provides watchlists, market quotes, portfolio profit calculations, configurable refresh behavior, status bar summaries, and price or percentage-change reminders.</p>
-        <p>Supported quote modules include stocks, market indexes, funds, cryptocurrencies, and foreign exchange rates.</p>
-        <p>mofish工具是一款 IntelliJ IDEA 行情助手插件，支持股票、指数、基金、虚拟币、外汇行情、持仓盈亏和价格提醒。</p>
+        <p><b>MoFish Tool</b> is a lightweight IntelliJ IDEA market assistant for viewing selected quotes, portfolio profit, and price reminders without leaving the IDE.</p>
+        <p>It provides a dedicated <b>mofish工具</b> tool window, rotating status bar snippets, watchlists, holdings profit, price/change reminders, and in-IDE detail or trend pages for stocks, indexes, funds, cryptocurrencies, and foreign exchange rates.</p>
+        <ul>
+            <li>View watchlists, grouped stocks, holdings, and profit without leaving the editor.</li>
+            <li>Configure modules, card/table views, stock columns, and auto-refresh preferences.</li>
+            <li>Get IDE notifications when a price or percentage-change reminder is hit.</li>
+            <li>Show profit summaries and selected market snippets in the status bar.</li>
+            <li>Stay usable with fallback data when live quote providers are temporarily unavailable.</li>
+        </ul>
+        <p><b>mofish工具</b> 是一个运行在 IntelliJ IDEA 内的行情助手插件，用于在开发过程中查看自选行情、持仓收益和价格提醒，减少在 IDE 与行情页面之间切换。</p>
+        <ul>
+            <li><b>自选行情：</b>支持股票、指数、基金、虚拟币和外汇。</li>
+            <li><b>持仓收益：</b>汇总股票、基金和虚拟币持仓收益。</li>
+            <li><b>状态栏展示：</b>轮播收益摘要和已选行情信息。</li>
+            <li><b>行情提醒：</b>价格或涨跌幅达到条件时通过 IDE 通知提醒。</li>
+            <li><b>数据兜底：</b>远程行情暂时不可用时使用静态或占位数据保持界面可用。</li>
+        </ul>
     ]]></description>
     <idea-version since-build="253"/>
     <depends>com.intellij.modules.platform</depends>
