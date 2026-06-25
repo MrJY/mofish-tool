@@ -11,7 +11,7 @@ object MoFishStockTrend {
      */
     fun requestFor(quote: StockQuote): MoFishWebRequest {
         return MoFishWebRequest.Url(
-            title = "摸鱼股票走势 - ${quote.name}",
+            title = "mofish股票走势 - ${quote.name}",
             url = eastMoneyTrendUrl(quote),
         )
     }

@@ -17,7 +17,7 @@ class MoFishWebEditorProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is MoFishWebVirtualFile
 
     /**
-     * 为摸鱼虚拟网页文件创建对应的编辑器实例。
+     * 为mofish虚拟网页文件创建对应的编辑器实例。
      * @param project 当前 IntelliJ 项目实例。
      * @param file 文件。
      * @return 处理后的结果或当前状态。

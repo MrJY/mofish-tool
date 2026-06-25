@@ -1,6 +1,6 @@
 # MoFish Tool
 
-MoFish Tool 是一个基于 IntelliJ Platform 的行情助手插件，使用 Kotlin 与 Swing/JB UI 构建。插件在 IDE 内提供“摸鱼工具”工具窗口、状态栏行情轮播、持仓收益计算和价格提醒能力，适合在不离开 IDE 的情况下查看常用市场数据。
+MoFish Tool 是一个基于 IntelliJ Platform 的行情助手插件，使用 Kotlin 与 Swing/JB UI 构建。插件在 IDE 内提供“mofish工具”工具窗口、状态栏行情轮播、持仓收益计算和价格提醒能力，适合在不离开 IDE 的情况下查看常用市场数据。
 
 - **插件 ID**：`online.mofish.tool`
 - **当前版本**：`1.0.0`
@@ -41,11 +41,11 @@ MoFish Tool 是一个基于 IntelliJ Platform 的行情助手插件，使用 Kot
 
 插件当前内置五个可见行情模块：
 
-- 摸鱼股票
-- 摸鱼指数
-- 摸鱼基金
-- 摸鱼虚拟币
-- 摸鱼外汇
+- mofish股票
+- mofish指数
+- mofish基金
+- mofish虚拟币
+- mofish外汇
 
 核心能力包括：
 
@@ -86,7 +86,7 @@ MoFish Tool 是一个基于 IntelliJ Platform 的行情助手插件，使用 Kot
 │   ├── wrapper/                   Gradle Wrapper
 │   └── libs.versions.toml         依赖版本目录
 ├── src/main/kotlin/online/mofish/tool/
-│   ├── actions/                   打开摸鱼工具窗口的 IDE Action
+│   ├── actions/                   打开mofish工具窗口的 IDE Action
 │   ├── data/                      行情数据源、HTTP 客户端和各市场 provider
 │   ├── domain/                    行情、持仓、提醒、收益等领域模型
 │   ├── services/                  项目状态、缓存、刷新、提醒、收益计算服务

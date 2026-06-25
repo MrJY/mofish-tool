@@ -268,7 +268,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
      */
     private fun showStockSearchDialog(): SearchableChoice? {
         val dialog = MoFishSearchableChoiceDialog(
-            dialogTitle = "添加摸鱼股票",
+            dialogTitle = "添加mofish股票",
             searchPlaceholder = "请输入股票代码、名称或关键词，例如：sz300750、hk00700、NVDA、腾讯",
             idleHint = "请输入股票代码、名称或关键词，最多展示 20 条候选结果。",
             searcher = ::searchStockChoices,
@@ -282,7 +282,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
      */
     private fun showIndexSearchDialog(): SearchableChoice? {
         val dialog = MoFishSearchableChoiceDialog(
-            dialogTitle = "添加摸鱼指数",
+            dialogTitle = "添加mofish指数",
             searchPlaceholder = "请输入指数代码、名称或市场，例如：sh000001、恒生、纳斯达克",
             idleHint = "请输入指数代码、名称或市场，最多展示 20 条候选结果。",
             searcher = ::searchIndexChoices,
@@ -296,9 +296,9 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
      */
     private fun showFundSearchDialog(): SearchableChoice? {
         val dialog = MoFishSearchableChoiceDialog(
-            dialogTitle = "添加摸鱼基金",
-            searchPlaceholder = "请输入摸鱼基金代码、名称、拼音或简称，例如：161725、白酒、招商",
-            idleHint = "请输入摸鱼基金代码、名称、拼音或简称，最多展示 20 条候选结果。",
+            dialogTitle = "添加mofish基金",
+            searchPlaceholder = "请输入mofish基金代码、名称、拼音或简称，例如：161725、白酒、招商",
+            idleHint = "请输入mofish基金代码、名称、拼音或简称，最多展示 20 条候选结果。",
             searcher = ::searchFundChoices,
         )
         return if (dialog.showAndGet()) dialog.selectedChoice else null
@@ -310,7 +310,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
      */
     private fun showCryptoSearchDialog(): SearchableChoice? {
         val dialog = MoFishSearchableChoiceDialog(
-            dialogTitle = "添加摸鱼虚拟币",
+            dialogTitle = "添加mofish虚拟币",
             searchPlaceholder = "请输入虚拟币 ID、符号或名称，例如：bitcoin、btc、ethereum",
             idleHint = "请输入虚拟币 ID、符号或名称，最多展示 20 条候选结果。",
             searcher = ::searchCryptoChoices,
@@ -689,7 +689,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         }
 
         private fun createTabButton(index: Int, item: ModuleNavItem): JButton {
-            val cleanName = item.displayName.removePrefix("摸鱼")
+            val cleanName = item.displayName.removePrefix("mofish")
             return object : JButton(cleanName) {
                 init {
                     isContentAreaFilled = false

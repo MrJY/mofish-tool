@@ -188,7 +188,7 @@ internal class FundModulePanel(
 
     private inner class RefreshFundAction : DumbAwareAction(
         "刷新",
-        "刷新摸鱼基金列表最新数据",
+        "刷新mofish基金列表最新数据",
         AllIcons.Actions.Refresh,
     ) {
         /**
@@ -201,7 +201,7 @@ internal class FundModulePanel(
         }
     }
 
-    private inner class AddFundAction : DumbAwareAction("添加摸鱼基金", "按摸鱼基金代码添加摸鱼基金", AllIcons.General.Add) {
+    private inner class AddFundAction : DumbAwareAction("添加mofish基金", "按mofish基金代码添加mofish基金", AllIcons.General.Add) {
         /**
          * 处理用户触发的 IDE 动作。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -211,11 +211,11 @@ internal class FundModulePanel(
             callbacks.watchlistService.addFundCode(fundCode)
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(fundCode)
-            callbacks.eventStatus.text = "已添加摸鱼基金 $fundCode，正在刷新。"
+            callbacks.eventStatus.text = "已添加mofish基金 $fundCode，正在刷新。"
         }
     }
 
-    private inner class RemoveSelectedFundAction : DumbAwareAction("删除摸鱼基金", "删除当前选中的摸鱼基金", AllIcons.General.Remove) {
+    private inner class RemoveSelectedFundAction : DumbAwareAction("删除mofish基金", "删除当前选中的mofish基金", AllIcons.General.Remove) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -233,14 +233,14 @@ internal class FundModulePanel(
             val confirm = Messages.showYesNoDialog(
                 callbacks.project,
                 "确认从自选基金中删除 ${selected.quote.name}（${selected.quote.code}）吗？",
-                "删除摸鱼基金",
+                "删除mofish基金",
                 AllIcons.General.WarningDialog,
             )
             if (confirm != Messages.YES) {
                 return
             }
             callbacks.watchlistService.removeFundCode(selected.quote.code)
-            callbacks.eventStatus.text = "已删除摸鱼基金 ${selected.quote.code}，正在刷新。"
+            callbacks.eventStatus.text = "已删除mofish基金 ${selected.quote.code}，正在刷新。"
         }
     }
 
@@ -250,10 +250,10 @@ internal class FundModulePanel(
     private fun openSelectedFundTrend() {
         val selected = selectedRow() ?: return
         MoFishWebEditorService.open(callbacks.project, MoFishFundTrend.requestFor(selected.quote))
-        callbacks.eventStatus.text = "已打开摸鱼基金 ${selected.quote.name} 的走势页。"
+        callbacks.eventStatus.text = "已打开mofish基金 ${selected.quote.name} 的走势页。"
     }
 
-    private inner class OpenFundTrendAction : DumbAwareAction("查看走势", "在编辑器标签页中查看当前摸鱼基金走势", AllIcons.Actions.Preview) {
+    private inner class OpenFundTrendAction : DumbAwareAction("查看走势", "在编辑器标签页中查看当前mofish基金走势", AllIcons.Actions.Preview) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -273,7 +273,7 @@ internal class FundModulePanel(
 
     private inner class AddSelectedFundHoldingAction : DumbAwareAction(
         "添加持仓",
-        "为当前摸鱼基金追加持仓",
+        "为当前mofish基金追加持仓",
         MoFishIcons.AddHolding,
     ) {
         /**
@@ -311,13 +311,13 @@ internal class FundModulePanel(
             callbacks.watchlistService.addHoldings(dialog.result)
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.code)
-            callbacks.eventStatus.text = "已添加摸鱼基金 ${selected.quote.name} 的持仓。"
+            callbacks.eventStatus.text = "已添加mofish基金 ${selected.quote.name} 的持仓。"
         }
     }
 
     private inner class AddSelectedFundReminderAction : DumbAwareAction(
         "添加提醒",
-        "为当前摸鱼基金添加提醒规则",
+        "为当前mofish基金添加提醒规则",
         MoFishIcons.AddReminder,
     ) {
         /**
@@ -356,7 +356,7 @@ internal class FundModulePanel(
             callbacks.watchlistService.addReminders(dialog.result)
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.code)
-            callbacks.eventStatus.text = "已添加摸鱼基金 ${selected.quote.name} 的提醒。"
+            callbacks.eventStatus.text = "已添加mofish基金 ${selected.quote.name} 的提醒。"
         }
     }
 

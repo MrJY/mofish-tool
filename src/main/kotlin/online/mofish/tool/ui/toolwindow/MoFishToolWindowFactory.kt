@@ -8,7 +8,7 @@ import com.intellij.ui.content.ContentFactory
 
 class MoFishToolWindowFactory : ToolWindowFactory, DumbAware {
     /**
-     * 创建并注册摸鱼工具窗口的内容组件。
+     * 创建并注册mofish工具窗口的内容组件。
      * @param project 当前 IntelliJ 项目实例。
      * @param toolWindow toolWindow。
      */
@@ -25,6 +25,6 @@ class MoFishToolWindowFactory : ToolWindowFactory, DumbAware {
     }
 
     companion object {
-        const val TOOL_WINDOW_ID = "摸鱼工具"
+        const val TOOL_WINDOW_ID = "mofish工具"
     }
 }

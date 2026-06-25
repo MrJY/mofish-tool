@@ -29,6 +29,6 @@ object MoFishWebEditorService {
         return title
             .replace('/', '-')
             .replace('\\', '-')
-            .ifBlank { "摸鱼网页" }
+            .ifBlank { "mofish网页" }
     }
 }

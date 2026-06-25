@@ -56,7 +56,7 @@ class FundQuoteClient(
      */
     fun fetchQuote(code: String): FundQuote {
         val normalizedCode = code.trim()
-        require(normalizedCode.isNotEmpty()) { "摸鱼基金代码不能为空。" }
+        require(normalizedCode.isNotEmpty()) { "mofish基金代码不能为空。" }
 
         quoteProviders.forEach { provider ->
             val quote = runCatching { provider.fetchQuote(normalizedCode) }.getOrNull()

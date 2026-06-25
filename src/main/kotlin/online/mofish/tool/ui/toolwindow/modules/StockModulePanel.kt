@@ -210,10 +210,10 @@ internal class StockModulePanel(
      */
     override fun createDetailComponent(): JComponent {
         val header = JPanel(BorderLayout())
-        header.add(JLabel("摸鱼股票详情", AllIcons.General.InspectionsOK, JLabel.LEFT), BorderLayout.WEST)
+        header.add(JLabel("mofish股票详情", AllIcons.General.InspectionsOK, JLabel.LEFT), BorderLayout.WEST)
         header.add(com.intellij.ui.components.ActionLink("返回列表") {
             setDetailVisible(false)
-            callbacks.eventStatus.text = "已返回摸鱼股票详情。"
+            callbacks.eventStatus.text = "已返回mofish股票详情。"
         }, BorderLayout.EAST)
 
         val content = JPanel(BorderLayout(JBUI.scale(0), JBUI.scale(6))).apply {
@@ -583,7 +583,7 @@ internal class StockModulePanel(
         stockGroupFilter = stockGroupFilter
             ?.let { current -> dialog.result.firstOrNull { it.equals(current, ignoreCase = true) } }
         callbacks.watchlistService.selectView(moduleViewId())
-        callbacks.eventStatus.text = "已更新摸鱼股票分组。"
+        callbacks.eventStatus.text = "已更新mofish股票分组。"
         callbacks.watchlistService.snapshot()?.let(::render)
     }
 
@@ -740,7 +740,7 @@ internal class StockModulePanel(
         updateDailyKLineChart(selected.quote, retryEmpty = true)
         callbacks.watchlistService.selectView(moduleViewId())
         callbacks.watchlistService.selectAsset(selected.quote.code)
-        callbacks.eventStatus.text = "已打开摸鱼股票 ${selected.quote.name} 的详情。"
+        callbacks.eventStatus.text = "已打开mofish股票 ${selected.quote.name} 的详情。"
     }
 
     /**
@@ -749,7 +749,7 @@ internal class StockModulePanel(
     private fun openSelectedStockTrend() {
         val selected = selectedRow() ?: return
         MoFishWebEditorService.open(callbacks.project, MoFishStockTrend.requestFor(selected.quote))
-        callbacks.eventStatus.text = "已打开摸鱼股票 ${selected.quote.name} 的走势页。"
+        callbacks.eventStatus.text = "已打开mofish股票 ${selected.quote.name} 的走势页。"
     }
 
     private inner class StockListRenderer : ListCellRenderer<StockListItem> {
@@ -1329,7 +1329,7 @@ internal class StockModulePanel(
 
     private inner class RefreshStockAction : DumbAwareAction(
         "刷新",
-        "刷新摸鱼股票列表最新数据",
+        "刷新mofish股票列表最新数据",
         AllIcons.Actions.Refresh,
     ) {
         /**
@@ -1342,7 +1342,7 @@ internal class StockModulePanel(
         }
     }
 
-    private inner class AddStockAction : DumbAwareAction("添加摸鱼股票", "按代码或关键词添加摸鱼股票", AllIcons.General.Add) {
+    private inner class AddStockAction : DumbAwareAction("添加mofish股票", "按代码或关键词添加mofish股票", AllIcons.General.Add) {
         /**
          * 处理用户触发的 IDE 动作。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -1352,11 +1352,11 @@ internal class StockModulePanel(
             callbacks.watchlistService.addStockCode(selectedCode)
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selectedCode)
-            callbacks.eventStatus.text = "已添加摸鱼股票 $selectedCode，正在刷新。"
+            callbacks.eventStatus.text = "已添加mofish股票 $selectedCode，正在刷新。"
         }
     }
 
-    private inner class FocusSelectedStockAction : DumbAwareAction("查看详情", "查看当前摸鱼股票的详情", AllIcons.General.ZoomIn) {
+    private inner class FocusSelectedStockAction : DumbAwareAction("查看详情", "查看当前mofish股票的详情", AllIcons.General.ZoomIn) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -1374,7 +1374,7 @@ internal class StockModulePanel(
         }
     }
 
-    private inner class OpenStockTrendAction : DumbAwareAction("查看走势", "在编辑器标签页中查看当前摸鱼股票走势", AllIcons.Actions.Preview) {
+    private inner class OpenStockTrendAction : DumbAwareAction("查看走势", "在编辑器标签页中查看当前mofish股票走势", AllIcons.Actions.Preview) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -1394,7 +1394,7 @@ internal class StockModulePanel(
 
     private inner class MoveSelectedStockToGroupAction : DumbAwareAction(
         "移动分组",
-        "将当前选中的摸鱼股票移动到指定分组",
+        "将当前选中的mofish股票移动到指定分组",
         AllIcons.Actions.GroupBy,
     ) {
         /**
@@ -1494,7 +1494,7 @@ internal class StockModulePanel(
 
     private inner class EditSelectedStockHoldingAction : DumbAwareAction(
         "添加持仓",
-        "为当前摸鱼股票追加持仓",
+        "为当前mofish股票追加持仓",
         MoFishIcons.AddHolding,
     ) {
         /**
@@ -1519,13 +1519,13 @@ internal class StockModulePanel(
             callbacks.watchlistService.addHoldings(listOf(holding))
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.code)
-            callbacks.eventStatus.text = "已添加摸鱼股票 ${selected.quote.name} 的持仓。"
+            callbacks.eventStatus.text = "已添加mofish股票 ${selected.quote.name} 的持仓。"
         }
     }
 
     private inner class EditSelectedStockReminderAction : DumbAwareAction(
         "添加提醒",
-        "为当前摸鱼股票添加提醒规则",
+        "为当前mofish股票添加提醒规则",
         MoFishIcons.AddReminder,
     ) {
         /**
@@ -1550,11 +1550,11 @@ internal class StockModulePanel(
             callbacks.watchlistService.addReminders(listOf(reminder))
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.code)
-            callbacks.eventStatus.text = "已添加摸鱼股票 ${selected.quote.name} 的提醒。"
+            callbacks.eventStatus.text = "已添加mofish股票 ${selected.quote.name} 的提醒。"
         }
     }
 
-    private inner class RemoveSelectedStockAction : DumbAwareAction("删除摸鱼股票", "删除当前选中的摸鱼股票", AllIcons.General.Remove) {
+    private inner class RemoveSelectedStockAction : DumbAwareAction("删除mofish股票", "删除当前选中的mofish股票", AllIcons.General.Remove) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -1572,18 +1572,18 @@ internal class StockModulePanel(
             val confirm = Messages.showYesNoDialog(
                 callbacks.project,
                 "确认从自选股票中删除 ${selected.quote.name}（${selected.quote.code}）吗？",
-                "删除摸鱼股票",
+                "删除mofish股票",
                 AllIcons.General.WarningDialog,
             )
             if (confirm != Messages.YES) {
                 return
             }
             callbacks.watchlistService.removeStockCode(selected.quote.code)
-            callbacks.eventStatus.text = "已删除摸鱼股票 ${selected.quote.code}，正在刷新。"
+            callbacks.eventStatus.text = "已删除mofish股票 ${selected.quote.code}，正在刷新。"
         }
     }
 
-    private inner class ToggleStockListViewAction : DumbAwareAction("切换视图", "切换摸鱼股票列表展示方式", AllIcons.Nodes.DataTables) {
+    private inner class ToggleStockListViewAction : DumbAwareAction("切换视图", "切换mofish股票列表展示方式", AllIcons.Nodes.DataTables) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -1594,7 +1594,7 @@ internal class StockModulePanel(
                 AssetListViewMode.CARD -> MoFishIcons.CardView
                 AssetListViewMode.TABLE -> AllIcons.Nodes.DataTables
             }
-            event.presentation.description = "切换为摸鱼股票${nextViewMode().displayName}"
+            event.presentation.description = "切换为mofish股票${nextViewMode().displayName}"
         }
 
         /**
@@ -1605,7 +1605,7 @@ internal class StockModulePanel(
             val nextModeName = nextViewMode().displayName
             toggleViewMode()
             callbacks.watchlistService.snapshot()?.let(::render)
-            callbacks.eventStatus.text = "摸鱼股票列表已切换为$nextModeName。"
+            callbacks.eventStatus.text = "mofish股票列表已切换为$nextModeName。"
         }
     }
 

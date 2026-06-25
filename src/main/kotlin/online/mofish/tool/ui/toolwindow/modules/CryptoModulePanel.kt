@@ -185,7 +185,7 @@ internal class CryptoModulePanel(
 
     private inner class RefreshCryptoAction : DumbAwareAction(
         "刷新",
-        "刷新摸鱼虚拟币列表最新数据",
+        "刷新mofish虚拟币列表最新数据",
         AllIcons.Actions.Refresh,
     ) {
         /**
@@ -198,7 +198,7 @@ internal class CryptoModulePanel(
         }
     }
 
-    private inner class AddCryptoAction : DumbAwareAction("添加摸鱼虚拟币", "按 ID、名称或符号添加摸鱼虚拟币", AllIcons.General.Add) {
+    private inner class AddCryptoAction : DumbAwareAction("添加mofish虚拟币", "按 ID、名称或符号添加mofish虚拟币", AllIcons.General.Add) {
         /**
          * 处理用户触发的 IDE 动作。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -208,11 +208,11 @@ internal class CryptoModulePanel(
             callbacks.watchlistService.addCryptoCode(selectedCode)
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selectedCode)
-            callbacks.eventStatus.text = "已添加摸鱼虚拟币 $selectedCode，正在刷新。"
+            callbacks.eventStatus.text = "已添加mofish虚拟币 $selectedCode，正在刷新。"
         }
     }
 
-    private inner class RemoveSelectedCryptoAction : DumbAwareAction("删除摸鱼虚拟币", "删除当前选中的摸鱼虚拟币", AllIcons.General.Remove) {
+    private inner class RemoveSelectedCryptoAction : DumbAwareAction("删除mofish虚拟币", "删除当前选中的mofish虚拟币", AllIcons.General.Remove) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -230,20 +230,20 @@ internal class CryptoModulePanel(
             val confirm = Messages.showYesNoDialog(
                 callbacks.project,
                 "确认从自选虚拟币中删除 ${selected.quote.name}（${selected.quote.code}）吗？",
-                "删除摸鱼虚拟币",
+                "删除mofish虚拟币",
                 AllIcons.General.WarningDialog,
             )
             if (confirm != Messages.YES) {
                 return
             }
             callbacks.watchlistService.removeCryptoCode(selected.quote.code)
-            callbacks.eventStatus.text = "已删除摸鱼虚拟币 ${selected.quote.code}，正在刷新。"
+            callbacks.eventStatus.text = "已删除mofish虚拟币 ${selected.quote.code}，正在刷新。"
         }
     }
 
     private inner class AddSelectedCryptoHoldingAction : DumbAwareAction(
         "添加持仓",
-        "为当前摸鱼虚拟币追加持仓",
+        "为当前mofish虚拟币追加持仓",
         MoFishIcons.AddHolding,
     ) {
         /**
@@ -280,13 +280,13 @@ internal class CryptoModulePanel(
             callbacks.watchlistService.addHoldings(dialog.result)
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.code)
-            callbacks.eventStatus.text = "已添加摸鱼虚拟币 ${selected.quote.name} 的持仓。"
+            callbacks.eventStatus.text = "已添加mofish虚拟币 ${selected.quote.name} 的持仓。"
         }
     }
 
     private inner class AddSelectedCryptoReminderAction : DumbAwareAction(
         "添加提醒",
-        "为当前摸鱼虚拟币添加提醒规则",
+        "为当前mofish虚拟币添加提醒规则",
         MoFishIcons.AddReminder,
     ) {
         /**
@@ -324,7 +324,7 @@ internal class CryptoModulePanel(
             callbacks.watchlistService.addReminders(dialog.result)
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.code)
-            callbacks.eventStatus.text = "已添加摸鱼虚拟币 ${selected.quote.name} 的提醒。"
+            callbacks.eventStatus.text = "已添加mofish虚拟币 ${selected.quote.name} 的提醒。"
         }
     }
 

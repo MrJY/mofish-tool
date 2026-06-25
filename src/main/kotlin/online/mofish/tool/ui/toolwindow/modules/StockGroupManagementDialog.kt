@@ -21,7 +21,7 @@ internal class StockGroupManagementDialog(
         private set
 
     init {
-        title = "管理摸鱼股票分组"
+        title = "管理mofish股票分组"
         setOKButtonText("确定")
         setCancelButtonText("取消")
         init()

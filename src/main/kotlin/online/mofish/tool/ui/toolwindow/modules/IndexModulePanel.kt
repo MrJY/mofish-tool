@@ -179,7 +179,7 @@ internal class IndexModulePanel(
 
     private inner class RefreshIndexAction : DumbAwareAction(
         "刷新",
-        "刷新摸鱼指数列表最新数据",
+        "刷新mofish指数列表最新数据",
         AllIcons.Actions.Refresh,
     ) {
         /**
@@ -192,7 +192,7 @@ internal class IndexModulePanel(
         }
     }
 
-    private inner class AddIndexAction : DumbAwareAction("添加摸鱼指数", "按代码或关键词添加摸鱼指数", AllIcons.General.Add) {
+    private inner class AddIndexAction : DumbAwareAction("添加mofish指数", "按代码或关键词添加mofish指数", AllIcons.General.Add) {
         /**
          * 处理用户触发的 IDE 动作。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -202,11 +202,11 @@ internal class IndexModulePanel(
             callbacks.watchlistService.addIndexCode(selectedCode)
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selectedCode)
-            callbacks.eventStatus.text = "已添加摸鱼指数 $selectedCode，正在刷新。"
+            callbacks.eventStatus.text = "已添加mofish指数 $selectedCode，正在刷新。"
         }
     }
 
-    private inner class RemoveSelectedIndexAction : DumbAwareAction("删除摸鱼指数", "删除当前选中的摸鱼指数", AllIcons.General.Remove) {
+    private inner class RemoveSelectedIndexAction : DumbAwareAction("删除mofish指数", "删除当前选中的mofish指数", AllIcons.General.Remove) {
         /**
          * 根据当前选择和上下文更新动作可用状态。
          * @param event IntelliJ 平台传入的动作事件上下文。
@@ -224,20 +224,20 @@ internal class IndexModulePanel(
             val confirm = Messages.showYesNoDialog(
                 callbacks.project,
                 "确认从自选指数中删除 ${selected.quote.name}（${selected.quote.code}）吗？",
-                "删除摸鱼指数",
+                "删除mofish指数",
                 AllIcons.General.WarningDialog,
             )
             if (confirm != Messages.YES) {
                 return
             }
             callbacks.watchlistService.removeIndexCode(selected.quote.code)
-            callbacks.eventStatus.text = "已删除摸鱼指数 ${selected.quote.code}，正在刷新。"
+            callbacks.eventStatus.text = "已删除mofish指数 ${selected.quote.code}，正在刷新。"
         }
     }
 
     private inner class AddSelectedIndexReminderAction : DumbAwareAction(
         "添加提醒",
-        "为当前摸鱼指数添加提醒规则",
+        "为当前mofish指数添加提醒规则",
         MoFishIcons.AddReminder,
     ) {
         /**
@@ -275,7 +275,7 @@ internal class IndexModulePanel(
             callbacks.watchlistService.addReminders(dialog.result)
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.code)
-            callbacks.eventStatus.text = "已添加摸鱼指数 ${selected.quote.name} 的提醒。"
+            callbacks.eventStatus.text = "已添加mofish指数 ${selected.quote.name} 的提醒。"
         }
     }
 

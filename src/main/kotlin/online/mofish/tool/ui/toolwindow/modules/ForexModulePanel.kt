@@ -164,7 +164,7 @@ internal class ForexModulePanel(
 
     private inner class RefreshForexAction : DumbAwareAction(
         "刷新",
-        "刷新摸鱼外汇牌价最新数据",
+        "刷新mofish外汇牌价最新数据",
         AllIcons.Actions.Refresh,
     ) {
         /**
@@ -179,7 +179,7 @@ internal class ForexModulePanel(
 
     private inner class AddSelectedForexReminderAction : DumbAwareAction(
         "添加提醒",
-        "为当前摸鱼外汇添加提醒规则",
+        "为当前mofish外汇添加提醒规则",
         MoFishIcons.AddReminder,
     ) {
         /**
@@ -218,7 +218,7 @@ internal class ForexModulePanel(
             callbacks.watchlistService.addReminders(dialog.result)
             callbacks.watchlistService.selectView(moduleViewId())
             callbacks.watchlistService.selectAsset(selected.quote.currencyCode)
-            callbacks.eventStatus.text = "已添加摸鱼外汇 ${selected.quote.currencyName} 的提醒。"
+            callbacks.eventStatus.text = "已添加mofish外汇 ${selected.quote.currencyName} 的提醒。"
         }
     }
 

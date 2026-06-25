@@ -225,7 +225,7 @@ class MoFishStatusBarWidget(private val project: Project) : StatusBarWidget, Tex
                     add(
                         StatusBarItem(
                             text = "外汇 ${compactName(rate.currencyName)} $valueText",
-                            tooltip = "摸鱼外汇 ${rate.currencyName} (${rate.currencyCode}) | 折算价 $valueText",
+                            tooltip = "mofish外汇 ${rate.currencyName} (${rate.currencyCode}) | 折算价 $valueText",
                         )
                     )
                 }
@@ -245,7 +245,7 @@ class MoFishStatusBarWidget(private val project: Project) : StatusBarWidget, Tex
         val changeText = formatMarketPercent(changePercent)
         return StatusBarItem(
             text = "$type ${compactName(name)} $priceText $changeText",
-            tooltip = "摸鱼$type $name ($code) | 现值 $priceText | 涨跌 $changeText",
+            tooltip = "mofish$type $name ($code) | 现值 $priceText | 涨跌 $changeText",
         )
     }
 
@@ -259,7 +259,7 @@ class MoFishStatusBarWidget(private val project: Project) : StatusBarWidget, Tex
             snapshot.stockSummary.todayProfit +
             snapshot.cryptoSummary.todayProfit
         val sign = if (total >= BigDecimal.ZERO) "+" else ""
-        return "摸鱼 $sign%.2f".format(total)
+        return "mofish $sign%.2f".format(total)
     }
 
     /**
@@ -269,9 +269,9 @@ class MoFishStatusBarWidget(private val project: Project) : StatusBarWidget, Tex
      */
     private fun formatTooltip(snapshot: WorkspaceProfitSnapshot): String = buildString {
         appendLine("今日收益明细")
-        appendLine("摸鱼基金：${formatSummaryLine(snapshot.fundSummary)}")
-        appendLine("摸鱼股票：${formatSummaryLine(snapshot.stockSummary)}")
-        append("摸鱼虚拟币：${formatSummaryLine(snapshot.cryptoSummary)}")
+        appendLine("mofish基金：${formatSummaryLine(snapshot.fundSummary)}")
+        appendLine("mofish股票：${formatSummaryLine(snapshot.stockSummary)}")
+        append("mofish虚拟币：${formatSummaryLine(snapshot.cryptoSummary)}")
     }
 
     /**

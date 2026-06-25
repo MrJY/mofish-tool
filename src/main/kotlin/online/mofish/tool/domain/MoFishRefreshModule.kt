@@ -7,15 +7,15 @@ enum class MoFishRefreshModule(
     private val displayName: String,
 ) {
     /** 股票行情模块。 */
-    STOCKS("stocks", "摸鱼股票"),
+    STOCKS("stocks", "mofish股票"),
     /** 市场指数模块。 */
-    INDICES("indices", "摸鱼指数"),
+    INDICES("indices", "mofish指数"),
     /** 基金行情模块。 */
-    FUNDS("funds", "摸鱼基金"),
+    FUNDS("funds", "mofish基金"),
     /** 虚拟币行情模块。 */
-    CRYPTO("crypto", "摸鱼虚拟币"),
+    CRYPTO("crypto", "mofish虚拟币"),
     /** 外汇牌价模块。 */
-    FOREX("forex", "摸鱼外汇"),
+    FOREX("forex", "mofish外汇"),
     /** 旧配置兼容项：快讯模块已移除，不再展示或刷新。 */
     @Deprecated("The flash news module has been removed; keep this entry only for persisted settings compatibility.")
     NEWS("news", "快讯"),

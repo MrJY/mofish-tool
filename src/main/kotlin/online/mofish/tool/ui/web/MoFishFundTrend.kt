@@ -10,7 +10,7 @@ object MoFishFundTrend {
      */
     fun requestFor(quote: FundQuote): MoFishWebRequest {
         return MoFishWebRequest.Html(
-            title = "摸鱼基金走势 - ${quote.name}",
+            title = "mofish基金走势 - ${quote.name}",
             html = chartHtml(
                 code = escapeHtml(quote.code),
                 name = escapeHtml(quote.name),
