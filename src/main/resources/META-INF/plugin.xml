@@ -4,7 +4,7 @@
     <vendor url="https://github.com/MrJY/mofish-tool">MrJY</vendor>
     <description><![CDATA[
         <p><b>MoFish Tool</b> is a lightweight IntelliJ IDEA market assistant for viewing selected quotes, portfolio profit, and price reminders without leaving the IDE.</p>
-        <p>It provides a dedicated <b>mofish工具</b> tool window, rotating status bar snippets, watchlists, holdings profit, price/change reminders, and in-IDE detail or trend pages for stocks, indexes, funds, cryptocurrencies, and foreign exchange rates.</p>
+        <p>It provides a dedicated <b>mofish</b> tool window, rotating status bar snippets, watchlists, holdings profit, price/change reminders, and in-IDE detail or trend pages for stocks, indexes, funds, cryptocurrencies, and foreign exchange rates.</p>
         <ul>
             <li>View watchlists, grouped stocks, holdings, and profit without leaving the editor.</li>
             <li>Configure modules, card/table views, stock columns, and auto-refresh preferences.</li>
@@ -12,7 +12,7 @@
             <li>Show profit summaries and selected market snippets in the status bar.</li>
             <li>Stay usable with fallback data when live quote providers are temporarily unavailable.</li>
         </ul>
-        <p><b>mofish工具</b> 是一个运行在 IntelliJ IDEA 内的行情助手插件，用于在开发过程中查看自选行情、持仓收益和价格提醒，减少在 IDE 与行情页面之间切换。</p>
+        <p><b>mofish</b> 是一个运行在 IntelliJ IDEA 内的行情助手插件，用于在开发过程中查看自选行情、持仓收益和价格提醒，减少在 IDE 与行情页面之间切换。</p>
         <ul>
             <li><b>自选行情：</b>支持股票、指数、基金、虚拟币和外汇。</li>
             <li><b>持仓收益：</b>汇总股票、基金和虚拟币持仓收益。</li>
@@ -49,10 +49,10 @@
 
         <applicationConfigurable
                 id="online.mofish.tool.settings"
-                displayName="mofish工具"
+                displayName="mofish"
                 instance="online.mofish.tool.settings.MoFishSettingsConfigurable"/>
         <toolWindow
-                id="mofish工具"
+                id="mofish"
                 anchor="left"
                 canCloseContents="false"
                 factoryClass="online.mofish.tool.ui.toolwindow.MoFishToolWindowFactory"
@@ -71,8 +71,8 @@
         <action
                 id="online.mofish.tool.actions.OpenMoFishToolWindowAction"
                 class="online.mofish.tool.actions.OpenMoFishToolWindowAction"
-                text="打开mofish工具"
-                description="打开mofish工具窗口"
+                text="打开mofish"
+                description="打开mofish窗口"
                 icon="/icons/mofishToolWindow.svg">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>

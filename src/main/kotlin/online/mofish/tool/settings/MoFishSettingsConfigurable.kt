@@ -44,7 +44,7 @@ class MoFishSettingsConfigurable : Configurable {
     private var draftHoldings: List<HoldingConfig> = emptyList()
     private var draftReminders: List<ReminderRule> = emptyList()
 
-    override fun getDisplayName(): String = "mofish工具"
+    override fun getDisplayName(): String = "mofish"
 
     override fun createComponent(): JComponent {
         if (rootPanel == null) {
@@ -104,7 +104,7 @@ class MoFishSettingsConfigurable : Configurable {
             statusBarRotationIntervalSpinner = JSpinner(SpinnerNumberModel(3, 1, 300, 1)).apply {
                 preferredSize = Dimension(JBUI.scale(86), preferredSize.height)
             },
-            openToolWindowOnStartupCheckBox = JBCheckBox("IDE 启动时自动打开mofish工具窗口"),
+            openToolWindowOnStartupCheckBox = JBCheckBox("IDE 启动时自动打开mofish窗口"),
             showStatusBarWidgetCheckBox = JBCheckBox("在状态栏滚动显示行情"),
             showHoldingProfitCheckBox = JBCheckBox("在行情列表显示持仓收益"),
             holdingsSummaryLabel = JBLabel(),

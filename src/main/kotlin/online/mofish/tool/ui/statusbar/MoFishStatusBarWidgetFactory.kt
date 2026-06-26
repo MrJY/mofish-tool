@@ -18,7 +18,7 @@ class MoFishStatusBarWidgetFactory : StatusBarWidgetFactory {
      * 获取Display名称。
      * @return 处理后的结果或当前状态。
      */
-    override fun getDisplayName(): String = "mofish工具行情"
+    override fun getDisplayName(): String = "mofish行情"
 
     /**
      * 判断是否满足Available条件。

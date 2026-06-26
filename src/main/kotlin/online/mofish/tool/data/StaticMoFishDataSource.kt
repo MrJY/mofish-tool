@@ -20,7 +20,7 @@ class StaticMoFishDataSource : MoFishDataSource {
     /**
      * 创建一个轻量级工作区骨架，用于界面首次打开时先展示占位状态。
      * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
-     * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+     * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
      * @return 处理后的结果或当前状态。
      */
     override fun createSkeletonWorkspace(
@@ -42,7 +42,7 @@ class StaticMoFishDataSource : MoFishDataSource {
     /**
      * 根据项目名称和当前设置加载完整工作区数据。
      * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
-     * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+     * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
      * @return 处理后的结果或当前状态。
      */
     override fun loadWorkspace(
@@ -64,7 +64,7 @@ class StaticMoFishDataSource : MoFishDataSource {
     /**
      * 只刷新指定模块的数据，并把结果合并回当前工作区。
      * @param projectName 当前 IntelliJ 项目的名称，用于区分不同项目的缓存、状态和刷新任务。
-     * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+     * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
      * @param currentWorkspace 刷新前已有的工作区数据，用于保留未刷新模块的内容。
      * @param modules 需要刷新或处理的业务模块集合。
      * @return 处理后的结果或当前状态。
@@ -93,7 +93,7 @@ class StaticMoFishDataSource : MoFishDataSource {
 
 /**
  * 构建Static基金行情，供后续界面展示或数据处理使用。
- * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
  * @return 处理后的结果或当前状态。
  */
 private fun buildStaticFundQuotes(settings: MoFishSettingsState): List<FundQuote> {
@@ -109,7 +109,7 @@ private fun buildStaticFundQuotes(settings: MoFishSettingsState): List<FundQuote
 /**
  * 构建Static股票行情，供后续界面展示或数据处理使用。
  * @param watchlist watchlist。
- * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
  * @return 处理后的结果或当前状态。
  */
 private fun buildStaticStockQuotes(
@@ -128,7 +128,7 @@ private fun buildStaticStockQuotes(
 /**
  * 构建Static虚拟币行情，供后续界面展示或数据处理使用。
  * @param watchlist watchlist。
- * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
  * @return 处理后的结果或当前状态。
  */
 private fun buildStaticCryptoQuotes(
@@ -146,7 +146,7 @@ private fun buildStaticCryptoQuotes(
 
 /**
  * 构建Static市场指数行情，供后续界面展示或数据处理使用。
- * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
  * @return 处理后的结果或当前状态。
  */
 private fun buildStaticIndexQuotes(settings: MoFishSettingsState): List<StockQuote> {
@@ -222,7 +222,7 @@ private fun sampleCryptoQuote(): CryptoQuote {
 /**
  * 处理 placeholderFundQuote 相关逻辑，并返回调用方需要的结果。
  * @param code 资产代码或业务标识。
- * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
  * @return 处理后的结果或当前状态。
  */
 private fun placeholderFundQuote(
@@ -245,7 +245,7 @@ private fun placeholderFundQuote(
 /**
  * 处理 placeholderStockQuote 相关逻辑，并返回调用方需要的结果。
  * @param code 资产代码或业务标识。
- * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
  * @return 处理后的结果或当前状态。
  */
 private fun placeholderStockQuote(
@@ -286,7 +286,7 @@ private fun placeholderIndexQuote(definition: MarketIndexDefinition): StockQuote
 /**
  * 处理 placeholderIndexQuote 相关逻辑，并返回调用方需要的结果。
  * @param code 资产代码或业务标识。
- * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
  * @return 处理后的结果或当前状态。
  */
 private fun placeholderIndexQuote(
@@ -325,7 +325,7 @@ private fun placeholderIndexQuote(
 /**
  * 处理 placeholderCryptoQuote 相关逻辑，并返回调用方需要的结果。
  * @param code 资产代码或业务标识。
- * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
  * @return 处理后的结果或当前状态。
  */
 private fun placeholderCryptoQuote(
@@ -350,7 +350,7 @@ private fun placeholderCryptoQuote(
 /**
  * 处理 displayNameFor 相关逻辑，并返回调用方需要的结果。
  * @param code 资产代码或业务标识。
- * @param settings 当前mofish工具设置快照，提供关注列表、持仓、提醒和刷新配置。
+ * @param settings 当前mofish设置快照，提供关注列表、持仓、提醒和刷新配置。
  * @return 处理后的结果或当前状态。
  */
 private fun displayNameFor(
