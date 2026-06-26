@@ -21,7 +21,7 @@
             <li><b>数据兜底：</b>远程行情暂时不可用时使用静态或占位数据保持界面可用。</li>
         </ul>
     ]]></description>
-    <idea-version since-build="253"/>
+    <idea-version since-build="251"/>
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">

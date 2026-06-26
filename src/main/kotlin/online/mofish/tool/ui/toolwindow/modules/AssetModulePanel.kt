@@ -281,6 +281,8 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
         }
         val tableScrollPane = JBScrollPane(table).apply {
             border = JBUI.Borders.empty()
+            viewport.background = table.background
+            background = table.background
         }
         if (hasCardView()) {
             listContent.add(listScrollPane, CARD_LIST_CARD)
@@ -302,10 +304,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
             raisedPanel.border = JBUI.Borders.empty()
             raisedPanel.isOpaque = false
         } else {
-            raisedPanel.border = JBUI.Borders.compound(
-                JBUI.Borders.customLine(com.intellij.ui.JBColor.border(), 1),
-                JBUI.Borders.empty(0, 8, 8, 8),
-            )
+            raisedPanel.border = JBUI.Borders.customLine(com.intellij.ui.JBColor.border(), 1)
             raisedPanel.background = MoFishUiStyle.surface
             raisedPanel.isOpaque = true
         }

@@ -21,6 +21,12 @@ dependencies {
     }
 }
 
+intellijPlatform {
+    publishing {
+        token = providers.gradleProperty("intellijPlatformPublishingToken")
+    }
+}
+
 tasks.named("buildSearchableOptions") {
     enabled = false
 }
