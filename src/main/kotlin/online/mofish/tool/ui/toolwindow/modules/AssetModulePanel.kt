@@ -339,7 +339,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
             listModel.clear()
             rows.forEach(listModel::addElement)
             tableModel.replaceRows(rows)
-            applySelection(preferredCode)
+            applySelection(preferredCode, scrollToSelection = false)
         }
         lastSelectionCode = selectedRow()?.code
     }
@@ -367,7 +367,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
     private fun syncSelection(code: String?) {
         withSelectionSync {
             selectListSelection(code)
-            selectTableSelection(code)
+            selectTableSelection(code, scrollToSelection = true)
         }
         lastSelectionCode = code
     }
@@ -376,9 +376,9 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
      * 处理 applySelection 相关逻辑，并返回调用方需要的结果。
      * @param code 资产代码或业务标识。
      */
-    private fun applySelection(code: String?) {
+    private fun applySelection(code: String?, scrollToSelection: Boolean) {
         selectListSelection(code)
-        selectTableSelection(code)
+        selectTableSelection(code, scrollToSelection)
     }
 
     /**
@@ -405,7 +405,7 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
      * 选择表格Selection并同步相关界面状态。
      * @param code 资产代码或业务标识。
      */
-    private fun selectTableSelection(code: String?) {
+    private fun selectTableSelection(code: String?, scrollToSelection: Boolean) {
         if (code.isNullOrBlank()) {
             table.clearSelection()
             return
@@ -416,7 +416,9 @@ internal abstract class AssetModulePanel<Q, R : AssetRow<Q>>(
             return
         }
         table.selectionModel.setSelectionInterval(index, index)
-        table.scrollRectToVisible(table.getCellRect(index, 0, true))
+        if (scrollToSelection) {
+            table.scrollRectToVisible(table.getCellRect(index, 0, true))
+        }
     }
 
     /**

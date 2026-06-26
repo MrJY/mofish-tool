@@ -22,6 +22,12 @@ dependencies {
 }
 
 intellijPlatform {
+    pluginConfiguration {
+        ideaVersion {
+            sinceBuild = "251"
+        }
+    }
+
     publishing {
         token = providers.gradleProperty("intellijPlatformPublishingToken")
     }

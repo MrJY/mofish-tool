@@ -6,13 +6,20 @@ versioning.
 
 ## Unreleased
 
+## 1.0.2 - 2026-06-26
+
+- Lowered the compatibility baseline to IntelliJ IDEA 2025.x.
+- Kept table refreshes from scrolling the current table view to the selected row.
+- Fixed the stock group assignment popup position so it opens near the selected row.
+- 将兼容基线调整为 IntelliJ IDEA 2025.x。
+- 修复表格刷新后自动滚动到选中行的问题。
+- 修复股票移动分组弹窗位置不正确的问题。
+
 ## 1.0.1 - 2026-06-26
 
 - Simplified the user-facing display name to `mofish` across plugin metadata, tool window labels,
   settings, documentation, and runtime text.
-- Lowered the compatibility baseline to IntelliJ IDEA 2025.x.
 - 将用户可见名称统一简化为 `mofish`，覆盖插件元信息、工具窗口、设置页、文档和运行时文案。
-- 将兼容基线调整为 IntelliJ IDEA 2025.x。
 
 ## 1.0.0 - 2026-05-15
 

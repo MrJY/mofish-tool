@@ -37,6 +37,7 @@ import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
+import java.awt.Point
 import java.awt.RenderingHints
 import java.math.BigDecimal
 import java.time.Duration
@@ -1411,7 +1412,7 @@ internal class StockModulePanel(
          */
         override fun actionPerformed(event: AnActionEvent) {
             val selected = selectedRow() ?: return
-            showStockAssignmentPopup(selected, stockPopupAnchor(event.inputEvent?.component))
+            showStockAssignmentPopup(selected)
         }
     }
 
@@ -1452,14 +1453,28 @@ internal class StockModulePanel(
      */
     private fun showStockAssignmentPopup(
         selected: StockListItem,
-        anchor: Component,
-        x: Int = 0,
-        y: Int = anchor.height.coerceAtLeast(1),
     ) {
-        val source = stockPopupAnchor(anchor)
-        val popupX = if (source === anchor) x else 0
-        val popupY = if (source === anchor) y else source.height.coerceAtLeast(1)
-        createStockAssignmentPopup(selected).show(source, popupX, popupY)
+        val source = stockPopupAnchor(if (currentViewMode() == AssetListViewMode.CARD) list else table)
+        val point = stockAssignmentPopupPoint(source)
+        createStockAssignmentPopup(selected).show(source, point.x, point.y)
+    }
+
+    private fun stockAssignmentPopupPoint(source: Component): Point {
+        if (source === table) {
+            val row = table.selectedRow
+            if (row >= 0) {
+                val rect = table.getCellRect(row, 0, true)
+                return Point(JBUI.scale(12).coerceAtMost(table.width.coerceAtLeast(1)), rect.y + rect.height)
+            }
+        }
+        if (source === list) {
+            val index = list.selectedIndex
+            val rect = if (index >= 0) list.getCellBounds(index, index) else null
+            if (rect != null) {
+                return Point(JBUI.scale(12).coerceAtMost(list.width.coerceAtLeast(1)), rect.y + rect.height)
+            }
+        }
+        return Point(0, source.height.coerceAtLeast(1))
     }
 
     /**
