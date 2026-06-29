@@ -1,7 +1,7 @@
 package online.mofish.tool.settings
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.SerializablePersistentStateComponent
-import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
     name = "MoFishSettings",
     storages = [Storage("mofish.xml")],
 )
-@Service(Service.Level.APP)
 class MoFishSettingsService : SerializablePersistentStateComponent<MoFishSettingsState>(MoFishSettingsState()) {
     private val stateFlow = MutableStateFlow(state)
 
@@ -59,6 +58,7 @@ class MoFishSettingsService : SerializablePersistentStateComponent<MoFishSetting
     private fun publishState(transform: (MoFishSettingsState) -> MoFishSettingsState): MoFishSettingsState {
         val next = updateState(transform)
         stateFlow.value = next
+        ApplicationManager.getApplication().saveSettings()
         return next
     }
 }
