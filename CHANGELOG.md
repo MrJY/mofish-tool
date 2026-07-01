@@ -6,6 +6,15 @@ versioning.
 
 ## Unreleased
 
+## 1.0.3 - 2026-07-01
+
+- Fixed local settings persistence so watchlists, holdings, reminders, and display preferences survive IDE restarts.
+- Added a fallback periodic save for mofish settings after local changes.
+- Adjusted stock card intraday charts to draw against the previous-close zero axis while keeping dynamic scaling.
+- 修复本地设置持久化问题，确保自选列表、持仓、提醒和展示偏好在 IDE 重启后保留。
+- 新增 mofish 设置变更后的定时兜底保存。
+- 调整股票卡片分时图，以昨收零轴为基准绘制，同时保留动态缩放。
+
 ## 1.0.2 - 2026-06-26
 
 - Lowered the compatibility baseline to IntelliJ IDEA 2025.x.

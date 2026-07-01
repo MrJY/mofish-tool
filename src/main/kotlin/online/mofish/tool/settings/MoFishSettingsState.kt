@@ -4,6 +4,7 @@ import online.mofish.tool.data.index.defaultMarketIndexCodes
 import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.ReminderRule
+import java.io.Serializable
 
 enum class MoFishSortDirection(
     private val displayName: String,
@@ -52,7 +53,7 @@ data class MoFishWatchlistSettings(
     val stockGroups: List<String> = emptyList(),
     val stockGroupAssignments: Map<String, String> = emptyMap(),
     val cryptoIds: List<String> = listOf("bitcoin"),
-) {
+) : Serializable {
     /**
      * 规范化d股票Groups，统一后续处理使用的表示形式。
      * @return 处理后的结果或当前状态。
@@ -90,14 +91,14 @@ internal fun normalizeStockGroupValue(rawGroupName: String): String = rawGroupNa
 
 data class MoFishSortSettings(
     val quoteDirection: MoFishSortDirection = MoFishSortDirection.DESC,
-)
+) : Serializable
 
 data class MoFishModuleRefreshSettings(
     val enabled: Boolean = true,
     val intervalSeconds: Int = 10,
     val startMinuteOfDay: Int = 9 * 60 + 30,
     val endMinuteOfDay: Int = 15 * 60,
-)
+) : Serializable
 
 data class MoFishRefreshSettings(
     val intervalSeconds: Int = 10,
@@ -107,7 +108,7 @@ data class MoFishRefreshSettings(
     val autoRefreshModules: Set<MoFishRefreshModule> = MoFishRefreshModule.defaultAutoRefreshModules,
     val moduleSettings: Map<MoFishRefreshModule, MoFishModuleRefreshSettings> = emptyMap(),
     val openToolWindowOnStartup: Boolean = false,
-) {
+) : Serializable {
     fun settingsFor(module: MoFishRefreshModule): MoFishModuleRefreshSettings {
         val settings = moduleSettings[module] ?: MoFishModuleRefreshSettings(
             enabled = autoRefreshEnabled && module in autoRefreshModules,
@@ -130,12 +131,12 @@ data class MoFishRefreshSettings(
 data class MoFishUiSettings(
     val stockTableColumns: Set<MoFishStockTableColumn> = MoFishStockTableColumn.defaultColumns,
     val enabledModules: Set<MoFishRefreshModule> = MoFishRefreshModule.defaultEnabledModules,
-)
+) : Serializable
 
 data class MoFishStatusBarSettings(
     val enabledModules: Set<MoFishRefreshModule> = MoFishRefreshModule.visibleModules,
     val rotationIntervalSeconds: Int = 3,
-)
+) : Serializable
 
 data class MoFishSettingsState(
     val watchlist: MoFishWatchlistSettings = MoFishWatchlistSettings(),
@@ -147,7 +148,7 @@ data class MoFishSettingsState(
     val statusBar: MoFishStatusBarSettings = MoFishStatusBarSettings(),
     val showStatusBarWidget: Boolean = true,
     val showHoldingProfit: Boolean = false,
-) {
+) : Serializable {
     val refreshIntervalSeconds: Int
         get() = refresh.intervalSeconds
 

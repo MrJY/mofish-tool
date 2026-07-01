@@ -1,6 +1,7 @@
 package online.mofish.tool.domain
 
 import java.math.BigDecimal
+import java.io.Serializable
 
 data class ReminderRule(
     /** 提醒规则唯一标识。 */
@@ -19,4 +20,4 @@ data class ReminderRule(
     val threshold: BigDecimal,
     /** 提醒规则是否启用。 */
     val enabled: Boolean = true,
-)
+) : Serializable

@@ -1,6 +1,7 @@
 package online.mofish.tool.domain
 
 import java.math.BigDecimal
+import java.io.Serializable
 
 data class HoldingConfig(
     /** 持仓配置唯一标识，用于编辑、删除和收益快照关联。 */
@@ -23,7 +24,7 @@ data class HoldingConfig(
     val currency: String = "CNY",
     /** 是否已经清仓，清仓持仓不再计入有效持仓数量。 */
     val isSellOut: Boolean = false,
-) {
+) : Serializable {
     /** 当前持仓是否仍有有效仓位。 */
     val hasPosition: Boolean
         get() = !isSellOut && listOfNotNull(quantity, investedAmount).any { it > BigDecimal.ZERO }
