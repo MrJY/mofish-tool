@@ -801,6 +801,7 @@ internal class StockModulePanel(
                 selected = isSelected,
                 intradayPoints = intradayCache[codeKey],
                 intradayLoading = intradayLoadingCodes.contains(codeKey),
+                intradayBaselinePrice = quote.previousClose,
             )
             return container
         }
@@ -900,6 +901,7 @@ internal class StockModulePanel(
             selected: Boolean,
             intradayPoints: List<StockIntradayPoint>?,
             intradayLoading: Boolean,
+            intradayBaselinePrice: BigDecimal?,
         ) {
             this.isSelected = selected
             val defaultFg = JBColor.foreground()
@@ -923,7 +925,7 @@ internal class StockModulePanel(
             } else {
                 profitLabel.isVisible = false
             }
-            intradayChart.setData(intradayPoints, intradayLoading)
+            intradayChart.setData(intradayPoints, intradayLoading, intradayBaselinePrice)
         }
 
         override fun paintComponent(g: Graphics) {
@@ -1050,6 +1052,7 @@ internal class StockModulePanel(
 
     private class StockIntradayChartComponent : JComponent() {
         private var points: List<StockIntradayPoint> = emptyList()
+        private var baselinePrice: BigDecimal? = null
         private var loading = false
 
         init {
@@ -1058,8 +1061,13 @@ internal class StockModulePanel(
             minimumSize = Dimension(1, JBUI.scale(76))
         }
 
-        fun setData(nextPoints: List<StockIntradayPoint>?, nextLoading: Boolean) {
+        fun setData(
+            nextPoints: List<StockIntradayPoint>?,
+            nextLoading: Boolean,
+            nextBaselinePrice: BigDecimal?,
+        ) {
             points = nextPoints.orEmpty().takeLast(CARD_INTRADAY_LIMIT)
+            baselinePrice = nextBaselinePrice?.takeIf { it > BigDecimal.ZERO }
             loading = nextLoading && points.isEmpty()
             repaint()
         }
@@ -1086,12 +1094,28 @@ internal class StockModulePanel(
                 return
             }
 
-            val maxPrice = points.maxOf { it.price }
-            val minPrice = points.minOf { it.price }
+            val axis = baselinePrice ?: points.first().price
+            val bounds = intradayDeviationBounds(axis)
             drawGrid(g2, plotLeft, plotTop, plotWidth, plotHeight)
-            drawAxes(g2, plotLeft, plotTop, plotWidth, plotHeight, maxPrice, minPrice)
-            drawIntradayLine(g2, plotLeft, plotTop, plotWidth, plotHeight, maxPrice, minPrice)
+            drawZeroAxis(g2, plotLeft, plotTop, plotWidth, plotHeight, bounds)
+            drawAxes(g2, plotLeft, plotTop, plotWidth, plotHeight, axis, bounds)
+            drawIntradayLine(g2, plotLeft, plotTop, plotWidth, plotHeight, axis, bounds)
             g2.dispose()
+        }
+
+        private fun intradayDeviationBounds(axis: BigDecimal): IntradayDeviationBounds {
+            val deviations = points.flatMap { point ->
+                listOfNotNull(
+                    point.price.subtract(axis),
+                    point.averagePrice?.subtract(axis),
+                )
+            }
+            val minDeviation = deviations.minOrNull()?.min(BigDecimal.ZERO) ?: BigDecimal.ZERO
+            val maxDeviation = deviations.maxOrNull()?.max(BigDecimal.ZERO) ?: BigDecimal.ZERO
+            if (minDeviation < maxDeviation) {
+                return IntradayDeviationBounds(minDeviation, maxDeviation)
+            }
+            return IntradayDeviationBounds(BigDecimal.ZERO.subtract(BigDecimal.ONE), BigDecimal.ONE)
         }
 
         private fun drawIntradayEmptyState(g2: Graphics2D, x: Int, y: Int, width: Int, height: Int) {
@@ -1113,14 +1137,28 @@ internal class StockModulePanel(
             }
         }
 
+        private fun drawZeroAxis(g2: Graphics2D, x: Int, y: Int, width: Int, height: Int, bounds: IntradayDeviationBounds) {
+            val zeroY = yForDeviation(BigDecimal.ZERO, y, height, bounds)
+            g2.color = MoFishUiStyle.textMuted
+            g2.stroke = BasicStroke(
+                JBUI.scale(1.2f),
+                BasicStroke.CAP_BUTT,
+                BasicStroke.JOIN_MITER,
+                JBUI.scale(10f),
+                floatArrayOf(JBUI.scale(5f), JBUI.scale(4f)),
+                0f,
+            )
+            g2.drawLine(x, zeroY, x + width, zeroY)
+        }
+
         private fun drawAxes(
             g2: Graphics2D,
             x: Int,
             y: Int,
             width: Int,
             height: Int,
-            maxPrice: BigDecimal,
-            minPrice: BigDecimal,
+            axis: BigDecimal,
+            bounds: IntradayDeviationBounds,
         ) {
             g2.font = JBUI.Fonts.smallFont()
             val metrics = g2.fontMetrics
@@ -1131,9 +1169,12 @@ internal class StockModulePanel(
             g2.drawLine(x, y + height, x + width, y + height)
 
             g2.color = MoFishUiStyle.textMuted
-            val maxText = axisPriceText(maxPrice)
-            val minText = axisPriceText(minPrice)
+            val maxText = deviationPercentText(bounds.maxDeviation, axis)
+            val zeroText = "0%"
+            val minText = deviationPercentText(bounds.minDeviation, axis)
+            val zeroY = yForDeviation(BigDecimal.ZERO, y, height, bounds)
             g2.drawString(maxText, x - metrics.stringWidth(maxText) - JBUI.scale(5), y + metrics.ascent)
+            g2.drawString(zeroText, x - metrics.stringWidth(zeroText) - JBUI.scale(5), zeroY + metrics.ascent / 2)
             g2.drawString(minText, x - metrics.stringWidth(minText) - JBUI.scale(5), y + height)
 
             drawCenteredAxisLabel(g2, "09:30", x, y + height + metrics.ascent + JBUI.scale(2))
@@ -1152,14 +1193,11 @@ internal class StockModulePanel(
             y: Int,
             width: Int,
             height: Int,
-            maxPrice: BigDecimal,
-            minPrice: BigDecimal,
+            axis: BigDecimal,
+            bounds: IntradayDeviationBounds,
         ) {
-            val range = maxPrice.subtract(minPrice).takeIf { it > BigDecimal.ZERO } ?: BigDecimal.ONE
-
             fun yFor(value: BigDecimal): Int {
-                val ratio = maxPrice.subtract(value).divide(range, 8, java.math.RoundingMode.HALF_UP).toDouble()
-                return y + (ratio * height).toInt().coerceIn(0, height)
+                return yForDeviation(value.subtract(axis), y, height, bounds)
             }
 
             val plotPoints = buildPlotPoints(x, width)
@@ -1167,7 +1205,7 @@ internal class StockModulePanel(
                 return
             }
 
-            val color = marketColor(points.last().price.subtract(points.first().price))
+            val color = marketColor(points.last().price.subtract(axis))
             g2.color = color
             g2.stroke = BasicStroke(JBUI.scale(1.4f))
             plotPoints.zipWithNext().forEach { (prev, next) ->
@@ -1228,13 +1266,35 @@ internal class StockModulePanel(
             }?.coerceIn(0, A_SHARE_TRADING_MINUTES)
         }
 
-        private fun axisPriceText(value: BigDecimal): String {
-            return value.setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+        private fun yForDeviation(
+            deviation: BigDecimal,
+            y: Int,
+            height: Int,
+            bounds: IntradayDeviationBounds,
+        ): Int {
+            val range = bounds.maxDeviation.subtract(bounds.minDeviation).takeIf { it > BigDecimal.ZERO } ?: BigDecimal.ONE
+            val ratio = bounds.maxDeviation.subtract(deviation).divide(range, 8, java.math.RoundingMode.HALF_UP).toDouble()
+            return y + (ratio * height).toInt().coerceIn(0, height)
+        }
+
+        private fun deviationPercentText(deviation: BigDecimal, axis: BigDecimal): String {
+            val percent = if (axis > BigDecimal.ZERO) {
+                deviation.multiply(PERCENT_BASE).divide(axis, 2, java.math.RoundingMode.HALF_UP)
+            } else {
+                BigDecimal.ZERO
+            }
+            val text = percent.stripTrailingZeros().toPlainString()
+            return if (percent > BigDecimal.ZERO) "+$text%" else "$text%"
         }
 
         private data class IntradayPlotPoint(
             val point: StockIntradayPoint,
             val x: Int,
+        )
+
+        private data class IntradayDeviationBounds(
+            val minDeviation: BigDecimal,
+            val maxDeviation: BigDecimal,
         )
 
         companion object {
@@ -1646,6 +1706,7 @@ internal class StockModulePanel(
 
 private const val DETAIL_KLINE_LIMIT = 32
 private const val CARD_INTRADAY_LIMIT = 260
+private val PERCENT_BASE = BigDecimal("100")
 
 private fun MoFishStockTableColumn.isNumericStockColumn(): Boolean {
     return when (this) {
