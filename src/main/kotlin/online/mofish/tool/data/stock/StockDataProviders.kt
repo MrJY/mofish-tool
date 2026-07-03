@@ -414,8 +414,9 @@ internal fun toSearchSuggestion(item: JsonElement): StockSearchSuggestion? {
         else -> return null
     }
 
+    val displayLabel = searchCategoryLabel(category, requested.market)
     val description = buildList {
-        add(marketLabel(requested.market))
+        add(displayLabel)
         abbreviation?.takeIf { it.isNotBlank() }?.let { add(it) }
     }.joinToString(" | ")
 
@@ -423,7 +424,7 @@ internal fun toSearchSuggestion(item: JsonElement): StockSearchSuggestion? {
         code = requested.originalCode,
         name = name,
         exchange = requested.exchange,
-        marketLabel = marketLabel(requested.market),
+        marketLabel = displayLabel,
         description = description,
         category = category,
     )
@@ -728,8 +729,23 @@ private fun isSupportedSearchCategory(category: String): Boolean {
     return normalizedCategory == "GP" ||
         normalizedCategory.startsWith("GP-") ||
         normalizedCategory == "ZS" ||
+        normalizedCategory.startsWith("ZQ-KZZ") ||
         normalizedCategory.contains("ETF") ||
         normalizedCategory.contains("LOF")
+}
+
+private fun searchCategoryLabel(
+    category: String,
+    market: RequestedMarket,
+): String {
+    val normalizedCategory = category.trim().uppercase()
+    return when {
+        normalizedCategory.startsWith("ZQ-KZZ") -> "可转债"
+        normalizedCategory == "ZS" -> "指数"
+        normalizedCategory.contains("ETF") -> "ETF"
+        normalizedCategory.contains("LOF") -> "LOF"
+        else -> marketLabel(market)
+    }
 }
 
 internal data class RequestedStock(

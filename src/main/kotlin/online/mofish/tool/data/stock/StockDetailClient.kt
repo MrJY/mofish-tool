@@ -26,6 +26,13 @@ class StockDetailClient(
                 message = "增强详情当前仅支持 A 股，港股/美股暂展示基础行情。",
             )
         }
+        if (isConvertibleBondCode(quote.code)) {
+            return StockDetailSnapshot(
+                code = quote.code,
+                enhanced = false,
+                message = "可转债暂展示基础行情、分时和K线，暂不展示股票研报和公司资料。",
+            )
+        }
 
         val symbol = requested.displaySymbol
         val metrics = runCatching { metricsProvider.fetchMetrics(requested) }.getOrNull()

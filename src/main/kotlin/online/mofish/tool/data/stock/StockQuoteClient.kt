@@ -157,6 +157,10 @@ internal fun inferChinaMarketPrefix(code: String): String? {
     }
 
     return when {
+        isShanghaiConvertibleBondSymbol(normalizedCode) -> "sh"
+
+        isShenzhenConvertibleBondSymbol(normalizedCode) -> "sz"
+
         normalizedCode.startsWith("43") ||
             normalizedCode.startsWith("83") ||
             normalizedCode.startsWith("87") ||
@@ -174,6 +178,27 @@ internal fun inferChinaMarketPrefix(code: String): String? {
 
         else -> null
     }
+}
+
+internal fun isConvertibleBondCode(code: String): Boolean {
+    val normalizedCode = code.trim().lowercase()
+    val symbol = when {
+        normalizedCode.startsWith("sh") -> normalizedCode.removePrefix("sh")
+        normalizedCode.startsWith("sz") -> normalizedCode.removePrefix("sz")
+        normalizedCode.startsWith("bj") -> normalizedCode.removePrefix("bj")
+        else -> normalizedCode
+    }
+    return isShanghaiConvertibleBondSymbol(symbol) || isShenzhenConvertibleBondSymbol(symbol)
+}
+
+private fun isShanghaiConvertibleBondSymbol(symbol: String): Boolean {
+    return symbol.matches(Regex("""\d{6}""")) &&
+        (symbol.startsWith("110") || symbol.startsWith("111") || symbol.startsWith("113") || symbol.startsWith("118"))
+}
+
+private fun isShenzhenConvertibleBondSymbol(symbol: String): Boolean {
+    return symbol.matches(Regex("""\d{6}""")) &&
+        (symbol.startsWith("123") || symbol.startsWith("127") || symbol.startsWith("128"))
 }
 
 /**

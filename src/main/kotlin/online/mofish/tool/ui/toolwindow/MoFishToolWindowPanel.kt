@@ -268,9 +268,9 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
      */
     private fun showStockSearchDialog(): SearchableChoice? {
         val dialog = MoFishSearchableChoiceDialog(
-            dialogTitle = "添加mofish股票",
-            searchPlaceholder = "请输入股票代码、名称或关键词，例如：sz300750、hk00700、NVDA、腾讯",
-            idleHint = "请输入股票代码、名称或关键词，最多展示 20 条候选结果。",
+            dialogTitle = "添加mofish股票/可转债",
+            searchPlaceholder = "请输入股票、可转债代码、名称或关键词，例如：sz300750、127056、腾讯",
+            idleHint = "请输入股票、可转债代码、名称或关键词，最多展示 20 条候选结果。",
             searcher = ::searchStockChoices,
         )
         return if (dialog.showAndGet()) dialog.selectedChoice else null
@@ -330,7 +330,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
                 SearchableChoice(
                     code = suggestion.code,
                     title = suggestion.name,
-                    subtitle = suggestion.marketLabel,
+                    subtitle = suggestion.description ?: suggestion.marketLabel,
                 )
             }
         }

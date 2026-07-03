@@ -6,6 +6,15 @@ versioning.
 
 ## Unreleased
 
+## 1.0.4 - 2026-07-03
+
+- Added searchable convertible bond support in the stock module.
+- Fixed direct-input market inference for Shanghai and Shenzhen convertible bond codes.
+- Kept convertible bond details on basic quote, intraday, and K-line views instead of loading stock-only enhanced data.
+- 新增股票模块搜索并添加可转债的能力。
+- 修复沪深可转债代码直接输入时的市场前缀推断。
+- 可转债详情页保留基础行情、分时和 K 线展示，不再加载股票专属增强信息。
+
 ## 1.0.3 - 2026-07-01
 
 - Fixed local settings persistence so watchlists, holdings, reminders, and display preferences survive IDE restarts.
