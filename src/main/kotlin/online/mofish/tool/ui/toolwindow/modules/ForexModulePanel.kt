@@ -4,6 +4,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
@@ -43,12 +44,14 @@ internal class ForexModulePanel(
      * @return 处理后的结果或当前状态。
      */
     override fun buildRows(snapshot: MoFishWatchlistState): List<ForexListItem> {
+        val codeOrder = snapshot.settingsState.watchlist.forexCurrencyCodes
+            .mapIndexed { index, code -> code.uppercase() to index }
+            .toMap()
         return snapshot.projectState.workspace.forexRates
             .map(::ForexListItem)
             .sortedWith(
-                compareBy<ForexListItem> { forexPriority(it.quote.currencyName) }
+                compareBy<ForexListItem> { codeOrder[it.quote.currencyCode.uppercase()] ?: Int.MAX_VALUE }
                     .thenBy { it.quote.currencyName }
-                    .thenByDescending { it.quote.publishedAt }
             )
     }
 
@@ -82,6 +85,8 @@ internal class ForexModulePanel(
     override fun createPopupActions(): List<AnAction> {
         return listOf(
             RefreshForexAction(),
+            AddForexAction(),
+            RemoveSelectedForexAction(),
             AddSelectedForexReminderAction(),
         )
     }
@@ -177,6 +182,49 @@ internal class ForexModulePanel(
         }
     }
 
+    private inner class AddForexAction : DumbAwareAction("添加mofish外汇", "按币种代码或名称添加mofish外汇", AllIcons.General.Add) {
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
+        override fun actionPerformed(event: AnActionEvent) {
+            val forexCode = callbacks.showForexSearchDialog()?.code ?: return
+            callbacks.watchlistService.addForexCode(forexCode)
+            callbacks.watchlistService.selectView(moduleViewId())
+            callbacks.watchlistService.selectAsset(forexCode)
+            callbacks.eventStatus.text = "已添加mofish外汇 $forexCode，正在刷新。"
+        }
+    }
+
+    private inner class RemoveSelectedForexAction : DumbAwareAction("删除mofish外汇", "删除当前选中的mofish外汇", AllIcons.General.Remove) {
+        /**
+         * 根据当前选择和上下文更新动作可用状态。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
+        override fun update(event: AnActionEvent) {
+            event.presentation.isEnabled = selectedRow() != null
+        }
+
+        /**
+         * 处理用户触发的 IDE 动作。
+         * @param event IntelliJ 平台传入的动作事件上下文。
+         */
+        override fun actionPerformed(event: AnActionEvent) {
+            val selected = selectedRow() ?: return
+            val confirm = Messages.showYesNoDialog(
+                callbacks.project,
+                "确认从自选外汇中删除 ${selected.quote.currencyName}（${selected.quote.currencyCode}）吗？",
+                "删除mofish外汇",
+                AllIcons.General.WarningDialog,
+            )
+            if (confirm != Messages.YES) {
+                return
+            }
+            callbacks.watchlistService.removeForexCode(selected.quote.currencyCode)
+            callbacks.eventStatus.text = "已删除mofish外汇 ${selected.quote.currencyCode}，正在刷新。"
+        }
+    }
+
     private inner class AddSelectedForexReminderAction : DumbAwareAction(
         "添加提醒",
         "为当前mofish外汇添加提醒规则",
@@ -220,16 +268,6 @@ internal class ForexModulePanel(
             callbacks.watchlistService.selectAsset(selected.quote.currencyCode)
             callbacks.eventStatus.text = "已添加mofish外汇 ${selected.quote.currencyName} 的提醒。"
         }
-    }
-
-    /**
-     * 处理 forexPriority 相关逻辑，并返回调用方需要的结果。
-     * @param currencyName 币种名称。
-     * @return 处理后的结果或当前状态。
-     */
-    private fun forexPriority(currencyName: String): Int {
-        val index = FOREX_PRIORITY_NAMES.indexOf(currencyName)
-        return if (index >= 0) index else Int.MAX_VALUE
     }
 
     /**

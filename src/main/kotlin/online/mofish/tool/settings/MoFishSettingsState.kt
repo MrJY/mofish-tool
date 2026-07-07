@@ -1,6 +1,7 @@
 package online.mofish.tool.settings
 
 import online.mofish.tool.data.index.defaultMarketIndexCodes
+import online.mofish.tool.data.forex.defaultForexCurrencyCodes
 import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.ReminderRule
@@ -50,6 +51,7 @@ data class MoFishWatchlistSettings(
     val fundCodes: List<String> = emptyList(),
     val stockCodes: List<String> = emptyList(),
     val indexCodes: List<String> = defaultMarketIndexCodes(),
+    val forexCurrencyCodes: List<String> = defaultForexCurrencyCodes(),
     val stockGroups: List<String> = emptyList(),
     val stockGroupAssignments: Map<String, String> = emptyMap(),
     val cryptoIds: List<String> = listOf("bitcoin"),

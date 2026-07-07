@@ -56,7 +56,7 @@ class StaticMoFishDataSource : MoFishDataSource {
             cryptoQuotes = buildStaticCryptoQuotes(settings.watchlist, settings),
             holdings = settings.holdings,
             reminderRules = settings.reminders,
-            forexRates = sampleForexRates(),
+            forexRates = buildStaticForexRates(settings),
             indexQuotes = buildStaticIndexQuotes(settings),
         )
     }
@@ -141,6 +141,13 @@ private fun buildStaticCryptoQuotes(
         } else {
             placeholderCryptoQuote(code, settings)
         }
+    }
+}
+
+private fun buildStaticForexRates(settings: MoFishSettingsState): List<ForexRate> {
+    val samplesByCode = sampleForexRates().associateBy { it.currencyCode.uppercase() }
+    return settings.watchlist.forexCurrencyCodes.mapNotNull { code ->
+        samplesByCode[code.uppercase()]
     }
 }
 

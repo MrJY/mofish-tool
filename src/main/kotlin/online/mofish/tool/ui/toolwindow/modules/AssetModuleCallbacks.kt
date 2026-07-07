@@ -19,6 +19,7 @@ internal interface AssetModuleCallbacks {
     fun showIndexSearchDialog(): SearchableChoice?
     fun showFundSearchDialog(): SearchableChoice?
     fun showCryptoSearchDialog(): SearchableChoice?
+    fun showForexSearchDialog(): SearchableChoice?
 }
 
 internal interface AssetRow<Q> {

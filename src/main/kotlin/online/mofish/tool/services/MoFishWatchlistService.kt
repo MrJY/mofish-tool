@@ -4,10 +4,13 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import online.mofish.tool.data.crypto.CryptoQuoteClient
+import online.mofish.tool.data.forex.BocForexClient
+import online.mofish.tool.data.forex.buildForexCurrencyPairCode
 import online.mofish.tool.data.fund.FundQuoteClient
 import online.mofish.tool.data.stock.StockQuoteClient
 import online.mofish.tool.domain.AssetType
 import online.mofish.tool.domain.CryptoSearchSuggestion
+import online.mofish.tool.domain.ForexRate
 import online.mofish.tool.domain.FundSearchSuggestion
 import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
@@ -46,6 +49,7 @@ class MoFishWatchlistService(
     private val settingsService = service<MoFishSettingsService>()
     private val refreshSchedulerService = service<MoFishRefreshSchedulerService>()
     private val reminderService = project.service<MoFishReminderService>()
+    private val bocForexClient = BocForexClient()
     private val cryptoQuoteClient = CryptoQuoteClient()
     private val fundQuoteClient = FundQuoteClient()
     private val stockQuoteClient = StockQuoteClient()
@@ -268,6 +272,22 @@ class MoFishWatchlistService(
     }
 
     /**
+     * 添加外汇币种代码。
+     * @param code 资产代码或业务标识。
+     */
+    fun addForexCode(code: String) {
+        val normalizedCode = normalizeForexCode(code)
+        if (normalizedCode.isEmpty()) {
+            return
+        }
+        updateWatchlist { watchlist ->
+            watchlist.copy(
+                forexCurrencyCodes = upsertWatchlistCode(watchlist.forexCurrencyCodes, normalizedCode),
+            )
+        }
+    }
+
+    /**
      * 添加股票Group。
      * @param groupName group名称。
      */
@@ -430,6 +450,22 @@ class MoFishWatchlistService(
     }
 
     /**
+     * 删除外汇币种代码。
+     * @param code 资产代码或业务标识。
+     */
+    fun removeForexCode(code: String) {
+        val normalizedCode = normalizeForexCode(code)
+        if (normalizedCode.isEmpty()) {
+            return
+        }
+        updateWatchlist { watchlist ->
+            watchlist.copy(
+                forexCurrencyCodes = removeWatchlistCode(watchlist.forexCurrencyCodes, normalizedCode),
+            )
+        }
+    }
+
+    /**
      * 删除虚拟币代码。
      * @param code 资产代码或业务标识。
      */
@@ -482,6 +518,27 @@ class MoFishWatchlistService(
             return emptyList()
         }
         return fundQuoteClient.searchSuggestions(normalizedKeyword)
+    }
+
+    /**
+     * 处理 searchForexSuggestions 相关逻辑，并返回调用方需要的结果。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
+    fun searchForexSuggestions(keyword: String): List<ForexRate> {
+        val normalizedKeyword = keyword.trim()
+        if (normalizedKeyword.isEmpty()) {
+            return emptyList()
+        }
+        val cachedRates = snapshot()?.projectState?.workspace?.forexRates.orEmpty()
+        val liveRates = runCatching { bocForexClient.fetchRates() }.getOrElse { cachedRates }
+        val searchToken = normalizedKeyword.uppercase()
+        return liveRates
+            .filter { rate ->
+                rate.currencyCode.uppercase().contains(searchToken) ||
+                    rate.currencyName.uppercase().contains(searchToken)
+            }
+            .distinctBy { it.currencyCode.uppercase() }
     }
 
     /**
@@ -703,6 +760,19 @@ internal fun normalizeIndexCode(rawCode: String): String = rawCode.trim().lowerc
  * @return 处理后的结果或当前状态。
  */
 internal fun normalizeCryptoCode(rawCode: String): String = rawCode.trim().lowercase()
+
+/**
+ * 规范化外汇币种代码，统一后续处理使用的表示形式。
+ * @param rawCode 用户输入或接口返回的原始资产代码。
+ * @return 处理后的结果或当前状态。
+ */
+internal fun normalizeForexCode(rawCode: String): String {
+    val normalized = rawCode.trim()
+    if (normalized.isEmpty()) {
+        return ""
+    }
+    return buildForexCurrencyPairCode(normalized)
+}
 
 /**
  * 规范化股票Group名称，统一后续处理使用的表示形式。

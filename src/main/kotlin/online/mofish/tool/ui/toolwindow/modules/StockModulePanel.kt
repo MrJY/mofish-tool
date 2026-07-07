@@ -37,6 +37,7 @@ import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
+import java.awt.GridLayout
 import java.awt.Point
 import java.awt.RenderingHints
 import java.math.BigDecimal
@@ -797,6 +798,9 @@ internal class StockModulePanel(
                 price = price,
                 percent = percent,
                 percentColor = changeColor,
+                highPrice = formatDecimal(quote.highPrice),
+                lowPrice = formatDecimal(quote.lowPrice),
+                openPrice = formatDecimal(quote.openPrice),
                 profitText = profitText,
                 selected = isSelected,
                 intradayPoints = intradayCache[codeKey],
@@ -814,6 +818,9 @@ internal class StockModulePanel(
         val codeLabel = JLabel()
         val priceLabel = JLabel()
         val percentLabel = JLabel()
+        val highPriceLabel = JLabel()
+        val lowPriceLabel = JLabel()
+        val openPriceLabel = JLabel()
 
         val profitLabel = JLabel()
         private val intradayChart = StockIntradayChartComponent()
@@ -870,6 +877,15 @@ internal class StockModulePanel(
             metricsPanel.add(percentContainer, BorderLayout.EAST)
 
             headerPanel.add(metricsPanel, BorderLayout.CENTER)
+
+            val quoteStatsPanel = JPanel(GridLayout(1, 3, JBUI.scale(8), 0)).apply {
+                isOpaque = false
+                border = JBUI.Borders.emptyTop(8)
+                add(createQuoteStat("最高", highPriceLabel))
+                add(createQuoteStat("最低", lowPriceLabel))
+                add(createQuoteStat("开盘", openPriceLabel))
+            }
+            headerPanel.add(quoteStatsPanel, BorderLayout.SOUTH)
             add(headerPanel, BorderLayout.NORTH)
 
             val contentContainer = JPanel(BorderLayout(0, JBUI.scale(6))).apply {
@@ -891,12 +907,30 @@ internal class StockModulePanel(
             add(contentContainer, BorderLayout.CENTER)
         }
 
+        private fun createQuoteStat(title: String, valueLabel: JLabel): JComponent {
+            val panel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                isOpaque = false
+            }
+            val titleLabel = JLabel("$title: ").apply {
+                font = JBUI.Fonts.smallFont()
+                foreground = MoFishUiStyle.textMuted
+                border = JBUI.Borders.emptyRight(3)
+            }
+            valueLabel.font = JBUI.Fonts.smallFont().deriveFont(java.awt.Font.BOLD)
+            panel.add(titleLabel)
+            panel.add(valueLabel)
+            return panel
+        }
+
         fun setValues(
             name: String,
             code: String,
             price: String,
             percent: String,
             percentColor: Color,
+            highPrice: String,
+            lowPrice: String,
+            openPrice: String,
             profitText: String,
             selected: Boolean,
             intradayPoints: List<StockIntradayPoint>?,
@@ -917,6 +951,13 @@ internal class StockModulePanel(
             
             percentLabel.text = percent
             percentLabel.foreground = percentColor
+
+            highPriceLabel.text = highPrice
+            highPriceLabel.foreground = defaultFg
+            lowPriceLabel.text = lowPrice
+            lowPriceLabel.foreground = defaultFg
+            openPriceLabel.text = openPrice
+            openPriceLabel.foreground = defaultFg
 
             if (profitText.isNotEmpty()) {
                 profitLabel.text = profitText
@@ -1170,11 +1211,8 @@ internal class StockModulePanel(
 
             g2.color = MoFishUiStyle.textMuted
             val maxText = deviationPercentText(bounds.maxDeviation, axis)
-            val zeroText = "0%"
             val minText = deviationPercentText(bounds.minDeviation, axis)
-            val zeroY = yForDeviation(BigDecimal.ZERO, y, height, bounds)
             g2.drawString(maxText, x - metrics.stringWidth(maxText) - JBUI.scale(5), y + metrics.ascent)
-            g2.drawString(zeroText, x - metrics.stringWidth(zeroText) - JBUI.scale(5), zeroY + metrics.ascent / 2)
             g2.drawString(minText, x - metrics.stringWidth(minText) - JBUI.scale(5), y + height)
 
             drawCenteredAxisLabel(g2, "09:30", x, y + height + metrics.ascent + JBUI.scale(2))

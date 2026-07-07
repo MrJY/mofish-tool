@@ -190,6 +190,14 @@ private fun parseBocTime(rawTime: String): LocalTime? {
  */
 internal fun defaultBocForexRatesUrl(): String = "https://www.boc.cn/sourcedb/whpj/index.html"
 
+internal fun defaultForexCurrencyCodes(): List<String> = listOf(
+    "USD/CNY",
+    "HKD/CNY",
+    "EUR/CNY",
+    "GBP/CNY",
+    "JPY/CNY",
+)
+
 private val ISO_CURRENCY_CODE_PATTERN = Regex("""[A-Z]{3}""")
 
 private val BOC_DATE_TIME_FORMATTERS = listOf(

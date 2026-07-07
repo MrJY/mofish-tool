@@ -3,6 +3,7 @@ package online.mofish.tool.data
 import online.mofish.tool.data.crypto.CryptoQuoteClient
 import online.mofish.tool.data.forex.BocForexClient
 import online.mofish.tool.data.fund.FundQuoteClient
+import online.mofish.tool.domain.ForexRate
 import online.mofish.tool.data.stock.StockQuoteClient
 import online.mofish.tool.domain.MoFishWorkspace
 import online.mofish.tool.domain.MoFishRefreshModule
@@ -65,7 +66,7 @@ class RemoteMoFishDataSource(
             .map { quotes -> quotes.ifEmpty { fallbackWorkspace.indexQuotes } }
             .getOrElse { fallbackWorkspace.indexQuotes }
         val liveForexRates = runCatching { bocForexClient.fetchRates() }
-            .map { rates -> rates.ifEmpty { fallbackWorkspace.forexRates } }
+            .map { rates -> filterForexRates(settings, rates.ifEmpty { fallbackWorkspace.forexRates }) }
             .getOrElse { fallbackWorkspace.forexRates }
         return fallbackWorkspace.copy(
             fundQuotes = liveFundQuotes,
@@ -144,7 +145,7 @@ class RemoteMoFishDataSource(
 
         if (MoFishRefreshModule.FOREX in modules) {
             val liveForexRates = runCatching { bocForexClient.fetchRates() }
-                .map { rates -> rates.ifEmpty { fallbackWorkspace.forexRates } }
+                .map { rates -> filterForexRates(settings, rates.ifEmpty { fallbackWorkspace.forexRates }) }
                 .getOrElse { fallbackWorkspace.forexRates }
             nextWorkspace = nextWorkspace.copy(forexRates = liveForexRates)
         }
@@ -158,5 +159,16 @@ class RemoteMoFishDataSource(
         return fallbackQuotes.map { fallbackQuote ->
             quoteByCode[fallbackQuote.code.lowercase()] ?: fallbackQuote
         }
+    }
+
+    private fun filterForexRates(settings: MoFishSettingsState, rates: List<ForexRate>): List<ForexRate> {
+        val selectedCodes = settings.watchlist.forexCurrencyCodes
+            .map { it.trim().uppercase() }
+            .filter { it.isNotEmpty() }
+        if (selectedCodes.isEmpty()) {
+            return emptyList()
+        }
+        val ratesByCode = rates.associateBy { it.currencyCode.uppercase() }
+        return selectedCodes.mapNotNull(ratesByCode::get)
     }
 }

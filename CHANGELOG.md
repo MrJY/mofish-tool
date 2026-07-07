@@ -6,6 +6,17 @@ versioning.
 
 ## Unreleased
 
+## 1.0.5 - 2026-07-07
+
+- Added add/remove support for the foreign exchange watchlist with searchable currency selection.
+- Kept foreign exchange rows in user-added watchlist order.
+- Added high, low, and open prices to stock card view.
+- Removed the left-side `0%` label from stock card intraday charts while keeping the zero axis.
+- 新增外汇自选的搜索添加和删除能力。
+- 外汇列表按用户添加顺序展示。
+- 股票卡片视图新增最高、最低、开盘价展示。
+- 股票卡片分时图保留零轴，但不再在左侧显示 `0%` 标签。
+
 ## 1.0.4 - 2026-07-03
 
 - Added searchable convertible bond support in the stock module.

@@ -15,11 +15,14 @@ import kotlinx.coroutines.flow.filterNotNull
 import online.mofish.tool.data.stock.canonicalizeStockInputCode
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.services.MoFishWatchlistService
+import online.mofish.tool.services.normalizeForexCode
 import online.mofish.tool.state.MoFishWatchlistState
 import online.mofish.tool.ui.dialogs.MoFishSearchableChoiceDialog
 import online.mofish.tool.ui.dialogs.SearchableChoice
 import online.mofish.tool.ui.toolwindow.modules.*
 import java.awt.*
+import java.math.BigDecimal
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.swing.*
@@ -57,6 +60,11 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
          * @return 处理后的结果或当前状态。
          */
         override fun showCryptoSearchDialog(): SearchableChoice? = this@MoFishToolWindowPanel.showCryptoSearchDialog()
+        /**
+         * 展示外汇搜索弹窗。
+         * @return 处理后的结果或当前状态。
+         */
+        override fun showForexSearchDialog(): SearchableChoice? = this@MoFishToolWindowPanel.showForexSearchDialog()
     }
     private val stockModule = StockModulePanel(moduleCallbacks)
     private val indexModule = IndexModulePanel(moduleCallbacks)
@@ -263,6 +271,22 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     }
 
     /**
+     * 处理 maybeResolveForexCode 相关逻辑，并返回调用方需要的结果。
+     * @param rawInput 用户输入的原始文本。
+     * @return 处理后的结果或当前状态。
+     */
+    private fun maybeResolveForexCode(rawInput: String): String? {
+        val normalized = normalizeForexCode(rawInput)
+        return normalized.takeIf { it.matches(Regex("""[A-Z]{3}/CNY""")) }
+    }
+
+    private fun formatDecimal(value: BigDecimal?): String = value?.toPlainString() ?: "--"
+
+    private fun formatDateTime(value: LocalDateTime?): String {
+        return value?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) ?: "--"
+    }
+
+    /**
      * 展示股票搜索弹窗。
      * @return 处理后的结果或当前状态。
      */
@@ -314,6 +338,20 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             searchPlaceholder = "请输入虚拟币 ID、符号或名称，例如：bitcoin、btc、ethereum",
             idleHint = "请输入虚拟币 ID、符号或名称，最多展示 20 条候选结果。",
             searcher = ::searchCryptoChoices,
+        )
+        return if (dialog.showAndGet()) dialog.selectedChoice else null
+    }
+
+    /**
+     * 展示外汇搜索弹窗。
+     * @return 处理后的结果或当前状态。
+     */
+    private fun showForexSearchDialog(): SearchableChoice? {
+        val dialog = MoFishSearchableChoiceDialog(
+            dialogTitle = "添加mofish外汇",
+            searchPlaceholder = "请输入外汇币种代码或名称，例如：USD、美元、港币",
+            idleHint = "请输入外汇币种代码或名称，最多展示 20 条候选结果。",
+            searcher = ::searchForexChoices,
         )
         return if (dialog.showAndGet()) dialog.selectedChoice else null
     }
@@ -423,6 +461,33 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
                 code = directCode,
                 title = directCode,
                 subtitle = "按 ID 直接添加",
+            )
+        )
+    }
+
+    /**
+     * 处理 searchForexChoices 相关逻辑，并返回调用方需要的结果。
+     * @param keyword 用户输入的搜索关键字。
+     * @return 处理后的结果或当前状态。
+     */
+    private fun searchForexChoices(keyword: String): List<SearchableChoice> {
+        val suggestions = watchlistService.searchForexSuggestions(keyword)
+        if (suggestions.isNotEmpty()) {
+            return suggestions.take(20).map { rate ->
+                SearchableChoice(
+                    code = rate.currencyCode,
+                    title = rate.currencyName,
+                    subtitle = "中行折算价 ${formatDecimal(rate.conversionPrice)} | 发布时间 ${formatDateTime(rate.publishedAt)}",
+                )
+            }
+        }
+
+        val directCode = maybeResolveForexCode(keyword) ?: return emptyList()
+        return listOf(
+            SearchableChoice(
+                code = directCode,
+                title = directCode,
+                subtitle = "直接添加外汇币种，刷新后尝试获取中行牌价。",
             )
         )
     }
