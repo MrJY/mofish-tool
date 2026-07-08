@@ -143,6 +143,8 @@ data class MoFishStatusBarSettings(
 
 data class MoFishGomokuSettings(
     val playerUuid: String = "",
+    val lastNickname: String = "",
+    val showModule: Boolean = false,
 ) : Serializable
 
 data class MoFishSettingsState(

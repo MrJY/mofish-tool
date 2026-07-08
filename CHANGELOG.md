@@ -7,9 +7,15 @@ versioning.
 ## Unreleased
 
 - Moved the Gomoku UUID display to a dedicated settings section and avoided regenerating UUIDs on restart.
+- Persisted the last Gomoku nickname and restored it when opening the Gomoku tab.
+- Added a Gomoku settings toggle to show or hide the Gomoku tab, disabled by default.
+- Fixed disabled tool window modules reappearing when all module toggles are turned off.
 - Improved Gomoku board sizing so it adapts down to 240px before scrolling, with a softer grid style.
 - Switched the Gomoku Docker Compose data mount from a named volume to local `./data`.
 - 将五子棋 UUID 展示移到设置页独立模块，并避免重启时重新生成 UUID。
+- 保存五子棋上次使用的昵称，并在打开五子棋标签页时自动回填。
+- 新增五子棋标签页显示开关，默认关闭。
+- 修复工具窗口模块全部关闭后反而恢复显示默认模块的问题。
 - 优化五子棋棋盘尺寸，缩小到 240px 后再滚动，并降低棋盘线视觉存在感。
 - 将五子棋 Docker Compose 数据挂载从命名卷改为本地 `./data` 目录。
 

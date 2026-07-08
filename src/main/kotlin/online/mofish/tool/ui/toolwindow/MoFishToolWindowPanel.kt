@@ -28,6 +28,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.swing.*
 
+private const val EMPTY_VIEW_ID = "__empty"
+
 class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPanel(false, true), Disposable {
     private val watchlistService = project.service<MoFishWatchlistService>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -90,6 +92,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         moduleContent.add(cryptoModule.createComponent(), "crypto")
         moduleContent.add(forexModule.createComponent(), "forex")
         moduleContent.add(gomokuModule, GOMOKU_VIEW_ID)
+        moduleContent.add(createEmptyModulePanel(), EMPTY_VIEW_ID)
 
         val container = JPanel(BorderLayout())
         container.border = JBUI.Borders.empty()
@@ -126,6 +129,18 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         return rootPanel
     }
 
+    private fun createEmptyModulePanel(): JComponent {
+        return JPanel(GridBagLayout()).apply {
+            isOpaque = false
+            add(
+                JBLabel("已隐藏所有模块，可在设置中重新启用。").apply {
+                    foreground = MoFishUiStyle.textMuted
+                },
+                GridBagConstraints(),
+            )
+        }
+    }
+
     /**
      * 处理 observeState 相关逻辑，并返回调用方需要的结果。
      */
@@ -146,7 +161,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     private fun render(snapshot: MoFishWatchlistState) {
         syncEnabledModules(snapshot)
         val selectedViewId = enabledViewId(snapshot.projectState.selectedViewId, snapshot.enabledModuleItems())
-        if (selectedViewId != snapshot.projectState.selectedViewId) {
+        if (selectedViewId != EMPTY_VIEW_ID && selectedViewId != snapshot.projectState.selectedViewId) {
             watchlistService.selectView(selectedViewId)
         }
         syncModuleView(selectedViewId)
@@ -194,18 +209,18 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         } else if (lastEnabledViewIds.isNotEmpty()) {
             lastEnabledViewIds[0]
         } else {
-            "stocks"
+            EMPTY_VIEW_ID
         }
     }
 
     private fun MoFishWatchlistState.enabledModuleItems(): List<ModuleNavItem> {
         val enabledModules = settingsState.ui.enabledModules
             .intersect(MoFishRefreshModule.visibleModules)
-            .ifEmpty { MoFishRefreshModule.defaultEnabledModules }
         return DEFAULT_MODULES.filter { item ->
-            item.viewId == GOMOKU_VIEW_ID || enabledModules.any { module -> module.viewId == item.viewId }
-        }.ifEmpty {
-            DEFAULT_MODULES
+            when (item.viewId) {
+                GOMOKU_VIEW_ID -> settingsState.gomoku.showModule
+                else -> enabledModules.any { module -> module.viewId == item.viewId }
+            }
         }
     }
 
@@ -218,7 +233,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     private fun enabledViewId(viewId: String, enabledItems: List<ModuleNavItem>): String {
         return enabledItems.firstOrNull { it.viewId == viewId }?.viewId
             ?: enabledItems.firstOrNull()?.viewId
-            ?: "stocks"
+            ?: EMPTY_VIEW_ID
     }
 
     /**

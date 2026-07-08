@@ -30,6 +30,8 @@ class MoFishSettingsConfigurable : Configurable {
     private var stockCodesField: JBTextField? = null
     private var cryptoCodesField: JBTextField? = null
     private var gomokuPlayerUuidField: JBTextField? = null
+    private var gomokuLastNicknameField: JBTextField? = null
+    private var showGomokuModuleCheckBox: JBCheckBox? = null
     private var moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor> = emptyMap()
     private var stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox> = emptyMap()
     private var enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
@@ -96,6 +98,8 @@ class MoFishSettingsConfigurable : Configurable {
             stockCodesField = JBTextField(),
             cryptoCodesField = JBTextField(),
             gomokuPlayerUuidField = JBTextField(),
+            gomokuLastNicknameField = JBTextField(),
+            showGomokuModuleCheckBox = JBCheckBox("显示五子棋标签页"),
             moduleRefreshEditors = MoFishRefreshModule.autoRefreshModules.associateWith(::createModuleRefreshEditor),
             stockTableColumnCheckBoxes = MoFishStockTableColumn.entries.associateWith { column ->
                 JBCheckBox(column.toString())
@@ -137,6 +141,8 @@ class MoFishSettingsConfigurable : Configurable {
         stockCodesField = ui.stockCodesField
         cryptoCodesField = ui.cryptoCodesField
         gomokuPlayerUuidField = ui.gomokuPlayerUuidField
+        gomokuLastNicknameField = ui.gomokuLastNicknameField
+        showGomokuModuleCheckBox = ui.showGomokuModuleCheckBox
         moduleRefreshEditors = ui.moduleRefreshEditors
         stockTableColumnCheckBoxes = ui.stockTableColumnCheckBoxes
         enabledModuleCheckBoxes = ui.enabledModuleCheckBoxes
@@ -178,6 +184,8 @@ class MoFishSettingsConfigurable : Configurable {
         stockCodesField = null
         cryptoCodesField = null
         gomokuPlayerUuidField = null
+        gomokuLastNicknameField = null
+        showGomokuModuleCheckBox = null
         moduleRefreshEditors = emptyMap()
         stockTableColumnCheckBoxes = emptyMap()
         enabledModuleCheckBoxes = emptyMap()
@@ -208,6 +216,8 @@ class MoFishSettingsConfigurable : Configurable {
 
     private fun createGomokuPanel(ui: SettingsEditorFields): JComponent {
         return FormBuilder.createFormBuilder()
+            .addComponent(ui.showGomokuModuleCheckBox)
+            .addLabeledComponent("上次昵称：", ui.gomokuLastNicknameField)
             .addLabeledComponent("玩家 UUID：", ui.gomokuPlayerUuidField)
             .addComponent(
                 JBLabel("首次连接五子棋或保存空 UUID 时会自动生成；同一个 UUID 代表同一个用户，战绩绑定到这个 UUID。").apply {
@@ -337,6 +347,8 @@ class MoFishSettingsConfigurable : Configurable {
         stockCodesField?.text = joinCodes(state.watchlist.stockCodes)
         cryptoCodesField?.text = joinCodes(state.watchlist.cryptoIds)
         gomokuPlayerUuidField?.text = state.gomoku.playerUuid
+        gomokuLastNicknameField?.text = state.gomoku.lastNickname
+        showGomokuModuleCheckBox?.isSelected = state.gomoku.showModule
         moduleRefreshEditors.forEach { (module, editor) ->
             editor.write(state.refresh.settingsFor(module))
         }
@@ -382,6 +394,7 @@ class MoFishSettingsConfigurable : Configurable {
         if (gomokuPlayerUuid.isNotBlank() && gomokuPlayerUuid.length < 32) {
             throw ConfigurationException("五子棋 UUID 不能少于 32 位。")
         }
+        val gomokuLastNickname = gomokuLastNicknameField?.text.orEmpty().trim()
         return baseState.copy(
             watchlist = MoFishWatchlistSettings(
                 fundCodes = parseFundCodes(fundCodesField?.text.orEmpty()),
@@ -414,7 +427,11 @@ class MoFishSettingsConfigurable : Configurable {
                     ?.coerceIn(1, 300)
                     ?: baseState.statusBar.rotationIntervalSeconds,
             ),
-            gomoku = MoFishGomokuSettings(playerUuid = gomokuPlayerUuid),
+            gomoku = MoFishGomokuSettings(
+                playerUuid = gomokuPlayerUuid,
+                lastNickname = gomokuLastNickname,
+                showModule = showGomokuModuleCheckBox?.isSelected ?: baseState.gomoku.showModule,
+            ),
             showStatusBarWidget = showStatusBarWidgetCheckBox?.isSelected ?: baseState.showStatusBarWidget,
             showHoldingProfit = showHoldingProfitCheckBox?.isSelected ?: baseState.showHoldingProfit,
         )
@@ -626,7 +643,6 @@ class MoFishSettingsConfigurable : Configurable {
         return enabledModuleCheckBoxes
             .filterValues { it.isSelected }
             .keys
-            .ifEmpty { MoFishRefreshModule.defaultEnabledModules }
     }
 
     private fun readStatusBarModules(fallbackModules: Set<MoFishRefreshModule>): Set<MoFishRefreshModule> {
@@ -662,6 +678,8 @@ private data class SettingsEditorFields(
     val stockCodesField: JBTextField,
     val cryptoCodesField: JBTextField,
     val gomokuPlayerUuidField: JBTextField,
+    val gomokuLastNicknameField: JBTextField,
+    val showGomokuModuleCheckBox: JBCheckBox,
     val moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor>,
     val stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox>,
     val enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,

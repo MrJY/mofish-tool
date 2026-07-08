@@ -81,6 +81,7 @@ internal class GomokuModulePanel(
     init {
         isOpaque = false
         border = JBUI.Borders.empty(8, 10, 8, 10)
+        nicknameField.text = settingsService.snapshot().gomoku.lastNickname
         userList.addListSelectionListener { updateActionState() }
         add(createHeader(), BorderLayout.NORTH)
         add(createMainPanel(), BorderLayout.CENTER)
@@ -246,10 +247,23 @@ internal class GomokuModulePanel(
             Messages.showErrorDialog(this, "请先输入昵称。", "连接五子棋服务器")
             return
         }
+        saveLastNickname(nickname)
         statusLabel.text = "正在连接服务器..."
         val request = Request.Builder().url(DEFAULT_SERVER_URL).build()
         webSocket = httpClient.newWebSocket(request, GomokuSocketListener(nickname))
         updateActionState()
+    }
+
+    private fun saveLastNickname(nickname: String) {
+        val currentState = settingsService.snapshot()
+        if (currentState.gomoku.lastNickname == nickname) {
+            return
+        }
+        settingsService.replaceState(
+            currentState.copy(
+                gomoku = currentState.gomoku.copy(lastNickname = nickname),
+            )
+        )
     }
 
     private fun inviteSelectedUser() {
@@ -327,6 +341,7 @@ internal class GomokuModulePanel(
     private fun handleRegistered(payload: JsonObject) {
         registeredUuid = payload.string("uuid") ?: ensurePlayerUuid()
         registeredNickname = payload.string("nickname")
+        registeredNickname?.takeIf { it.isNotBlank() }?.let(::saveLastNickname)
         val wins = payload.int("wins") ?: 0
         val losses = payload.int("losses") ?: 0
         val games = payload.int("games") ?: wins + losses
