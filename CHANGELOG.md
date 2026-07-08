@@ -6,6 +6,13 @@ versioning.
 
 ## Unreleased
 
+- Moved the Gomoku UUID display to a dedicated settings section and avoided regenerating UUIDs on restart.
+- Improved Gomoku board sizing so it adapts down to 240px before scrolling, with a softer grid style.
+- Switched the Gomoku Docker Compose data mount from a named volume to local `./data`.
+- 将五子棋 UUID 展示移到设置页独立模块，并避免重启时重新生成 UUID。
+- 优化五子棋棋盘尺寸，缩小到 240px 后再滚动，并降低棋盘线视觉存在感。
+- 将五子棋 Docker Compose 数据挂载从命名卷改为本地 `./data` 目录。
+
 ## 1.0.6 - 2026-07-08
 
 - Added a `mofish五子棋` tab with nickname registration, UUID-based identity, online users, invitations, automatic matching, board play, and resign support.

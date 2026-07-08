@@ -5,6 +5,7 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.Messages
+import com.intellij.ui.JBColor
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
@@ -67,6 +68,8 @@ class MoFishSettingsConfigurable : Configurable {
                         createRefreshPanel(ui)
                     )
                 )
+                add(Box.createVerticalStrut(JBUI.scale(10)))
+                add(createSection("五子棋", "维护五子棋身份标识；对局数、胜负记录都绑定到 UUID。", createGomokuPanel(ui)))
                 add(Box.createVerticalStrut(JBUI.scale(10)))
                 add(createSection("持仓与提醒", "集中维护已添加标的的持仓和提醒规则。", createAssetRulesPanel(ui)))
                 add(Box.createVerticalGlue())
@@ -157,7 +160,9 @@ class MoFishSettingsConfigurable : Configurable {
 
     @Throws(ConfigurationException::class)
     override fun apply() {
-        settingsService.replaceState(readEditorState())
+        val updatedState = readEditorState(generateMissingGomokuUuid = true)
+        settingsService.replaceState(updatedState)
+        gomokuPlayerUuidField?.text = updatedState.gomoku.playerUuid
     }
 
     override fun reset() {
@@ -198,7 +203,22 @@ class MoFishSettingsConfigurable : Configurable {
             .addLabeledComponent("状态栏内容：", createFlowPanel(ui.statusBarModuleCheckBoxes.values.toList()))
             .addLabeledComponent("滚动间隔：", createSecondsEditor(ui.statusBarRotationIntervalSpinner))
             .addComponent(ui.showHoldingProfitCheckBox)
-            .addLabeledComponent("五子棋 UUID：", ui.gomokuPlayerUuidField)
+            .panel
+    }
+
+    private fun createGomokuPanel(ui: SettingsEditorFields): JComponent {
+        return FormBuilder.createFormBuilder()
+            .addLabeledComponent("玩家 UUID：", ui.gomokuPlayerUuidField)
+            .addComponent(
+                JBLabel("首次连接五子棋或保存空 UUID 时会自动生成；同一个 UUID 代表同一个用户，战绩绑定到这个 UUID。").apply {
+                    foreground = JBColor.GRAY
+                }
+            )
+            .addComponent(
+                JBLabel("可以手动设置自己的 UUID，但不能少于 32 位；修改后会被服务端视为另一个用户。").apply {
+                    foreground = JBColor.GRAY
+                }
+            )
             .panel
     }
 
@@ -337,7 +357,7 @@ class MoFishSettingsConfigurable : Configurable {
         updateDraftSummaries()
     }
 
-    private fun readEditorState(): MoFishSettingsState {
+    private fun readEditorState(generateMissingGomokuUuid: Boolean = false): MoFishSettingsState {
         val baseState = settingsService.snapshot()
         val stockCodes = parseLowercaseCodes(stockCodesField?.text.orEmpty())
         val stockCodeSet = stockCodes.toSet()
@@ -353,8 +373,13 @@ class MoFishSettingsConfigurable : Configurable {
             ?: baseState.refresh.intervalSeconds
         val firstRefreshWindow = moduleRefreshSettings.values.firstOrNull { it.enabled }
             ?: baseState.refresh.settingsFor(MoFishRefreshModule.STOCKS)
-        val gomokuPlayerUuid = gomokuPlayerUuidField?.text.orEmpty().trim()
-        if (gomokuPlayerUuid.length < 32) {
+        val rawGomokuPlayerUuid = gomokuPlayerUuidField?.text.orEmpty().trim()
+        val gomokuPlayerUuid = when {
+            rawGomokuPlayerUuid.isNotBlank() -> rawGomokuPlayerUuid
+            generateMissingGomokuUuid -> generateGomokuPlayerUuid()
+            else -> baseState.gomoku.playerUuid
+        }
+        if (gomokuPlayerUuid.isNotBlank() && gomokuPlayerUuid.length < 32) {
             throw ConfigurationException("五子棋 UUID 不能少于 32 位。")
         }
         return baseState.copy(

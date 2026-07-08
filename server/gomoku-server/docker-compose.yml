@@ -9,8 +9,4 @@ services:
       PYTHONUNBUFFERED: "1"
       GOMOKU_ADMIN_TOKEN: ""
     volumes:
-      - gomoku-data:/data
-
-volumes:
-  gomoku-data:
-    name: mofish-gomoku-data
+      - ./data:/data

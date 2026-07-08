@@ -149,18 +149,18 @@ SQLite 数据库在容器内路径是：
 /data/gomoku.db
 ```
 
-`docker-compose.yml` 已经把 `/data` 挂到名为 `mofish-gomoku-data` 的 Docker volume。只要不删除这个 volume，服务端重启、容器重建后，玩家昵称、对局数、胜局数、负局数都会保留。
+`docker-compose.yml` 已经把容器内的 `/data` 挂到当前项目目录下的 `./data`。所以实际数据文件在宿主机：
+
+```text
+./data/gomoku.db
+```
+
+只要不删除这个目录和数据库文件，服务端重启、容器重建后，玩家昵称、对局数、胜局数、负局数都会保留。
 
 如果要备份数据，可以执行：
 
 ```bash
-docker run --rm -v mofish-gomoku-data:/data -v "$PWD":/backup busybox cp /data/gomoku.db /backup/gomoku.db
-```
-
-也可以用下面命令查看 volume：
-
-```bash
-docker volume ls
+cp data/gomoku.db gomoku.db.backup
 ```
 
 ## 直接启动

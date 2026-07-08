@@ -37,6 +37,8 @@ import java.awt.Graphics2D
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.RenderingHints
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.DefaultListModel
@@ -63,6 +65,7 @@ internal class GomokuModulePanel(
     private val gameContentLayout = CardLayout()
     private val gameContent = JPanel(gameContentLayout)
     private lateinit var onlineUsersPanel: JComponent
+    private var boardScrollPane: JBScrollPane? = null
 
     private val nicknameField = JBTextField()
     private val connectButton = JButton("连接")
@@ -71,7 +74,6 @@ internal class GomokuModulePanel(
     private val resignButton = JButton("认输")
     private val statusLabel = JBLabel("输入昵称后连接服务器。")
     private val titleLabel = JBLabel("未连接")
-    private val uuidLabel = JBLabel()
     private val userListModel = DefaultListModel<GomokuUser>()
     private val userList = JBList(userListModel)
     private val boardComponent = GomokuBoardComponent { x, y -> playMove(x, y) }
@@ -79,8 +81,6 @@ internal class GomokuModulePanel(
     init {
         isOpaque = false
         border = JBUI.Borders.empty(8, 10, 8, 10)
-        uuidLabel.text = "UUID：${ensurePlayerUuid()}"
-        uuidLabel.foreground = MoFishUiStyle.textMuted
         userList.addListSelectionListener { updateActionState() }
         add(createHeader(), BorderLayout.NORTH)
         add(createMainPanel(), BorderLayout.CENTER)
@@ -130,18 +130,6 @@ internal class GomokuModulePanel(
                 gridy = 0
             },
         )
-        panel.add(
-            uuidLabel,
-            GridBagConstraints().apply {
-                gridx = 0
-                gridy = 1
-                gridwidth = 3
-                weightx = 1.0
-                fill = GridBagConstraints.HORIZONTAL
-                insets = JBUI.insetsTop(6)
-                anchor = GridBagConstraints.WEST
-            },
-        )
         return panel
     }
 
@@ -187,9 +175,23 @@ internal class GomokuModulePanel(
     }
 
     private fun createBoardPanel(): JComponent {
-        return JPanel(BorderLayout()).apply {
+        return JBScrollPane(boardComponent).apply {
+            border = JBUI.Borders.empty()
+            viewport.isOpaque = false
             isOpaque = false
-            add(boardComponent, BorderLayout.CENTER)
+            preferredSize = Dimension(JBUI.scale(260), JBUI.scale(260))
+            minimumSize = Dimension(0, 0)
+            horizontalScrollBarPolicy = JBScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
+            verticalScrollBarPolicy = JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
+            viewport.addComponentListener(
+                object : ComponentAdapter() {
+                    override fun componentResized(e: ComponentEvent) {
+                        boardComponent.fitToViewport(viewport.extentSize)
+                    }
+                }
+            )
+            boardScrollPane = this
+            SwingUtilities.invokeLater { boardComponent.fitToViewport(viewport.extentSize) }
         }
     }
 
@@ -328,7 +330,6 @@ internal class GomokuModulePanel(
         val wins = payload.int("wins") ?: 0
         val losses = payload.int("losses") ?: 0
         val games = payload.int("games") ?: wins + losses
-        uuidLabel.text = "UUID：${registeredUuid.orEmpty()}"
         titleLabel.text = "已连接：${registeredNickname.orEmpty()} | ${games}局 ${wins}胜 ${losses}负"
         statusLabel.text = "可自动匹配或邀请在线用户。"
         nicknameField.isEnabled = false
@@ -442,6 +443,11 @@ internal class GomokuModulePanel(
         inviteButton.isVisible = !gameActive
         resignButton.isVisible = gameActive
         gameContentLayout.show(gameContent, if (gameActive) BOARD_CARD else WAITING_CARD)
+        if (gameActive) {
+            SwingUtilities.invokeLater {
+                boardScrollPane?.viewport?.extentSize?.let(boardComponent::fitToViewport)
+            }
+        }
         revalidate()
         repaint()
     }
@@ -456,7 +462,6 @@ internal class GomokuModulePanel(
         override fun onOpen(webSocket: WebSocket, response: Response) {
             onUiThread {
                 val playerUuid = ensurePlayerUuid()
-                uuidLabel.text = "UUID：$playerUuid"
                 statusLabel.text = "已连接服务器，正在注册昵称..."
                 sendJson(
                     buildJsonObject {
@@ -504,8 +509,8 @@ internal class GomokuModulePanel(
         private val onMove: (Int, Int) -> Unit,
     ) : JComponent() {
         init {
-            preferredSize = Dimension(JBUI.scale(520), JBUI.scale(520))
-            minimumSize = Dimension(JBUI.scale(320), JBUI.scale(320))
+            preferredSize = Dimension(JBUI.scale(360), JBUI.scale(360))
+            minimumSize = Dimension(JBUI.scale(240), JBUI.scale(240))
             addMouseListener(
                 object : MouseAdapter() {
                     override fun mouseClicked(event: MouseEvent) {
@@ -520,12 +525,30 @@ internal class GomokuModulePanel(
             )
         }
 
+        fun fitToViewport(viewportSize: Dimension) {
+            val minSize = JBUI.scale(240)
+            val maxSize = JBUI.scale(360)
+            val availableSide = minOf(viewportSize.width, viewportSize.height)
+            val boardOuterSize = availableSide.coerceIn(minSize, maxSize)
+            val viewWidth = viewportSize.width.coerceAtLeast(minSize)
+            val updatedSize = Dimension(viewWidth, boardOuterSize)
+            if (preferredSize != updatedSize || size != updatedSize) {
+                preferredSize = updatedSize
+                minimumSize = Dimension(minSize, minSize)
+                size = updatedSize
+                revalidate()
+                repaint()
+            }
+        }
+
         override fun paintComponent(g: Graphics) {
             val g2 = g.create() as Graphics2D
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             val boardRect = boardRect()
-            drawGrid(g2, boardRect)
-            drawStones(g2, boardRect)
+            if (boardRect.size > 0) {
+                drawGrid(g2, boardRect)
+                drawStones(g2, boardRect)
+            }
             g2.dispose()
         }
 
@@ -533,7 +556,7 @@ internal class GomokuModulePanel(
             val cell = rect.size.toDouble() / (BOARD_SIZE + 1)
             val start = rect.x + cell
             val end = rect.x + rect.size - cell
-            g2.color = JBColor(Color(0x3D2A17), Color(0x2C2118))
+            g2.color = JBColor(Color(0xC9BCA8), Color(0x5F574E))
             g2.stroke = BasicStroke(JBUI.scale(1f))
             repeat(BOARD_SIZE) { index ->
                 val p = (start + cell * index).toInt()
@@ -544,7 +567,7 @@ internal class GomokuModulePanel(
                 listOf(3, 7, 11).forEach { y ->
                     val cx = (start + cell * x).toInt()
                     val cy = (start + cell * y).toInt()
-                    val r = JBUI.scale(3)
+                    val r = JBUI.scale(2)
                     g2.fillOval(cx - r, cy - r, r * 2, r * 2)
                 }
             }
@@ -599,8 +622,8 @@ internal class GomokuModulePanel(
 
         private fun boardRect(): BoardRect {
             val padding = JBUI.scale(10)
-            val availableWidth = (width - padding * 2).coerceAtLeast(JBUI.scale(260))
-            val availableHeight = (height - padding * 2).coerceAtLeast(JBUI.scale(260))
+            val availableWidth = (width - padding * 2).coerceAtLeast(0)
+            val availableHeight = (height - padding * 2).coerceAtLeast(0)
             val finalSize = minOf(availableWidth, availableHeight)
             return BoardRect((width - finalSize) / 2, padding, finalSize)
         }
