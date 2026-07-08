@@ -6,6 +6,7 @@ import online.mofish.tool.domain.HoldingConfig
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.domain.ReminderRule
 import java.io.Serializable
+import java.util.UUID
 
 enum class MoFishSortDirection(
     private val displayName: String,
@@ -140,6 +141,10 @@ data class MoFishStatusBarSettings(
     val rotationIntervalSeconds: Int = 3,
 ) : Serializable
 
+data class MoFishGomokuSettings(
+    val playerUuid: String = generateGomokuPlayerUuid(),
+) : Serializable
+
 data class MoFishSettingsState(
     val watchlist: MoFishWatchlistSettings = MoFishWatchlistSettings(),
     val holdings: List<HoldingConfig> = emptyList(),
@@ -148,6 +153,7 @@ data class MoFishSettingsState(
     val refresh: MoFishRefreshSettings = MoFishRefreshSettings(),
     val ui: MoFishUiSettings = MoFishUiSettings(),
     val statusBar: MoFishStatusBarSettings = MoFishStatusBarSettings(),
+    val gomoku: MoFishGomokuSettings = MoFishGomokuSettings(),
     val showStatusBarWidget: Boolean = true,
     val showHoldingProfit: Boolean = false,
 ) : Serializable {
@@ -161,6 +167,8 @@ data class MoFishSettingsState(
         get() = refresh.openToolWindowOnStartup
 
 }
+
+internal fun generateGomokuPlayerUuid(): String = UUID.randomUUID().toString().replace("-", "")
 
 private const val MINUTES_PER_DAY = 24 * 60
 

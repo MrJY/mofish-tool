@@ -1,0 +1,16 @@
+services:
+  gomoku-server:
+    build: .
+    container_name: mofish-gomoku-server
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    environment:
+      PYTHONUNBUFFERED: "1"
+      GOMOKU_ADMIN_TOKEN: ""
+    volumes:
+      - gomoku-data:/data
+
+volumes:
+  gomoku-data:
+    name: mofish-gomoku-data

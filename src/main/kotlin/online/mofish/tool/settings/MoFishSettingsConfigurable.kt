@@ -28,6 +28,7 @@ class MoFishSettingsConfigurable : Configurable {
     private var fundCodesField: JBTextField? = null
     private var stockCodesField: JBTextField? = null
     private var cryptoCodesField: JBTextField? = null
+    private var gomokuPlayerUuidField: JBTextField? = null
     private var moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor> = emptyMap()
     private var stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox> = emptyMap()
     private var enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
@@ -91,6 +92,7 @@ class MoFishSettingsConfigurable : Configurable {
             fundCodesField = JBTextField(),
             stockCodesField = JBTextField(),
             cryptoCodesField = JBTextField(),
+            gomokuPlayerUuidField = JBTextField(),
             moduleRefreshEditors = MoFishRefreshModule.autoRefreshModules.associateWith(::createModuleRefreshEditor),
             stockTableColumnCheckBoxes = MoFishStockTableColumn.entries.associateWith { column ->
                 JBCheckBox(column.toString())
@@ -131,6 +133,7 @@ class MoFishSettingsConfigurable : Configurable {
         fundCodesField = ui.fundCodesField
         stockCodesField = ui.stockCodesField
         cryptoCodesField = ui.cryptoCodesField
+        gomokuPlayerUuidField = ui.gomokuPlayerUuidField
         moduleRefreshEditors = ui.moduleRefreshEditors
         stockTableColumnCheckBoxes = ui.stockTableColumnCheckBoxes
         enabledModuleCheckBoxes = ui.enabledModuleCheckBoxes
@@ -169,6 +172,7 @@ class MoFishSettingsConfigurable : Configurable {
         fundCodesField = null
         stockCodesField = null
         cryptoCodesField = null
+        gomokuPlayerUuidField = null
         moduleRefreshEditors = emptyMap()
         stockTableColumnCheckBoxes = emptyMap()
         enabledModuleCheckBoxes = emptyMap()
@@ -194,6 +198,7 @@ class MoFishSettingsConfigurable : Configurable {
             .addLabeledComponent("状态栏内容：", createFlowPanel(ui.statusBarModuleCheckBoxes.values.toList()))
             .addLabeledComponent("滚动间隔：", createSecondsEditor(ui.statusBarRotationIntervalSpinner))
             .addComponent(ui.showHoldingProfitCheckBox)
+            .addLabeledComponent("五子棋 UUID：", ui.gomokuPlayerUuidField)
             .panel
     }
 
@@ -311,6 +316,7 @@ class MoFishSettingsConfigurable : Configurable {
         fundCodesField?.text = joinCodes(state.watchlist.fundCodes)
         stockCodesField?.text = joinCodes(state.watchlist.stockCodes)
         cryptoCodesField?.text = joinCodes(state.watchlist.cryptoIds)
+        gomokuPlayerUuidField?.text = state.gomoku.playerUuid
         moduleRefreshEditors.forEach { (module, editor) ->
             editor.write(state.refresh.settingsFor(module))
         }
@@ -347,6 +353,10 @@ class MoFishSettingsConfigurable : Configurable {
             ?: baseState.refresh.intervalSeconds
         val firstRefreshWindow = moduleRefreshSettings.values.firstOrNull { it.enabled }
             ?: baseState.refresh.settingsFor(MoFishRefreshModule.STOCKS)
+        val gomokuPlayerUuid = gomokuPlayerUuidField?.text.orEmpty().trim()
+        if (gomokuPlayerUuid.length < 32) {
+            throw ConfigurationException("五子棋 UUID 不能少于 32 位。")
+        }
         return baseState.copy(
             watchlist = MoFishWatchlistSettings(
                 fundCodes = parseFundCodes(fundCodesField?.text.orEmpty()),
@@ -379,6 +389,7 @@ class MoFishSettingsConfigurable : Configurable {
                     ?.coerceIn(1, 300)
                     ?: baseState.statusBar.rotationIntervalSeconds,
             ),
+            gomoku = MoFishGomokuSettings(playerUuid = gomokuPlayerUuid),
             showStatusBarWidget = showStatusBarWidgetCheckBox?.isSelected ?: baseState.showStatusBarWidget,
             showHoldingProfit = showHoldingProfitCheckBox?.isSelected ?: baseState.showHoldingProfit,
         )
@@ -625,6 +636,7 @@ private data class SettingsEditorFields(
     val fundCodesField: JBTextField,
     val stockCodesField: JBTextField,
     val cryptoCodesField: JBTextField,
+    val gomokuPlayerUuidField: JBTextField,
     val moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor>,
     val stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox>,
     val enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,

@@ -1,0 +1,2 @@
+"""MoFish Gomoku server package."""
+

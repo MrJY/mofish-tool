@@ -6,6 +6,19 @@ versioning.
 
 ## Unreleased
 
+## 1.0.6 - 2026-07-08
+
+- Added a `mofish五子棋` tab with nickname registration, UUID-based identity, online users, invitations, automatic matching, board play, and resign support.
+- Added persistent Gomoku player UUID settings and validation.
+- Added a Python Gomoku WebSocket server with SQLite-backed player records, win/loss/game statistics, health checks, a simple admin page, and Docker Compose deployment.
+- Switched the default Gomoku server endpoint to `wss://demo.mrjy.online/gomoku`.
+- Improved Gomoku connection failure messages with detailed error and response information.
+- 新增 `mofish五子棋` 标签页，支持昵称注册、UUID 身份、在线用户、邀请对局、自动匹配、棋盘落子和认输。
+- 新增五子棋玩家 UUID 设置持久化和长度校验。
+- 新增 Python 五子棋 WebSocket 服务端，使用 SQLite 持久化玩家战绩，并提供健康检查、简单管理页面和 Docker Compose 部署。
+- 默认五子棋连接地址切换为 `wss://demo.mrjy.online/gomoku`。
+- 优化五子棋连接失败提示，展示更具体的异常和响应信息。
+
 ## 1.0.5 - 2026-07-07
 
 - Added add/remove support for the foreign exchange watchlist with searchable currency selection.

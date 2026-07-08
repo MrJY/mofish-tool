@@ -16,6 +16,7 @@ internal data class ModuleNavItem(
 
 internal val MODULE_NAV_WIDTH = JBUI.scale(120)
 internal val MODULE_NAV_COLLAPSED_WIDTH = JBUI.scale(28)
+internal const val GOMOKU_VIEW_ID = "gomoku"
 internal val DEFAULT_MODULES = MoFishRefreshModule.visibleModules.map { module ->
     ModuleNavItem(module.viewId, module.toString())
-}
+} + ModuleNavItem(GOMOKU_VIEW_ID, "mofish五子棋")

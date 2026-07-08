@@ -16,6 +16,7 @@ import online.mofish.tool.data.stock.canonicalizeStockInputCode
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.services.MoFishWatchlistService
 import online.mofish.tool.services.normalizeForexCode
+import online.mofish.tool.settings.MoFishSettingsService
 import online.mofish.tool.state.MoFishWatchlistState
 import online.mofish.tool.ui.dialogs.MoFishSearchableChoiceDialog
 import online.mofish.tool.ui.dialogs.SearchableChoice
@@ -71,6 +72,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     private val forexModule = ForexModulePanel(moduleCallbacks)
     private val cryptoModule = CryptoModulePanel(moduleCallbacks)
     private val fundModule = FundModulePanel(moduleCallbacks)
+    private val gomokuModule = GomokuModulePanel(service<MoFishSettingsService>())
 
     private lateinit var tabComponent: ModuleTabComponent
     private var lastEnabledViewIds = emptyList<String>()
@@ -87,6 +89,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         moduleContent.add(fundModule.createComponent(), "funds")
         moduleContent.add(cryptoModule.createComponent(), "crypto")
         moduleContent.add(forexModule.createComponent(), "forex")
+        moduleContent.add(gomokuModule, GOMOKU_VIEW_ID)
 
         val container = JPanel(BorderLayout())
         container.border = JBUI.Borders.empty()
@@ -105,6 +108,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     override fun dispose() {
         disposed = true
         stockModule.dispose()
+        gomokuModule.dispose()
         watchlistService.deactivate()
         scope.cancel()
     }
@@ -151,6 +155,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
         fundModule.render(snapshot)
         cryptoModule.render(snapshot)
         forexModule.render(snapshot)
+        gomokuModule.render()
     }
 
     /**
@@ -198,7 +203,7 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
             .intersect(MoFishRefreshModule.visibleModules)
             .ifEmpty { MoFishRefreshModule.defaultEnabledModules }
         return DEFAULT_MODULES.filter { item ->
-            enabledModules.any { module -> module.viewId == item.viewId }
+            item.viewId == GOMOKU_VIEW_ID || enabledModules.any { module -> module.viewId == item.viewId }
         }.ifEmpty {
             DEFAULT_MODULES
         }
