@@ -3,3 +3,5 @@
 .idea
 .intellijPlatform
 build
+__pycache__/
+*.py[cod]

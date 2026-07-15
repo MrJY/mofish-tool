@@ -73,7 +73,7 @@ class MoFishSettingsConfigurable : Configurable {
                     )
                 )
                 add(Box.createVerticalStrut(JBUI.scale(10)))
-                add(createSection("五子棋", "维护五子棋身份标识；对局数、胜负记录都绑定到 UUID。", createGomokuPanel(ui)))
+                add(createSection("mofish5", "维护 mofish5 身份标识；对局数、胜负记录都绑定到 UUID。", createGomokuPanel(ui)))
                 add(Box.createVerticalStrut(JBUI.scale(10)))
                 add(createSection("持仓与提醒", "集中维护已添加标的的持仓和提醒规则。", createAssetRulesPanel(ui)))
                 add(Box.createVerticalGlue())
@@ -101,8 +101,8 @@ class MoFishSettingsConfigurable : Configurable {
             cryptoCodesField = JBTextField(),
             gomokuPlayerUuidField = JBTextField(),
             gomokuLastNicknameField = JBTextField(),
-            showGomokuModuleCheckBox = JBCheckBox("显示五子棋标签页"),
-            gomokuFloatingBoardCheckBox = JBCheckBox("对局开始时显示悬浮棋盘"),
+            showGomokuModuleCheckBox = JBCheckBox("显示 mofish5 标签页"),
+            gomokuFloatingBoardCheckBox = JBCheckBox("对局开始时显示悬浮棋盘（Ctrl+Alt+5 快速切换）"),
             gomokuFloatingOpacitySpinner = JSpinner(SpinnerNumberModel(92, 30, 100, 1)).apply {
                 preferredSize = Dimension(JBUI.scale(86), preferredSize.height)
             },
@@ -232,7 +232,7 @@ class MoFishSettingsConfigurable : Configurable {
             .addLabeledComponent("上次昵称：", ui.gomokuLastNicknameField)
             .addLabeledComponent("玩家 UUID：", ui.gomokuPlayerUuidField)
             .addComponent(
-                JBLabel("首次连接五子棋或保存空 UUID 时会自动生成；同一个 UUID 代表同一个用户，战绩绑定到这个 UUID。").apply {
+                JBLabel("首次连接 mofish5 或保存空 UUID 时会自动生成；同一个 UUID 代表同一个用户，战绩绑定到这个 UUID。").apply {
                     foreground = JBColor.GRAY
                 }
             )
@@ -406,7 +406,7 @@ class MoFishSettingsConfigurable : Configurable {
             else -> baseState.gomoku.playerUuid
         }
         if (gomokuPlayerUuid.isNotBlank() && gomokuPlayerUuid.length < 32) {
-            throw ConfigurationException("五子棋 UUID 不能少于 32 位。")
+            throw ConfigurationException("mofish5 UUID 不能少于 32 位。")
         }
         val gomokuLastNickname = gomokuLastNicknameField?.text.orEmpty().trim()
         return baseState.copy(

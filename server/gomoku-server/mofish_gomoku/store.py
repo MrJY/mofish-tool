@@ -92,6 +92,26 @@ class PlayerStore:
         row = self.connection.execute("SELECT COUNT(*) AS count FROM players").fetchone()
         return int(row["count"]) if row is not None else 0
 
+    def update_player(self, player_uuid: str, nickname: str, wins: int, losses: int) -> Optional[PlayerRecord]:
+        now = utc_now()
+        with self.connection:
+            cursor = self.connection.execute(
+                """
+                UPDATE players
+                SET nickname = ?, wins = ?, losses = ?, games = ?, updated_at = ?
+                WHERE uuid = ?
+                """,
+                (nickname, wins, losses, wins + losses, now, player_uuid),
+            )
+        if cursor.rowcount == 0:
+            return None
+        return self.get_player(player_uuid)
+
+    def delete_player(self, player_uuid: str) -> bool:
+        with self.connection:
+            cursor = self.connection.execute("DELETE FROM players WHERE uuid = ?", (player_uuid,))
+        return cursor.rowcount > 0
+
     def record_result(self, winner_uuid: Optional[str], loser_uuid: Optional[str]) -> None:
         now = utc_now()
         with self.connection:

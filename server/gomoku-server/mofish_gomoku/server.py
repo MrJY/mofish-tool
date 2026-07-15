@@ -7,7 +7,7 @@ import json
 import re
 import struct
 import uuid
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 from .admin import render_admin_html
 from .models import BOARD_SIZE, MIN_PLAYER_UUID_LENGTH, Client, Room, Stone
@@ -58,6 +58,7 @@ class GomokuServer:
         raw_headers = await reader.readuntil(b"\r\n\r\n")
         lines = raw_headers.decode("iso-8859-1").split("\r\n")
         request_parts = lines[0].split(" ")
+        method = request_parts[0].upper() if request_parts else "GET"
         raw_path = request_parts[1] if len(request_parts) >= 2 else "/"
         parsed_url = urlsplit(raw_path)
         path = parsed_url.path
@@ -71,7 +72,15 @@ class GomokuServer:
             await self.send_http_response(writer, "ok\n", content_type="text/plain; charset=utf-8")
             return False
         if path == "/admin":
-            await self.handle_admin_page(writer, query)
+            try:
+                content_length = int(headers.get("content-length", "0") or "0")
+            except ValueError:
+                content_length = -1
+            if content_length < 0 or content_length > 65_536:
+                await self.send_http_response(writer, "Bad Request\n", status="400 Bad Request")
+                return False
+            body = await reader.readexactly(content_length) if content_length > 0 else b""
+            await self.handle_admin_page(writer, query, method, body)
             return False
         ws_key = headers.get("sec-websocket-key")
         if not ws_key:
@@ -90,9 +99,15 @@ class GomokuServer:
         await writer.drain()
         return True
 
-    async def handle_admin_page(self, writer: asyncio.StreamWriter, query: dict[str, list[str]]) -> None:
+    async def handle_admin_page(
+        self,
+        writer: asyncio.StreamWriter,
+        query: dict[str, list[str]],
+        method: str,
+        body: bytes,
+    ) -> None:
+        request_token = query.get("token", [""])[0]
         if self.admin_token:
-            request_token = query.get("token", [""])[0]
             if request_token != self.admin_token:
                 await self.send_http_response(
                     writer,
@@ -101,7 +116,73 @@ class GomokuServer:
                     content_type="text/plain; charset=utf-8",
                 )
                 return
-        await self.send_http_response(writer, self.admin_html(), content_type="text/html; charset=utf-8")
+        if method == "POST":
+            if not self.admin_token:
+                await self.send_http_response(
+                    writer,
+                    "Set GOMOKU_ADMIN_TOKEN before modifying player data.\n",
+                    status="403 Forbidden",
+                    content_type="text/plain; charset=utf-8",
+                )
+                return
+            form = parse_qs(body.decode("utf-8", errors="replace"))
+            message = await self.handle_admin_action(form)
+            redirect_query = urlencode({"token": request_token, "message": message})
+            await self.send_http_redirect(writer, f"/admin?{redirect_query}")
+            return
+        if method != "GET":
+            await self.send_http_response(writer, "Method Not Allowed\n", status="405 Method Not Allowed")
+            return
+        message = query.get("message", [""])[0]
+        await self.send_http_response(writer, self.admin_html(message), content_type="text/html; charset=utf-8")
+
+    async def handle_admin_action(self, form: dict[str, list[str]]) -> str:
+        action = form.get("action", [""])[0]
+        player_uuid = form.get("uuid", [""])[0].strip()
+        if not player_uuid:
+            return "操作失败：缺少玩家 UUID。"
+        async with self.lock:
+            if player_uuid in self.clients_by_uuid:
+                return "操作失败：玩家当前在线，请先让玩家断开连接。"
+            if action == "delete":
+                return "玩家数据已删除。" if self.store.delete_player(player_uuid) else "操作失败：玩家不存在。"
+            if action != "update":
+                return "操作失败：未知操作。"
+            nickname = form.get("nickname", [""])[0].strip()[:32]
+            if not NICKNAME_PATTERN.match(nickname):
+                return "操作失败：昵称只能包含中英文、数字、下划线或短横线，长度 1-32。"
+            nickname_owner = self.nickname_keys.get(nickname.casefold())
+            if nickname_owner is not None and nickname_owner != player_uuid:
+                return "操作失败：昵称正被其他在线玩家使用。"
+            wins = self.parse_admin_count(form, "wins")
+            losses = self.parse_admin_count(form, "losses")
+            if wins is None or losses is None:
+                return "操作失败：胜负场次必须是 0-1000000 之间的整数。"
+            updated = self.store.update_player(player_uuid, nickname, wins, losses)
+            return "玩家数据已保存。" if updated is not None else "操作失败：玩家不存在。"
+
+    @staticmethod
+    def parse_admin_count(form: dict[str, list[str]], field: str) -> int | None:
+        try:
+            value = int(form.get(field, [""])[0])
+        except (TypeError, ValueError):
+            return None
+        return value if 0 <= value <= 1_000_000 else None
+
+    async def send_http_redirect(self, writer: asyncio.StreamWriter, location: str) -> None:
+        writer.write(
+            (
+                "HTTP/1.1 303 See Other\r\n"
+                f"Location: {location}\r\n"
+                "Content-Length: 0\r\n"
+                "Cache-Control: no-store\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+            ).encode("utf-8")
+        )
+        await writer.drain()
+        writer.close()
+        await writer.wait_closed()
 
     async def send_http_response(
         self,
@@ -125,10 +206,17 @@ class GomokuServer:
         writer.close()
         await writer.wait_closed()
 
-    def admin_html(self) -> str:
+    def admin_html(self, message: str = "") -> str:
         online_clients = [client for client in self.clients_by_uuid.values() if client.registered]
         waiting_uuids = {client.player_uuid for client in self.random_queue if client.player_uuid}
-        return render_admin_html(self.store, online_clients, self.rooms_by_id.values(), waiting_uuids)
+        return render_admin_html(
+            self.store,
+            online_clients,
+            self.rooms_by_id.values(),
+            waiting_uuids,
+            admin_token=self.admin_token,
+            message=message,
+        )
 
     async def read_text_frame(self, reader: asyncio.StreamReader) -> str | None:
         first = await reader.readexactly(1)

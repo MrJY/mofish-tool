@@ -11,6 +11,7 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
 import online.mofish.tool.settings.MoFishSettingsService
 import online.mofish.tool.settings.generateGomokuPlayerUuid
+import online.mofish.tool.services.Mofish5FloatingBoardController
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -29,6 +30,8 @@ import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Color
+import java.awt.Component
+import java.awt.Cursor
 import java.awt.Dialog
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -38,6 +41,7 @@ import java.awt.Graphics2D
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Point
+import java.awt.Rectangle
 import java.awt.RenderingHints
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
@@ -56,6 +60,7 @@ import javax.swing.WindowConstants
 
 internal class GomokuModulePanel(
     private val settingsService: MoFishSettingsService,
+    private val floatingBoardController: Mofish5FloatingBoardController,
 ) : JPanel(BorderLayout(JBUI.scale(10), JBUI.scale(8))) {
     private val httpClient = OkHttpClient()
     private val json = Json { ignoreUnknownKeys = true }
@@ -74,6 +79,8 @@ internal class GomokuModulePanel(
     private var boardScrollPane: JBScrollPane? = null
     private var floatingBoardDialog: JDialog? = null
     private var floatingBoardDismissedForCurrentGame = false
+    private var floatingBoardShownByShortcut = false
+    private val toggleFloatingBoardHandler: () -> Unit = ::toggleFloatingBoard
 
     private val nicknameField = JBTextField()
     private val connectButton = JButton("连接")
@@ -85,7 +92,7 @@ internal class GomokuModulePanel(
     private val userListModel = DefaultListModel<GomokuUser>()
     private val userList = JBList(userListModel)
     private val boardComponent = GomokuBoardComponent { x, y -> playMove(x, y) }
-    private val floatingBoardComponent = GomokuBoardComponent { x, y -> playMove(x, y) }
+    private val floatingBoardComponent = GomokuBoardComponent(JBUI.scale(2)) { x, y -> playMove(x, y) }
 
     init {
         isOpaque = false
@@ -94,6 +101,7 @@ internal class GomokuModulePanel(
         userList.addListSelectionListener { updateActionState() }
         add(createHeader(), BorderLayout.NORTH)
         add(createMainPanel(), BorderLayout.CENTER)
+        floatingBoardController.register(toggleFloatingBoardHandler)
         updateActionState()
     }
 
@@ -107,6 +115,7 @@ internal class GomokuModulePanel(
         webSocket = null
         floatingBoardDialog?.dispose()
         floatingBoardDialog = null
+        floatingBoardController.unregister(toggleFloatingBoardHandler)
         httpClient.dispatcher.executorService.shutdown()
     }
 
@@ -256,7 +265,7 @@ internal class GomokuModulePanel(
 
         val nickname = nicknameField.text.trim()
         if (nickname.isBlank()) {
-            Messages.showErrorDialog(this, "请先输入昵称。", "连接五子棋服务器")
+            Messages.showErrorDialog(this, "请先输入昵称。", "连接 mofish5 服务器")
             return
         }
         saveLastNickname(nickname)
@@ -378,8 +387,8 @@ internal class GomokuModulePanel(
         val fromUuid = payload.string("fromUuid") ?: return
         val answer = Messages.showYesNoDialog(
             this,
-            "$from 邀请你下五子棋，是否接受？",
-            "五子棋邀请",
+            "$from 邀请你下 mofish5，是否接受？",
+            "mofish5 邀请",
             Messages.getQuestionIcon(),
         )
         sendJson(
@@ -393,6 +402,7 @@ internal class GomokuModulePanel(
     private fun handleGameStart(payload: JsonObject) {
         clearBoard()
         floatingBoardDismissedForCurrentGame = false
+        floatingBoardShownByShortcut = false
         roomId = payload.string("roomId")
         myStone = Stone.fromWire(payload.string("stone"))
         currentTurn = Stone.BLACK
@@ -435,6 +445,7 @@ internal class GomokuModulePanel(
         roomId = null
         currentTurn = Stone.BLACK
         statusLabel.text = message
+        floatingBoardShownByShortcut = false
         hideFloatingBoard()
         updateActionState()
         boardComponent.repaint()
@@ -454,6 +465,7 @@ internal class GomokuModulePanel(
         statusLabel.text = message
         nicknameField.isEnabled = true
         connectButton.text = "连接"
+        floatingBoardShownByShortcut = false
         hideFloatingBoard()
         updateActionState()
         boardComponent.repaint()
@@ -472,7 +484,7 @@ internal class GomokuModulePanel(
     private fun syncFloatingBoardFromSettings() {
         val settings = settingsService.snapshot().gomoku
         val dialog = floatingBoardDialog
-        if (!settings.floatingBoardEnabled) {
+        if (!settings.floatingBoardEnabled && !floatingBoardShownByShortcut) {
             hideFloatingBoard()
             floatingBoardDismissedForCurrentGame = false
             return
@@ -481,13 +493,13 @@ internal class GomokuModulePanel(
             applyFloatingBoardOpacity(dialog, settings.floatingBoardOpacity)
         }
         if (gameActive) {
-            showFloatingBoardIfEnabled()
+            showFloatingBoardIfEnabled(force = floatingBoardShownByShortcut)
         }
     }
 
-    private fun showFloatingBoardIfEnabled() {
+    private fun showFloatingBoardIfEnabled(force: Boolean = false) {
         val settings = settingsService.snapshot().gomoku
-        if (!settings.floatingBoardEnabled || floatingBoardDismissedForCurrentGame) {
+        if ((!settings.floatingBoardEnabled && !force) || floatingBoardDismissedForCurrentGame) {
             return
         }
         val dialog = floatingBoardDialog ?: createFloatingBoardDialog().also {
@@ -505,17 +517,19 @@ internal class GomokuModulePanel(
     private fun createFloatingBoardDialog(): JDialog {
         return JDialog(
             SwingUtilities.getWindowAncestor(this),
-            "五子棋悬浮棋盘",
+            "mofish5 悬浮棋盘",
             Dialog.ModalityType.MODELESS,
         ).apply {
             isUndecorated = true
             defaultCloseOperation = WindowConstants.HIDE_ON_CLOSE
             isAlwaysOnTop = true
             minimumSize = Dimension(JBUI.scale(260), JBUI.scale(260))
-            preferredSize = Dimension(JBUI.scale(420), JBUI.scale(420))
+            preferredSize = Dimension(JBUI.scale(420), JBUI.scale(440))
             contentPane.layout = BorderLayout()
-            contentPane.add(createFloatingBoardHeader(this), BorderLayout.NORTH)
+            val header = createFloatingBoardHeader(this)
+            contentPane.add(header, BorderLayout.NORTH)
             contentPane.add(floatingBoardComponent, BorderLayout.CENTER)
+            installFloatingBoardWindowInteractions(this, header)
             addWindowListener(
                 object : WindowAdapter() {
                     override fun windowClosing(e: WindowEvent) {
@@ -535,40 +549,140 @@ internal class GomokuModulePanel(
     }
 
     private fun createFloatingBoardHeader(dialog: JDialog): JComponent {
-        var dragOffset: Point? = null
-        val dragHandler = object : MouseAdapter() {
-            override fun mousePressed(event: MouseEvent) {
-                dragOffset = event.point
-            }
-
-            override fun mouseDragged(event: MouseEvent) {
-                val offset = dragOffset ?: return
-                val screenPoint = event.locationOnScreen
-                dialog.setLocation(screenPoint.x - offset.x, screenPoint.y - offset.y)
-            }
-        }
-        val title = JBLabel("五子棋").apply {
+        val title = JBLabel("mofish5").apply {
             foreground = MoFishUiStyle.textMuted
-            addMouseListener(dragHandler)
-            addMouseMotionListener(dragHandler)
         }
         return JPanel(BorderLayout()).apply {
             isOpaque = false
-            border = JBUI.Borders.empty(3, 8, 3, 4)
-            addMouseListener(dragHandler)
-            addMouseMotionListener(dragHandler)
+            border = JBUI.Borders.empty(1, 4, 1, 2)
             add(title, BorderLayout.WEST)
             add(
                 JButton("×").apply {
                     isFocusable = false
-                    margin = JBUI.insets(0, 6)
+                    isContentAreaFilled = false
+                    border = JBUI.Borders.empty()
+                    margin = JBUI.emptyInsets()
+                    preferredSize = Dimension(JBUI.scale(20), JBUI.scale(18))
                     addActionListener {
                         floatingBoardDismissedForCurrentGame = true
+                        floatingBoardShownByShortcut = false
                         dialog.isVisible = false
                     }
                 },
                 BorderLayout.EAST,
             )
+        }
+    }
+
+    private fun installFloatingBoardWindowInteractions(dialog: JDialog, header: JComponent) {
+        var resizeEdges = 0
+        var initialBounds: Rectangle? = null
+        var initialScreenPoint: Point? = null
+        var moveOffset: Point? = null
+        val moveComponents = setOf<Component>(header, header.getComponent(0))
+        val handler = object : MouseAdapter() {
+            override fun mouseMoved(event: MouseEvent) {
+                event.component.cursor = Cursor.getPredefinedCursor(cursorForEdges(resizeEdgesAt(dialog, event)))
+            }
+
+            override fun mousePressed(event: MouseEvent) {
+                resizeEdges = resizeEdgesAt(dialog, event)
+                initialBounds = dialog.bounds
+                initialScreenPoint = event.locationOnScreen
+                moveOffset = if (resizeEdges == 0 && event.component in moveComponents) {
+                    Point(event.xOnScreen - dialog.x, event.yOnScreen - dialog.y)
+                } else {
+                    null
+                }
+            }
+
+            override fun mouseDragged(event: MouseEvent) {
+                val offset = moveOffset
+                if (offset != null) {
+                    dialog.setLocation(event.xOnScreen - offset.x, event.yOnScreen - offset.y)
+                    return
+                }
+                val bounds = initialBounds ?: return
+                val start = initialScreenPoint ?: return
+                if (resizeEdges == 0) {
+                    return
+                }
+                resizeFloatingBoard(dialog, bounds, event.xOnScreen - start.x, event.yOnScreen - start.y, resizeEdges)
+            }
+
+            override fun mouseReleased(event: MouseEvent) {
+                resizeEdges = 0
+                initialBounds = null
+                initialScreenPoint = null
+                moveOffset = null
+            }
+        }
+        listOf(header, header.getComponent(0), floatingBoardComponent).forEach { component ->
+            component.addMouseListener(handler)
+            component.addMouseMotionListener(handler)
+        }
+    }
+
+    private fun resizeEdgesAt(dialog: JDialog, event: MouseEvent): Int {
+        val point = SwingUtilities.convertPoint(event.component, event.point, dialog)
+        val margin = JBUI.scale(6)
+        var edges = 0
+        if (point.x <= margin) edges = edges or RESIZE_LEFT
+        if (point.x >= dialog.width - margin) edges = edges or RESIZE_RIGHT
+        if (point.y <= margin) edges = edges or RESIZE_TOP
+        if (point.y >= dialog.height - margin) edges = edges or RESIZE_BOTTOM
+        return edges
+    }
+
+    private fun cursorForEdges(edges: Int): Int = when (edges) {
+        RESIZE_TOP or RESIZE_LEFT, RESIZE_BOTTOM or RESIZE_RIGHT -> Cursor.NW_RESIZE_CURSOR
+        RESIZE_TOP or RESIZE_RIGHT, RESIZE_BOTTOM or RESIZE_LEFT -> Cursor.NE_RESIZE_CURSOR
+        RESIZE_LEFT, RESIZE_RIGHT -> Cursor.E_RESIZE_CURSOR
+        RESIZE_TOP, RESIZE_BOTTOM -> Cursor.N_RESIZE_CURSOR
+        else -> Cursor.DEFAULT_CURSOR
+    }
+
+    private fun resizeFloatingBoard(dialog: JDialog, initial: Rectangle, dx: Int, dy: Int, edges: Int) {
+        var x = initial.x
+        var y = initial.y
+        var width = initial.width
+        var height = initial.height
+        if (edges and RESIZE_LEFT != 0) {
+            x += dx
+            width -= dx
+        }
+        if (edges and RESIZE_RIGHT != 0) width += dx
+        if (edges and RESIZE_TOP != 0) {
+            y += dy
+            height -= dy
+        }
+        if (edges and RESIZE_BOTTOM != 0) height += dy
+        val minWidth = dialog.minimumSize.width
+        val minHeight = dialog.minimumSize.height
+        if (width < minWidth) {
+            if (edges and RESIZE_LEFT != 0) x -= minWidth - width
+            width = minWidth
+        }
+        if (height < minHeight) {
+            if (edges and RESIZE_TOP != 0) y -= minHeight - height
+            height = minHeight
+        }
+        dialog.setBounds(x, y, width, height)
+    }
+
+    private fun toggleFloatingBoard() {
+        if (!gameActive) {
+            statusLabel.text = "当前没有进行中的 mofish5 对局。"
+            return
+        }
+        if (floatingBoardDialog?.isVisible == true) {
+            floatingBoardDismissedForCurrentGame = true
+            floatingBoardShownByShortcut = false
+            hideFloatingBoard()
+        } else {
+            floatingBoardDismissedForCurrentGame = false
+            floatingBoardShownByShortcut = true
+            showFloatingBoardIfEnabled(force = true)
         }
     }
 
@@ -662,6 +776,7 @@ internal class GomokuModulePanel(
     }
 
     private inner class GomokuBoardComponent(
+        private val padding: Int = JBUI.scale(10),
         private val onMove: (Int, Int) -> Unit,
     ) : JComponent() {
         init {
@@ -782,7 +897,6 @@ internal class GomokuModulePanel(
         }
 
         private fun boardRect(): BoardRect {
-            val padding = JBUI.scale(10)
             val availableWidth = (width - padding * 2).coerceAtLeast(0)
             val availableHeight = (height - padding * 2).coerceAtLeast(0)
             val finalSize = minOf(availableWidth, availableHeight)
@@ -820,6 +934,10 @@ internal class GomokuModulePanel(
         const val WAITING_CARD = "waiting"
         const val BOARD_CARD = "board"
         const val MIN_PLAYER_UUID_LENGTH = 32
+        const val RESIZE_LEFT = 1
+        const val RESIZE_RIGHT = 2
+        const val RESIZE_TOP = 4
+        const val RESIZE_BOTTOM = 8
     }
 }
 

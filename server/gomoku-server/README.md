@@ -1,6 +1,6 @@
-# 五子棋服务端
+# mofish5 服务端
 
-这是 `mofish五子棋` 标签页使用的轻量 WebSocket 服务端。
+这是 `mofish5` 标签页使用的轻量 WebSocket 服务端。
 
 服务端只使用 Python 标准库，不需要安装第三方依赖。玩家身份、昵称和战绩使用 SQLite 保存。直接运行需要 Python 3.7+；Docker 部署会使用镜像内的 Python 3.12。
 
@@ -104,7 +104,7 @@ docker compose exec gomoku-server python -c "import urllib.request; print(urllib
 https://demo.mrjy.online/admin
 ```
 
-管理页面会显示在线用户、等待匹配人数、进行中对局和战绩榜，每 10 秒自动刷新。
+管理页面会显示在线用户、等待匹配人数、进行中对局和玩家数据，并提供手动刷新。
 
 如果要给管理页面加口令，可以编辑 `docker-compose.yml`：
 
@@ -124,6 +124,15 @@ docker compose up -d --build
 ```text
 https://demo.mrjy.online/admin?token=换成你的管理口令
 ```
+
+配置管理口令后，可以直接在玩家列表中：
+
+- 修改玩家昵称。
+- 修改胜局数和负局数，总局数会自动按胜负合计。
+- 删除不再需要的玩家数据。
+
+为了避免服务运行状态与数据库不一致，在线玩家不能修改或删除，需要先让该玩家断开连接。未配置
+`GOMOKU_ADMIN_TOKEN` 时管理页面保持只读，不能执行数据维护操作。
 
 停止服务：
 
@@ -218,7 +227,7 @@ SQLite 是持久化数据库。只要 `.db` 文件还在，服务端重启后玩
 ## 玩家身份
 
 - 每个玩家由 UUID 唯一标识。
-- 插件第一次进入五子棋标签页时，如果设置里没有 UUID，会自动生成一个 32 位 UUID 并保存到插件设置。
+- 插件第一次进入 mofish5 标签页时，如果设置里没有 UUID，会自动生成一个 32 位 UUID 并保存到插件设置。
 - 用户可以在插件设置里查看或修改自己的 UUID。
 - 自定义 UUID 不能少于 32 位。
 - 同一个 UUID 代表同一个玩家，战绩也绑定到这个 UUID。

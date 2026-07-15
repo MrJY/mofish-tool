@@ -76,5 +76,12 @@
                 icon="/icons/mofishToolWindow.svg">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
+        <action
+                id="online.mofish.tool.actions.ToggleMofish5FloatingBoardAction"
+                class="online.mofish.tool.actions.ToggleMofish5FloatingBoardAction"
+                text="切换 mofish5 悬浮棋盘"
+                description="打开或关闭当前对局的 mofish5 悬浮棋盘">
+            <keyboard-shortcut keymap="$default" first-keystroke="control alt 5"/>
+        </action>
     </actions>
 </idea-plugin>

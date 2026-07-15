@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import online.mofish.tool.data.stock.canonicalizeStockInputCode
 import online.mofish.tool.domain.MoFishRefreshModule
 import online.mofish.tool.services.MoFishWatchlistService
+import online.mofish.tool.services.Mofish5FloatingBoardController
 import online.mofish.tool.services.normalizeForexCode
 import online.mofish.tool.settings.MoFishSettingsService
 import online.mofish.tool.state.MoFishWatchlistState
@@ -74,7 +75,10 @@ class MoFishToolWindowPanel(private val project: Project) : SimpleToolWindowPane
     private val forexModule = ForexModulePanel(moduleCallbacks)
     private val cryptoModule = CryptoModulePanel(moduleCallbacks)
     private val fundModule = FundModulePanel(moduleCallbacks)
-    private val gomokuModule = GomokuModulePanel(service<MoFishSettingsService>())
+    private val gomokuModule = GomokuModulePanel(
+        settingsService = service<MoFishSettingsService>(),
+        floatingBoardController = project.service<Mofish5FloatingBoardController>(),
+    )
 
     private lateinit var tabComponent: ModuleTabComponent
     private var lastEnabledViewIds = emptyList<String>()
