@@ -29,6 +29,7 @@ import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Color
+import java.awt.Dialog
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Font
@@ -36,17 +37,22 @@ import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
+import java.awt.Point
 import java.awt.RenderingHints
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
 import javax.swing.DefaultListModel
 import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.JDialog
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
+import javax.swing.WindowConstants
 
 internal class GomokuModulePanel(
     private val settingsService: MoFishSettingsService,
@@ -66,6 +72,8 @@ internal class GomokuModulePanel(
     private val gameContent = JPanel(gameContentLayout)
     private lateinit var onlineUsersPanel: JComponent
     private var boardScrollPane: JBScrollPane? = null
+    private var floatingBoardDialog: JDialog? = null
+    private var floatingBoardDismissedForCurrentGame = false
 
     private val nicknameField = JBTextField()
     private val connectButton = JButton("连接")
@@ -77,6 +85,7 @@ internal class GomokuModulePanel(
     private val userListModel = DefaultListModel<GomokuUser>()
     private val userList = JBList(userListModel)
     private val boardComponent = GomokuBoardComponent { x, y -> playMove(x, y) }
+    private val floatingBoardComponent = GomokuBoardComponent { x, y -> playMove(x, y) }
 
     init {
         isOpaque = false
@@ -89,12 +98,15 @@ internal class GomokuModulePanel(
     }
 
     fun render() {
+        syncFloatingBoardFromSettings()
         updateActionState()
     }
 
     fun dispose() {
         webSocket?.close(1000, "dispose")
         webSocket = null
+        floatingBoardDialog?.dispose()
+        floatingBoardDialog = null
         httpClient.dispatcher.executorService.shutdown()
     }
 
@@ -380,6 +392,7 @@ internal class GomokuModulePanel(
 
     private fun handleGameStart(payload: JsonObject) {
         clearBoard()
+        floatingBoardDismissedForCurrentGame = false
         roomId = payload.string("roomId")
         myStone = Stone.fromWire(payload.string("stone"))
         currentTurn = Stone.BLACK
@@ -387,6 +400,8 @@ internal class GomokuModulePanel(
         titleLabel.text = "房间 ${roomId.orEmpty()} | 你执${myStone.displayName}"
         statusLabel.text = if (myStone == currentTurn) "你先手。" else "等待对手落子。"
         boardComponent.repaint()
+        floatingBoardComponent.repaint()
+        showFloatingBoardIfEnabled()
     }
 
     private fun handleMove(payload: JsonObject) {
@@ -401,6 +416,7 @@ internal class GomokuModulePanel(
         currentTurn = if (stone == Stone.BLACK) Stone.WHITE else Stone.BLACK
         statusLabel.text = if (gameActive && myStone == currentTurn) "轮到你落子。" else "等待对手落子。"
         boardComponent.repaint()
+        floatingBoardComponent.repaint()
     }
 
     private fun handleGameOver(payload: JsonObject) {
@@ -419,8 +435,10 @@ internal class GomokuModulePanel(
         roomId = null
         currentTurn = Stone.BLACK
         statusLabel.text = message
+        hideFloatingBoard()
         updateActionState()
         boardComponent.repaint()
+        floatingBoardComponent.repaint()
     }
 
     private fun resetSession(message: String) {
@@ -436,8 +454,10 @@ internal class GomokuModulePanel(
         statusLabel.text = message
         nicknameField.isEnabled = true
         connectButton.text = "连接"
+        hideFloatingBoard()
         updateActionState()
         boardComponent.repaint()
+        floatingBoardComponent.repaint()
     }
 
     private fun clearBoard() {
@@ -447,6 +467,127 @@ internal class GomokuModulePanel(
             }
         }
         lastMove = null
+    }
+
+    private fun syncFloatingBoardFromSettings() {
+        val settings = settingsService.snapshot().gomoku
+        val dialog = floatingBoardDialog
+        if (!settings.floatingBoardEnabled) {
+            hideFloatingBoard()
+            floatingBoardDismissedForCurrentGame = false
+            return
+        }
+        if (dialog != null) {
+            applyFloatingBoardOpacity(dialog, settings.floatingBoardOpacity)
+        }
+        if (gameActive) {
+            showFloatingBoardIfEnabled()
+        }
+    }
+
+    private fun showFloatingBoardIfEnabled() {
+        val settings = settingsService.snapshot().gomoku
+        if (!settings.floatingBoardEnabled || floatingBoardDismissedForCurrentGame) {
+            return
+        }
+        val dialog = floatingBoardDialog ?: createFloatingBoardDialog().also {
+            floatingBoardDialog = it
+        }
+        floatingBoardComponent.repaint()
+        if (!dialog.isVisible) {
+            dialog.setLocationRelativeTo(this)
+            dialog.isVisible = true
+        }
+        applyFloatingBoardOpacity(dialog, settings.floatingBoardOpacity)
+        dialog.toFront()
+    }
+
+    private fun createFloatingBoardDialog(): JDialog {
+        return JDialog(
+            SwingUtilities.getWindowAncestor(this),
+            "五子棋悬浮棋盘",
+            Dialog.ModalityType.MODELESS,
+        ).apply {
+            isUndecorated = true
+            defaultCloseOperation = WindowConstants.HIDE_ON_CLOSE
+            isAlwaysOnTop = true
+            minimumSize = Dimension(JBUI.scale(260), JBUI.scale(260))
+            preferredSize = Dimension(JBUI.scale(420), JBUI.scale(420))
+            contentPane.layout = BorderLayout()
+            contentPane.add(createFloatingBoardHeader(this), BorderLayout.NORTH)
+            contentPane.add(floatingBoardComponent, BorderLayout.CENTER)
+            addWindowListener(
+                object : WindowAdapter() {
+                    override fun windowClosing(e: WindowEvent) {
+                        floatingBoardDismissedForCurrentGame = true
+                    }
+                }
+            )
+            addComponentListener(
+                object : ComponentAdapter() {
+                    override fun componentResized(e: ComponentEvent) {
+                        floatingBoardComponent.repaint()
+                    }
+                }
+            )
+            pack()
+        }
+    }
+
+    private fun createFloatingBoardHeader(dialog: JDialog): JComponent {
+        var dragOffset: Point? = null
+        val dragHandler = object : MouseAdapter() {
+            override fun mousePressed(event: MouseEvent) {
+                dragOffset = event.point
+            }
+
+            override fun mouseDragged(event: MouseEvent) {
+                val offset = dragOffset ?: return
+                val screenPoint = event.locationOnScreen
+                dialog.setLocation(screenPoint.x - offset.x, screenPoint.y - offset.y)
+            }
+        }
+        val title = JBLabel("五子棋").apply {
+            foreground = MoFishUiStyle.textMuted
+            addMouseListener(dragHandler)
+            addMouseMotionListener(dragHandler)
+        }
+        return JPanel(BorderLayout()).apply {
+            isOpaque = false
+            border = JBUI.Borders.empty(3, 8, 3, 4)
+            addMouseListener(dragHandler)
+            addMouseMotionListener(dragHandler)
+            add(title, BorderLayout.WEST)
+            add(
+                JButton("×").apply {
+                    isFocusable = false
+                    margin = JBUI.insets(0, 6)
+                    addActionListener {
+                        floatingBoardDismissedForCurrentGame = true
+                        dialog.isVisible = false
+                    }
+                },
+                BorderLayout.EAST,
+            )
+        }
+    }
+
+    private fun applyFloatingBoardOpacity(dialog: JDialog, opacityPercent: Int) {
+        val opacity = opacityPercent.coerceIn(30, 100) / 100f
+        val applyOpacity = {
+            dialog.opacity = opacity
+            dialog.repaint()
+        }
+        runCatching(applyOpacity)
+        if (dialog.isVisible) {
+            SwingUtilities.invokeLater {
+                runCatching(applyOpacity)
+            }
+        }
+    }
+
+    private fun hideFloatingBoard() {
+        floatingBoardDialog?.isVisible = false
     }
 
     private fun updateActionState() {
@@ -542,11 +683,8 @@ internal class GomokuModulePanel(
 
         fun fitToViewport(viewportSize: Dimension) {
             val minSize = JBUI.scale(240)
-            val maxSize = JBUI.scale(360)
-            val availableSide = minOf(viewportSize.width, viewportSize.height)
-            val boardOuterSize = availableSide.coerceIn(minSize, maxSize)
-            val viewWidth = viewportSize.width.coerceAtLeast(minSize)
-            val updatedSize = Dimension(viewWidth, boardOuterSize)
+            val boardOuterSize = viewportSize.width.coerceAtLeast(minSize)
+            val updatedSize = Dimension(boardOuterSize, boardOuterSize)
             if (preferredSize != updatedSize || size != updatedSize) {
                 preferredSize = updatedSize
                 minimumSize = Dimension(minSize, minSize)
@@ -599,19 +737,27 @@ internal class GomokuModulePanel(
                     }
                     val cx = (start + cell * x).toInt()
                     val cy = (start + cell * y).toInt()
-                    val radius = (cell * 0.42).toInt().coerceAtLeast(JBUI.scale(7))
-                    g2.color = if (stone == Stone.BLACK) Color(0x111111) else Color(0xF7F7F7)
+                    val radius = (cell * 0.32).toInt().coerceAtLeast(JBUI.scale(3))
+                    g2.color = if (stone == Stone.BLACK) {
+                        JBColor(Color(0x66594D), Color(0x8B8177))
+                    } else {
+                        JBColor(Color(0xD8CFC2), Color(0xB7AEA4))
+                    }
                     g2.fillOval(cx - radius, cy - radius, radius * 2, radius * 2)
-                    g2.color = if (stone == Stone.BLACK) Color(0x000000) else Color(0xC9C9C9)
+                    g2.color = if (stone == Stone.BLACK) {
+                        JBColor(Color(0x51473E), Color(0x756C64))
+                    } else {
+                        JBColor(Color(0xB8ADA0), Color(0x988F86))
+                    }
                     g2.drawOval(cx - radius, cy - radius, radius * 2, radius * 2)
                 }
             }
             lastMove?.let { move ->
                 val cx = (start + cell * move.x).toInt()
                 val cy = (start + cell * move.y).toInt()
-                val r = (cell * 0.18).toInt().coerceAtLeast(JBUI.scale(4))
-                g2.color = JBColor(Color(0xE03131), Color(0xFF7875))
-                g2.stroke = BasicStroke(JBUI.scale(2f))
+                val r = (cell * 0.11).toInt().coerceAtLeast(JBUI.scale(2))
+                g2.color = JBColor(Color(0xA77B6F), Color(0xA9877F))
+                g2.stroke = BasicStroke(JBUI.scale(1f))
                 g2.drawOval(cx - r, cy - r, r * 2, r * 2)
             }
         }

@@ -145,7 +145,21 @@ data class MoFishGomokuSettings(
     val playerUuid: String = "",
     val lastNickname: String = "",
     val showModule: Boolean = false,
-) : Serializable
+    val floatingBoardEnabled: Boolean = false,
+    val floatingBoardOpacity: Int = 92,
+) : Serializable {
+    private fun readResolve(): Any {
+        return if (floatingBoardOpacity in 30..100) {
+            this
+        } else {
+            copy(floatingBoardOpacity = 92)
+        }
+    }
+
+    private companion object {
+        const val serialVersionUID: Long = -4709089796976673333L
+    }
+}
 
 data class MoFishSettingsState(
     val watchlist: MoFishWatchlistSettings = MoFishWatchlistSettings(),

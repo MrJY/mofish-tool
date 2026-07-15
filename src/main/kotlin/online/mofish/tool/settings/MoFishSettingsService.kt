@@ -110,9 +110,17 @@ class MoFishSettingsPersistedState {
 }
 
 internal fun encodeSettingsState(state: MoFishSettingsState): String {
+    val serializableState = state.copy(
+        refresh = state.refresh.copy(autoRefreshModules = state.refresh.autoRefreshModules.toSet()),
+        ui = state.ui.copy(
+            stockTableColumns = state.ui.stockTableColumns.toSet(),
+            enabledModules = state.ui.enabledModules.toSet(),
+        ),
+        statusBar = state.statusBar.copy(enabledModules = state.statusBar.enabledModules.toSet()),
+    )
     val bytes = ByteArrayOutputStream().use { byteStream ->
         ObjectOutputStream(byteStream).use { objectStream ->
-            objectStream.writeObject(state)
+            objectStream.writeObject(serializableState)
         }
         byteStream.toByteArray()
     }

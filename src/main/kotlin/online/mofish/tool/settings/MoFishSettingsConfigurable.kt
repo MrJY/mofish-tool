@@ -32,6 +32,8 @@ class MoFishSettingsConfigurable : Configurable {
     private var gomokuPlayerUuidField: JBTextField? = null
     private var gomokuLastNicknameField: JBTextField? = null
     private var showGomokuModuleCheckBox: JBCheckBox? = null
+    private var gomokuFloatingBoardCheckBox: JBCheckBox? = null
+    private var gomokuFloatingOpacitySpinner: JSpinner? = null
     private var moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor> = emptyMap()
     private var stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox> = emptyMap()
     private var enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox> = emptyMap()
@@ -100,6 +102,10 @@ class MoFishSettingsConfigurable : Configurable {
             gomokuPlayerUuidField = JBTextField(),
             gomokuLastNicknameField = JBTextField(),
             showGomokuModuleCheckBox = JBCheckBox("显示五子棋标签页"),
+            gomokuFloatingBoardCheckBox = JBCheckBox("对局开始时显示悬浮棋盘"),
+            gomokuFloatingOpacitySpinner = JSpinner(SpinnerNumberModel(92, 30, 100, 1)).apply {
+                preferredSize = Dimension(JBUI.scale(86), preferredSize.height)
+            },
             moduleRefreshEditors = MoFishRefreshModule.autoRefreshModules.associateWith(::createModuleRefreshEditor),
             stockTableColumnCheckBoxes = MoFishStockTableColumn.entries.associateWith { column ->
                 JBCheckBox(column.toString())
@@ -143,6 +149,8 @@ class MoFishSettingsConfigurable : Configurable {
         gomokuPlayerUuidField = ui.gomokuPlayerUuidField
         gomokuLastNicknameField = ui.gomokuLastNicknameField
         showGomokuModuleCheckBox = ui.showGomokuModuleCheckBox
+        gomokuFloatingBoardCheckBox = ui.gomokuFloatingBoardCheckBox
+        gomokuFloatingOpacitySpinner = ui.gomokuFloatingOpacitySpinner
         moduleRefreshEditors = ui.moduleRefreshEditors
         stockTableColumnCheckBoxes = ui.stockTableColumnCheckBoxes
         enabledModuleCheckBoxes = ui.enabledModuleCheckBoxes
@@ -186,6 +194,8 @@ class MoFishSettingsConfigurable : Configurable {
         gomokuPlayerUuidField = null
         gomokuLastNicknameField = null
         showGomokuModuleCheckBox = null
+        gomokuFloatingBoardCheckBox = null
+        gomokuFloatingOpacitySpinner = null
         moduleRefreshEditors = emptyMap()
         stockTableColumnCheckBoxes = emptyMap()
         enabledModuleCheckBoxes = emptyMap()
@@ -217,6 +227,8 @@ class MoFishSettingsConfigurable : Configurable {
     private fun createGomokuPanel(ui: SettingsEditorFields): JComponent {
         return FormBuilder.createFormBuilder()
             .addComponent(ui.showGomokuModuleCheckBox)
+            .addComponent(ui.gomokuFloatingBoardCheckBox)
+            .addLabeledComponent("悬浮透明度：", createPercentEditor(ui.gomokuFloatingOpacitySpinner))
             .addLabeledComponent("上次昵称：", ui.gomokuLastNicknameField)
             .addLabeledComponent("玩家 UUID：", ui.gomokuPlayerUuidField)
             .addComponent(
@@ -349,6 +361,8 @@ class MoFishSettingsConfigurable : Configurable {
         gomokuPlayerUuidField?.text = state.gomoku.playerUuid
         gomokuLastNicknameField?.text = state.gomoku.lastNickname
         showGomokuModuleCheckBox?.isSelected = state.gomoku.showModule
+        gomokuFloatingBoardCheckBox?.isSelected = state.gomoku.floatingBoardEnabled
+        gomokuFloatingOpacitySpinner?.value = state.gomoku.floatingBoardOpacity.coerceIn(30, 100)
         moduleRefreshEditors.forEach { (module, editor) ->
             editor.write(state.refresh.settingsFor(module))
         }
@@ -378,7 +392,7 @@ class MoFishSettingsConfigurable : Configurable {
             .filterKeys { it.lowercase() in stockCodeSet }
             .filterValues { group -> stockGroups.any { it.equals(group, ignoreCase = true) } }
         val moduleRefreshSettings = readModuleRefreshSettings(baseState.refresh.effectiveModuleSettings())
-        val enabledRefreshModules = moduleRefreshSettings.filterValues { it.enabled }.keys
+        val enabledRefreshModules = moduleRefreshSettings.filterValues { it.enabled }.keys.toSet()
         val shortestIntervalSeconds = moduleRefreshSettings.values
             .filter { it.enabled }
             .minOfOrNull { it.intervalSeconds }
@@ -431,6 +445,13 @@ class MoFishSettingsConfigurable : Configurable {
                 playerUuid = gomokuPlayerUuid,
                 lastNickname = gomokuLastNickname,
                 showModule = showGomokuModuleCheckBox?.isSelected ?: baseState.gomoku.showModule,
+                floatingBoardEnabled = gomokuFloatingBoardCheckBox?.isSelected
+                    ?: baseState.gomoku.floatingBoardEnabled,
+                floatingBoardOpacity = readSpinnerValue(
+                    spinner = gomokuFloatingOpacitySpinner,
+                    fallback = baseState.gomoku.floatingBoardOpacity,
+                    range = 30..100,
+                ),
             ),
             showStatusBarWidget = showStatusBarWidgetCheckBox?.isSelected ?: baseState.showStatusBarWidget,
             showHoldingProfit = showHoldingProfitCheckBox?.isSelected ?: baseState.showHoldingProfit,
@@ -620,6 +641,24 @@ class MoFishSettingsConfigurable : Configurable {
         return panel
     }
 
+    private fun createPercentEditor(spinner: JSpinner): JPanel {
+        val panel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
+        panel.isOpaque = false
+        panel.add(spinner)
+        panel.add(JBLabel("%").apply {
+            border = JBUI.Borders.emptyLeft(6)
+        })
+        return panel
+    }
+
+    private fun readSpinnerValue(spinner: JSpinner?, fallback: Int, range: IntRange): Int {
+        if (spinner == null) {
+            return fallback
+        }
+        runCatching { spinner.commitEdit() }
+        return (spinner.value as? Number)?.toInt()?.coerceIn(range) ?: fallback
+    }
+
     private fun updateStatusBarControlsEnabled() {
         val enabled = showStatusBarWidgetCheckBox?.isSelected == true
         statusBarModuleCheckBoxes.values.forEach { it.isEnabled = enabled }
@@ -633,6 +672,7 @@ class MoFishSettingsConfigurable : Configurable {
         return stockTableColumnCheckBoxes
             .filterValues { it.isSelected }
             .keys
+            .toSet()
             .ifEmpty { MoFishStockTableColumn.defaultColumns }
     }
 
@@ -643,6 +683,7 @@ class MoFishSettingsConfigurable : Configurable {
         return enabledModuleCheckBoxes
             .filterValues { it.isSelected }
             .keys
+            .toSet()
     }
 
     private fun readStatusBarModules(fallbackModules: Set<MoFishRefreshModule>): Set<MoFishRefreshModule> {
@@ -652,6 +693,7 @@ class MoFishSettingsConfigurable : Configurable {
         return statusBarModuleCheckBoxes
             .filterValues { it.isSelected }
             .keys
+            .toSet()
     }
 
     private fun parseFundCodes(raw: String): List<String> {
@@ -680,6 +722,8 @@ private data class SettingsEditorFields(
     val gomokuPlayerUuidField: JBTextField,
     val gomokuLastNicknameField: JBTextField,
     val showGomokuModuleCheckBox: JBCheckBox,
+    val gomokuFloatingBoardCheckBox: JBCheckBox,
+    val gomokuFloatingOpacitySpinner: JSpinner,
     val moduleRefreshEditors: Map<MoFishRefreshModule, ModuleRefreshEditor>,
     val stockTableColumnCheckBoxes: Map<MoFishStockTableColumn, JBCheckBox>,
     val enabledModuleCheckBoxes: Map<MoFishRefreshModule, JBCheckBox>,

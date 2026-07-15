@@ -4,36 +4,14 @@ All notable changes to MoFish Tool are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic
 versioning.
 
-## Unreleased
+## 1.0.5 - 2026-07-15
 
-- Moved the Gomoku UUID display to a dedicated settings section and avoided regenerating UUIDs on restart.
-- Persisted the last Gomoku nickname and restored it when opening the Gomoku tab.
-- Added a Gomoku settings toggle to show or hide the Gomoku tab, disabled by default.
-- Fixed disabled tool window modules reappearing when all module toggles are turned off.
-- Improved Gomoku board sizing so it adapts down to 240px before scrolling, with a softer grid style.
-- Switched the Gomoku Docker Compose data mount from a named volume to local `./data`.
-- 将五子棋 UUID 展示移到设置页独立模块，并避免重启时重新生成 UUID。
-- 保存五子棋上次使用的昵称，并在打开五子棋标签页时自动回填。
-- 新增五子棋标签页显示开关，默认关闭。
-- 修复工具窗口模块全部关闭后反而恢复显示默认模块的问题。
-- 优化五子棋棋盘尺寸，缩小到 240px 后再滚动，并降低棋盘线视觉存在感。
-- 将五子棋 Docker Compose 数据挂载从命名卷改为本地 `./data` 目录。
-
-## 1.0.6 - 2026-07-08
-
-- Added a `mofish五子棋` tab with nickname registration, UUID-based identity, online users, invitations, automatic matching, board play, and resign support.
-- Added persistent Gomoku player UUID settings and validation.
-- Added a Python Gomoku WebSocket server with SQLite-backed player records, win/loss/game statistics, health checks, a simple admin page, and Docker Compose deployment.
-- Switched the default Gomoku server endpoint to `wss://demo.mrjy.online/gomoku`.
-- Improved Gomoku connection failure messages with detailed error and response information.
-- 新增 `mofish五子棋` 标签页，支持昵称注册、UUID 身份、在线用户、邀请对局、自动匹配、棋盘落子和认输。
-- 新增五子棋玩家 UUID 设置持久化和长度校验。
-- 新增 Python 五子棋 WebSocket 服务端，使用 SQLite 持久化玩家战绩，并提供健康检查、简单管理页面和 Docker Compose 部署。
-- 默认五子棋连接地址切换为 `wss://demo.mrjy.online/gomoku`。
-- 优化五子棋连接失败提示，展示更具体的异常和响应信息。
-
-## 1.0.5 - 2026-07-07
-
+- Added an optional Gomoku tab with persistent nickname and player identity settings.
+- Supports online players, invitations, automatic matching, board play, resigning, and game statistics.
+- Added a responsive in-tool board and an always-on-top floating board with configurable opacity.
+- 新增可选的五子棋标签页，并保存玩家昵称和身份信息。
+- 支持在线用户、邀请对局、自动匹配、棋盘落子、认输和战绩统计。
+- 支持自适应工具窗口棋盘，以及可配置透明度的置顶悬浮棋盘。
 - Added add/remove support for the foreign exchange watchlist with searchable currency selection.
 - Kept foreign exchange rows in user-added watchlist order.
 - Added high, low, and open prices to stock card view.
