@@ -4,17 +4,16 @@ All notable changes to MoFish Tool are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows semantic
 versioning.
 
-## 1.0.5 - 2026-07-15
+## 1.0.6 - 2026-07-15
 
-- Added an optional Gomoku tab with persistent nickname and player identity settings.
+- Added an optional Gomoku tab with persistent nickname and UUID identity settings; the UUID is the unique player
+  identifier and should be kept safe.
 - Supports online players, invitations, automatic matching, board play, resigning, and game statistics.
 - Added a responsive in-tool board and a resizable always-on-top floating board with configurable opacity and a
   `Ctrl+Alt+5` toggle shortcut.
-- Added admin controls to edit or delete offline player records without accessing SQLite directly.
-- 新增可选的 mofish5 标签页，并保存玩家昵称和身份信息。
+- 新增可选的 mofish5 标签页，并保存玩家昵称和 UUID 身份信息；UUID 是唯一用户标识，请务必妥善保存。
 - 支持在线用户、邀请对局、自动匹配、棋盘落子、认输和战绩统计。
 - 支持自适应工具窗口棋盘，以及可调整大小、配置透明度并通过 `Ctrl+Alt+5` 快速切换的置顶悬浮棋盘。
-- 管理页面支持直接编辑或删除离线玩家数据，无需手动连接 SQLite。
 - Added add/remove support for the foreign exchange watchlist with searchable currency selection.
 - Kept foreign exchange rows in user-added watchlist order.
 - Added high, low, and open prices to stock card view.
