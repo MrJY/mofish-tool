@@ -8,7 +8,8 @@ versioning.
 
 - Added an optional Gomoku tab with persistent nickname and player identity settings.
 - Supports online players, invitations, automatic matching, board play, resigning, and game statistics.
-- Added a responsive in-tool board and a resizable always-on-top floating board with configurable opacity and a `Ctrl+Alt+5` toggle shortcut.
+- Added a responsive in-tool board and a resizable always-on-top floating board with configurable opacity and a
+  `Ctrl+Alt+5` toggle shortcut.
 - Added admin controls to edit or delete offline player records without accessing SQLite directly.
 - 新增可选的 mofish5 标签页，并保存玩家昵称和身份信息。
 - 支持在线用户、邀请对局、自动匹配、棋盘落子、认输和战绩统计。
